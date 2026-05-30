@@ -36,9 +36,12 @@ fork the fact.
 | AI job lifecycle and provider abstraction       | `06-ai-analysis-pipeline.md` |
 | Storage abstraction and deployment              | `07-storage-and-deployment.md` |
 | Decisions and their rationale (ADRs)            | `09-decision-log.md` |
+| Solution layout, projects, dependency rules, slices | `10-solution-structure.md` |
 
 Resolved decisions an assistant must respect: Blazor frontend (ADR-001),
-PostgreSQL (ADR-002), modular monolith + vertical slices (ADR-003).
+PostgreSQL (ADR-002), modular monolith + vertical slices (ADR-003),
+solution layout — project-per-module, plain feature services, pragmatic API
+style (ADR-004).
 
 ---
 

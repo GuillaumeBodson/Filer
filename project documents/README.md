@@ -11,6 +11,8 @@ along the way.
 Start at `00` for context and `01` for the product vision. `02`–`07` are the
 design specifications. `08` is the rule set for AI coding assistants. `09` is the
 running decision log — read it to understand *why* things are the way they are.
+`10` defines how the codebase is physically structured before implementation
+begins.
 
 ---
 
@@ -28,6 +30,7 @@ running decision log — read it to understand *why* things are the way they are
 | 07  | Storage & Deployment        | Storage abstraction, Docker topology, evolution      | Active |
 | 08  | AI Development Guidelines    | Rules for AI coding assistants                       | Active |
 | 09  | Decision Log (ADRs)         | Significant decisions and their rationale            | Active |
+| 10  | Solution & Architecture Layout | Projects, module structure, dependency rules, slices | Active |
 
 ---
 
@@ -41,6 +44,8 @@ See `09-decision-log.md` for full rationale.
   reserved for future semantic search).
 * **ADR-003 — Architecture:** Modular monolith with vertical slices;
   infrastructure behind abstractions; CQRS/DDD/microservices deferred.
+* **ADR-004 — Solution layout:** Project-per-module (with `*.Contracts`); plain
+  feature services; pragmatic minimal-API-vs-controller choice per slice.
 
 ---
 

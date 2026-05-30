@@ -172,3 +172,70 @@ The candidate styles answer two separate questions: deployment topology
   preferred, with infrastructure abstraction retained as the one borrowed layer.
 
 ---
+
+## ADR-004 — Solution layout: project-per-module, plain feature services, pragmatic API style
+
+* **Date:** 2026-05-30
+* **Status:** Accepted
+
+### Context
+
+ADR-003 fixed the architecture *style* (modular monolith with vertical slices)
+but not the *structure* it takes in source. Three structural choices were open
+and shape everything downstream: how strict the module boundaries are physically,
+how a vertical slice is wired internally, and which API endpoint style the slices
+use. The full structure is specified in `10-solution-structure.md`; this ADR
+records the choices and why.
+
+### Decision
+
+* **Project per module.** Each module is its own class library paired with a thin
+  public `*.Contracts` library. A module depends only on other modules'
+  `*.Contracts`, never their implementation. Boundaries are compiler-enforced and
+  asserted by an architecture-test project.
+* **Plain feature services.** A vertical slice is an endpoint, a feature service
+  (an ordinary injected class), and its DTOs/validation. No mediator or command
+  bus is introduced.
+* **Pragmatic API style.** Minimal APIs are the default; controllers are used
+  only where a resource cluster's size or binding needs make controller
+  conventions remove code. The choice is made per slice, not globally, and never
+  affects a module's public contract.
+
+### Rationale
+
+* **Project-per-module** turns the module seams of ADR-003 into boundaries the
+  compiler enforces, strengthening the future SaaS / service-extraction path
+  without distributed-systems cost now. The `*.Contracts` split keeps the public
+  surface of each module explicit and lean.
+* **Plain feature services** keep ceremony low and code obvious, matching the
+  project's "prefer readability, avoid unnecessary abstraction" guideline (`08`).
+  MediatR's pipeline benefits are not yet needed and would add indirection the
+  guidelines lean against.
+* **Pragmatic API style** avoids a dogmatic global rule; it co-locates routing
+  with the slice while letting genuinely large resource clusters use controllers
+  where they cut boilerplate.
+
+### Trade-offs accepted
+
+* More projects to manage than a single-project, folder-based modular monolith;
+  accepted for enforceable boundaries.
+* A `DbContext` per module is more setup than one shared context; accepted to
+  keep each module the sole owner of its data.
+* Plain services can duplicate small cross-cutting bits (validation/logging
+  wiring) that a mediator pipeline would centralize; accepted versus premature
+  abstraction, and revisitable if cross-cutting needs grow.
+
+### Alternatives considered
+
+* **Folders in a single project** — least ceremony, but boundaries rely on
+  discipline alone and are easy to erode; rejected in favor of compiler
+  enforcement.
+* **Hybrid (module class libraries, no per-module Contracts split)** — real
+  assembly boundaries without separate contract projects; rejected because the
+  Contracts split is what keeps each module's public surface explicit and
+  prevents implementation leakage.
+* **MediatR commands/queries** — useful pipeline behaviors for validation and
+  logging, but adds a dependency and indirection without a concrete present need;
+  deferred, consistent with deferring CQRS in ADR-003.
+
+---
