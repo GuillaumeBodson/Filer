@@ -73,16 +73,25 @@ Potential future features:
 
 ### Frontend
 
-Pending decision:
+Decided (2026-05-30): **Blazor**
 
-* Blazor
-* Angular
+* Web: Blazor WebAssembly (consumes the REST API).
+* Desktop (Windows) and mobile (Android): MAUI Blazor Hybrid, reusing the same UI.
+* Shared UI components live in a Razor Class Library reused across web and native shells.
+* Blazor Server is explicitly avoided as the foundation (persistent connection does not suit the multi-client / Hybrid target).
+
+See the decision log for full rationale.
 
 ### Database
 
-Current candidate:
+Decided (2026-05-30): **PostgreSQL**
 
-* PostgreSQL
+* Relational metadata store (users, documents, folders, tags, ownership).
+* JSONB for flexible metadata and AI analysis results.
+* pgvector extension reserved for future semantic search / embeddings.
+* Built-in full-text search for V1.
+
+See `09-decision-log.md` (ADR-002) for rationale.
 
 ### Deployment
 
@@ -94,7 +103,8 @@ Mandatory:
 
 ## Storage Strategy
 
-### Recommended V1 Approach
+Summary; full detail and the `IFileStorageProvider` abstraction live in
+`07-storage-and-deployment.md`.
 
 Metadata:
 
@@ -111,6 +121,9 @@ Future evolution:
 ---
 
 ## Authentication Strategy
+
+Summary; the full security model (tokens, ownership, file access) lives in
+`05-security.md`.
 
 ### V1
 
@@ -129,6 +142,9 @@ Potential migration toward:
 ---
 
 ## AI Integration Strategy
+
+Summary; the full job lifecycle and `IAIAnalysisProvider` abstraction live in
+`06-ai-analysis-pipeline.md`.
 
 AI processing must be isolated from the main API flow.
 
@@ -153,23 +169,22 @@ Potential future providers:
 
 ---
 
-## Architectural Constraints
+## Architecture
 
-The project architecture is intentionally undecided at this stage.
+Decided (2026-05-30): **Modular monolith with vertical slices**
 
-Avoid premature commitment to:
+* Topology: a single deployable modular monolith. Modules (Auth, Document
+  Management, Folder/Tag Management, AI Analysis, Storage, Search, Background
+  Jobs) have explicit boundaries and communicate through interfaces.
+* Internal organization: vertical slices (organize by feature, not technical layer).
+* Infrastructure (storage, AI providers, persistence) stays behind abstractions
+  such as `IFileStorageProvider` and `IAIAnalysisProvider`.
+* CQRS, DDD, and microservices are deferred until a concrete need appears.
 
-* Clean Architecture
-* Vertical Slice Architecture
-* Modular Monolith
-* Microservices
+Module seams preserve the future SaaS / service-extraction path without paying
+distributed-systems costs in V1.
 
-The architecture decision must follow clearer understanding of:
-
-* Domain complexity
-* AI processing requirements
-* Multi-user evolution
-* Scaling constraints
+See `09-decision-log.md` (ADR-003) for rationale.
 
 ---
 
@@ -201,13 +216,8 @@ The architecture decision must follow clearer understanding of:
 
 ## AI Assistant Instructions
 
-When generating code or architecture suggestions:
-
-* Do not assume final architecture style.
-* Preserve extensibility.
-* Avoid overengineering.
-* Prefer abstractions around infrastructure concerns.
-* Keep the system evolvable toward SaaS.
-* Maintain API-first design.
-* Respect Docker deployment constraints.
-* Avoid coupling AI providers to domain logic.
+Rules for AI coding assistants are maintained in `08-ai-development-guidelines.md`
+(the single source of truth for assistant behavior). They build on the principles
+above — preserve extensibility, prefer infrastructure abstractions, keep the
+system evolvable toward SaaS, maintain API-first design, and respect the resolved
+architecture (ADR-003).
