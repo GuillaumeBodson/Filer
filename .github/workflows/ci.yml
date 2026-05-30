@@ -53,12 +53,14 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      # Target the solution explicitly: the repo root also holds docker-compose.dcproj,
+      # so a bare `dotnet restore` can't pick a single project/solution (MSB1011).
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore Filer.slnx
 
-      # No --no-restore reuse issues; build honours warnings-as-errors (Directory.Build.props).
+      # Build honours warnings-as-errors (Directory.Build.props).
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build Filer.slnx --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test --configuration Release --no-build --verbosity normal
+        run: dotnet test Filer.slnx --configuration Release --no-build --verbosity normal
