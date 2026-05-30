@@ -18,7 +18,7 @@ services:
       timeout: 5s
       retries: 5
 
-  api:
+  filer.api:
     build:
       context: .
       dockerfile: src/Filer.Api/Dockerfile

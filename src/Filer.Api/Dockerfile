@@ -2,6 +2,12 @@
 
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+# Kerberos/GSSAPI runtime lib: Npgsql attempts to load it during connection
+# negotiation. Without it the connection still succeeds via SCRAM, but Npgsql
+# logs a noisy "Cannot load library libgssapi_krb5.so.2" error on startup.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080

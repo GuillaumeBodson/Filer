@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <!-- Host / composition root. References module implementations only to register
        them (10-solution-structure.md). Common settings come from Directory.Build.props;
@@ -7,6 +7,7 @@
     <UserSecretsId>60396da0-fd5a-472f-8311-33dc60f435ff</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>..\..</DockerfileContext>
+    <DockerComposeProjectPath>..\..\docker-compose.dcproj</DockerComposeProjectPath>
   </PropertyGroup>
 
   <ItemGroup>

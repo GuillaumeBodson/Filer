@@ -1,0 +1,13 @@
+# Visual Studio debug overlay on docker-compose.yml.
+# Adds HTTPS plus the dev-cert / user-secrets mounts VS needs; the base file owns
+# everything else (HTTP port, Postgres, JWT, connection string). Container runs as
+# the non-root app user, so only /home/app mounts are needed.
+services:
+  filer.api:
+    environment:
+      - ASPNETCORE_HTTPS_PORTS=8081
+    ports:
+      - "8081:8081"
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro

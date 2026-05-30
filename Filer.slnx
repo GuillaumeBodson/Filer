@@ -8,4 +8,7 @@
     <Project Path="src/Modules/Auth/Filer.Modules.Auth.Contracts/Filer.Modules.Auth.Contracts.csproj" Id="14bac8cc-6963-49ea-96ba-51444cbe38c5" />
     <Project Path="src/Modules/Auth/Filer.Modules.Auth/Filer.Modules.Auth.csproj" Id="d544c4a8-d736-4d6d-9ec8-db11a480f604" />
   </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
 </Solution>
