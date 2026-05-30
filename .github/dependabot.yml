@@ -1,0 +1,24 @@
+version: 2
+updates:
+  # NuGet versions are centralised in Directory.Packages.props; Dependabot edits it directly.
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      # One PR for routine patch/minor bumps to keep review light for a solo dev.
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  # Keep the Actions in ci.yml current and patched.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(ci)"

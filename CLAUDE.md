@@ -22,6 +22,7 @@ Tout le *quoi* vit dans `project documents/`. En cas de conflit avec ce fichier,
 | Règles comportementales pour assistants IA          | `08-ai-development-guidelines.md` |
 | Décisions et leur rationale (ADR)                   | `09-decision-log.md` |
 | Layout solution, projets, règles de dépendance      | `10-solution-structure.md` |
+| Workflow Git, branches, commits, PR, CI, releases   | `11-git-workflow.md` |
 
 ## Commandes
 

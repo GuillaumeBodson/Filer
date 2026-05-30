@@ -61,3 +61,28 @@ nunit-*.xml
 
 # User-specific project files
 *.user
+*.suo
+
+## ----------------------------------------------------------------------
+## Filer additions: secrets & local config — never commit.
+## Real Jwt__SigningKey & connection strings come from env or a secret
+## store (05-security.md). Only the dev key in appsettings.Development.json
+## is allowed in source control.
+## ----------------------------------------------------------------------
+appsettings.*.local.json
+appsettings.Local.json
+*.local.json
+secrets.json
+.env
+.env.*
+
+# Rider / JetBrains
+.idea/
+
+# VS Code (keep a deliberately shared extensions list if you add one)
+.vscode/*
+!.vscode/extensions.json
+
+# OS noise
+.DS_Store
+Thumbs.db
