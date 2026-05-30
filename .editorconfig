@@ -1,0 +1,39 @@
+# EditorConfig — shared formatting and style rules for the solution.
+# https://editorconfig.org  /  https://learn.microsoft.com/dotnet/fundamentals/code-analysis/code-style-rule-options
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,yml,yaml,props,csproj,slnx}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+# Namespaces mirror folders; prefer file-scoped namespaces (10-solution-structure.md).
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_using_directive_placement = outside_namespace:warning
+dotnet_sort_system_directives_first = true
+
+# Prefer explicit, readable code (08-ai-development-guidelines.md).
+dotnet_style_qualification_for_field = false:warning
+csharp_prefer_braces = true:suggestion
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+
+# Nullable is enabled solution-wide; treat nullability warnings seriously.
+dotnet_diagnostic.CS8600.severity = error
+dotnet_diagnostic.CS8602.severity = error
+dotnet_diagnostic.CS8618.severity = error
+
+# EF Core migrations are generated code; exempt them from style enforcement
+# (warnings-as-errors would otherwise fail on e.g. IDE0161).
+[**/Migrations/*.cs]
+generated_code = true

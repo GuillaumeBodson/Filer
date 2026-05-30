@@ -1,0 +1,28 @@
+@Filer.Api_HostAddress = http://localhost:5232
+@email = demo@filer.local
+@password = Passw0rd!
+
+### Register a new account
+POST {{Filer.Api_HostAddress}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Login to obtain an access token
+# @name login
+POST {{Filer.Api_HostAddress}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Current user profile (uses the token from the login response above)
+GET {{Filer.Api_HostAddress}}/api/v1/auth/me
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+###

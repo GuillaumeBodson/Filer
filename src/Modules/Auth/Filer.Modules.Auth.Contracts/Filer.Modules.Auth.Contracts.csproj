@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Public surface of the Auth module. References SharedKernel only — never
+       EF Core, never another module (10-solution-structure.md, ADR-004). -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,42 @@
+# Local / dev composition: API + PostgreSQL.
+# The walking skeleton proves host + auth + persistence wire together (10-solution-structure.md).
+services:
+  postgres:
+    image: postgres:17
+    container_name: filer-postgres
+    environment:
+      POSTGRES_DB: filer
+      POSTGRES_USER: filer
+      POSTGRES_PASSWORD: filer_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - filer-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U filer -d filer"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Filer.Api/Dockerfile
+    container_name: filer-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=filer;Username=filer;Password=filer_dev_password"
+      # Dev-only signing key. In real environments supply Jwt__SigningKey via a secret store, never source control (05-security.md).
+      Jwt__Issuer: "filer-api"
+      Jwt__Audience: "filer-clients"
+      Jwt__SigningKey: "dev-only-signing-key-change-me-please-32-bytes-min"
+      Jwt__AccessTokenMinutes: "15"
+    ports:
+      - "8080:8080"
+
+volumes:
+  filer-pgdata:

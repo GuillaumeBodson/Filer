@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Bottom of the dependency graph: depends on nothing else in the solution
+       (10-solution-structure.md). Common settings come from Directory.Build.props. -->
+
+</Project>

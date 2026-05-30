@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Host / composition root. References module implementations only to register
+       them (10-solution-structure.md). Common settings come from Directory.Build.props;
+       package versions from Directory.Packages.props. -->
+  <PropertyGroup>
+    <UserSecretsId>60396da0-fd5a-472f-8311-33dc60f435ff</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileContext>..\..</DockerfileContext>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
+    <!-- EF Core tooling so `dotnet ef`/Package Manager can build migrations with this as the startup project. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Modules\Auth\Filer.Modules.Auth\Filer.Modules.Auth.csproj" />
+  </ItemGroup>
+
+</Project>
