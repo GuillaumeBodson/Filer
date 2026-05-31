@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Unit tests for the Auth module. One test project per module, mirroring the
+       project-per-module layout (10/12). Fast, isolated, collaborators mocked
+       through their interfaces — no web host, no database here. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Auth\Filer.Modules.Auth\Filer.Modules.Auth.csproj" />
+  </ItemGroup>
+
+  <!-- UserManager / Identity types used by the service-under-test pull in the
+       shared framework; declare it so the test assembly resolves them. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+
+</Project>

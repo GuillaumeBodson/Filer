@@ -17,4 +17,17 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
   </ItemGroup>
+
+  <!-- Test stack (12-testing-strategy.md). xUnit runner; FluentAssertions for
+       readable failures; Moq at the designed seams; coverlet for coverage.
+       FluentAssertions is pinned to the 7.x line - the last version under the
+       free Apache-2.0 licence (8.x moved to a paid commercial licence). -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="Moq" Version="4.20.72" />
+    <PackageVersion Include="FluentAssertions" Version="7.2.0" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+  </ItemGroup>
 </Project>
