@@ -1,0 +1,20 @@
+<Project>
+
+  <!-- Inherit the solution-wide settings (nullable, warnings-as-errors,
+       analyzers, central package versions), then layer test-only relaxations.
+       MSBuild stops at the first Directory.Build.props it finds walking up, so
+       the root one is imported explicitly. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+
+    <!-- Test method names use the MethodOrFeature_StateUnderTest_ExpectedOutcome
+         convention (12-testing-strategy.md), which CA1707 (no underscores in
+         identifiers) would reject. Suppress it for tests only; production code
+         keeps the rule. -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+
+</Project>
