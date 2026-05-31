@@ -1,4 +1,5 @@
 using Filer.Modules.Auth.Authentication;
+using Filer.Modules.Auth.Contracts;
 using Filer.Modules.Auth.Domain;
 using Filer.SharedKernel.Results;
 using Microsoft.AspNetCore.Identity;
@@ -16,7 +17,7 @@ public sealed class LoginService(UserManager<ApplicationUser> userManager, IToke
     private readonly ITokenService _tokenService = tokenService;
 
     private static readonly Error InvalidCredentials =
-        Error.Unauthorized("Invalid email or password.", "invalid_credentials");
+        Error.Unauthorized("Invalid email or password.", AuthErrorCodes.InvalidCredentials);
 
     public async Task<Result<LoginResponse>> HandleAsync(LoginRequest request, CancellationToken ct)
     {

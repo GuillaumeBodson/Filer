@@ -1,3 +1,4 @@
+using Filer.Modules.Auth.Contracts;
 using Filer.Modules.Auth.Domain;
 using Filer.SharedKernel.Results;
 using Filer.SharedKernel.Time;
@@ -13,6 +14,13 @@ public sealed class RegisterService(UserManager<ApplicationUser> userManager, IC
 {
     private readonly UserManager<ApplicationUser> _userManager = userManager;
     private readonly IClock _clock = clock;
+
+    // ASP.NET Identity prefixes duplicate-account error codes with "Duplicate"
+    // (e.g. DuplicateUserName, DuplicateEmail); we treat any of them as email-taken.
+    private const string DuplicateIdentityErrorPrefix = "Duplicate";
+
+    private static readonly Error EmailTaken =
+        Error.Conflict("An account with this email already exists.", AuthErrorCodes.EmailTaken);
 
     public async Task<Result<RegisterResponse>> HandleAsync(RegisterRequest request, CancellationToken ct)
     {
@@ -38,13 +46,13 @@ public sealed class RegisterService(UserManager<ApplicationUser> userManager, IC
         if (!result.Succeeded)
         {
             bool duplicate = result.Errors.Any(e =>
-                e.Code.Contains("Duplicate", StringComparison.OrdinalIgnoreCase));
+                e.Code.Contains(DuplicateIdentityErrorPrefix, StringComparison.OrdinalIgnoreCase));
 
             string message = string.Join(" ", result.Errors.Select(e => e.Description));
 
             return duplicate
-                ? Result.Failure<RegisterResponse>(Error.Conflict("An account with this email already exists.", "email_taken"))
-                : Result.Failure<RegisterResponse>(Error.Validation(message, "registration_failed"));
+                ? Result.Failure<RegisterResponse>(EmailTaken)
+                : Result.Failure<RegisterResponse>(Error.Validation(message, AuthErrorCodes.RegistrationFailed));
         }
 
         return Result.Success(new RegisterResponse(user.Id, email));
