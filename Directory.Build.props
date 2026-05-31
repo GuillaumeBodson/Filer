@@ -11,6 +11,12 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 
+    <!-- Static analysis (13-code-quality-and-design.md): staged ramp - start at the
+         curated recommended rule set so main stays green, ratchet toward latest-all later. -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+
     <!-- Central NuGet package version management (Directory.Packages.props). -->
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>

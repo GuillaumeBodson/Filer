@@ -33,6 +33,12 @@ dotnet_diagnostic.CS8600.severity = error
 dotnet_diagnostic.CS8602.severity = error
 dotnet_diagnostic.CS8618.severity = error
 
+# CA1716: type/namespace names matching a reserved keyword in another CLR language
+# (e.g. `Error` is a VB keyword). Disabled deliberately: Filer is a C#-only solution
+# (ASP.NET Core API + Blazor) with no cross-CLR-language consumer, and the rule
+# fights idiomatic domain names like `Error`. See 13-code-quality-and-design.md.
+dotnet_diagnostic.CA1716.severity = none
+
 # EF Core migrations are generated code; exempt them from style enforcement
 # (warnings-as-errors would otherwise fail on e.g. IDE0161).
 [**/Migrations/*.cs]

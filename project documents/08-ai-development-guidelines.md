@@ -37,6 +37,9 @@ fork the fact.
 | Storage abstraction and deployment              | `07-storage-and-deployment.md` |
 | Decisions and their rationale (ADRs)            | `09-decision-log.md` |
 | Solution layout, projects, dependency rules, slices | `10-solution-structure.md` |
+| Git workflow, branches, commits, PR, CI         | `11-git-workflow.md` |
+| Testing strategy, required tests, coverage gate | `12-testing-strategy.md` |
+| Coding standards, OOP/SOLID, patterns, Definition of Done | `13-code-quality-and-design.md` |
 
 Resolved decisions an assistant must respect: Blazor frontend (ADR-001),
 PostgreSQL (ADR-002), modular monolith + vertical slices (ADR-003),
@@ -79,33 +82,65 @@ canonical docs, the *how to behave* lives here.
 
 # Coding Guidelines
 
+The full code-level standard — error handling, cancellation, validation, logging,
+OOP/SOLID posture, endorsed vs deferred design patterns, static analysis, and the
+Definition of Done — lives in `13-code-quality-and-design.md`. The testing bar
+lives in `12-testing-strategy.md`. This section states the directives an assistant
+must apply on every change; `13`/`12` give the detail and rationale.
+
 ## General
 
-* Prefer readability.
-* Avoid unnecessary abstraction.
-* Avoid speculative complexity.
-* Prefer explicit naming.
+* Prefer readability and explicit naming over cleverness.
+* Avoid unnecessary abstraction and speculative complexity — apply OOP, SOLID, and
+  design patterns *only where they remove present complexity*, never pre-emptively
+  (`13`, "the governing tension"). An interface with one implementation and no
+  test/extensibility need is usually premature; the designed exceptions are the
+  infrastructure seams below.
+* `sealed` by default; `record` DTOs; immutable at the boundary.
 
 ## API
 
-* Use versioned routes.
-* Return typed responses.
-* Use DTOs at boundaries.
-* Validate requests explicitly.
+* Use versioned routes. Return typed responses. Entities never cross the boundary —
+  map to DTOs (`03`, `10`).
+* Validate requests explicitly at the slice boundary, returning `Result` /
+  `Error` (current house pattern; `13`).
+
+## Error handling (hard rule)
+
+* Expected/domain outcomes use `Result`/`Result<T>` + `Error` and map to HTTP via
+  the standard problem-details shape — **not** exceptions (`03`, `13`).
+* Exceptions are for broken invariants and unrecoverable infrastructure failures,
+  handled centrally in the host. Never catch-and-swallow; never `catch (Exception)`
+  to hide a failure.
+
+## Async & cancellation (hard rule)
+
+* Async all the way; never block on async (`.Result`, `.Wait()`).
+* Every async method accepts a `CancellationToken` and **propagates it** to every
+  call that takes one. A token accepted then ignored is a bug.
 
 ## Persistence
 
-* Keep persistence concerns isolated.
-* Avoid leaking ORM concerns into domain logic.
+* Keep persistence concerns isolated; do not leak ORM concerns into feature logic.
+* Use `DbContext` directly in the feature service (ADR-004) — do **not** add a
+  generic repository/unit-of-work layer pre-emptively (`13`).
+
+## Logging (hard rule)
+
+* Structured logging via `ILogger` message templates, correct levels, correlation
+  ids (`04`). Never log secrets, tokens, passwords, or file contents (`05`).
+
+## Testing (hard rule)
+
+* A slice is not done without the tests `12` requires: feature-service unit tests
+  for the success path **and every failure `Error`**, plus the security-critical
+  integration tests (ownership → **404 not 403**, auth, upload validation). Do not
+  defer tests to "later".
 
 ## Background Jobs
 
-AI analysis must support:
-
-* retries
-* async processing
-* cancellation
-* observability
+AI analysis must support retries (with backoff), async processing, cancellation,
+idempotency, and observability — each is also a test obligation (`06`, `12`).
 
 ---
 
@@ -119,6 +154,15 @@ Do not:
 * assume SaaS-only design
 * overengineer V1
 * introduce microservices prematurely
+* reintroduce a mediator/command bus or a generic repository/unit-of-work over EF
+  Core (rejected by ADR-004; `13`)
+* introduce CQRS, DDD aggregates, or new interfaces with a single implementation
+  without a concrete, documented need
+* throw or catch-and-swallow exceptions for ordinary business outcomes (use
+  `Result`)
+* accept a `CancellationToken` and then fail to propagate it
+* merge a slice without its required tests (`12`)
+* log secrets, tokens, passwords, or file contents (`05`)
 
 ---
 

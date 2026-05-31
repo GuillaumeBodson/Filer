@@ -1,3 +1,4 @@
+using Filer.Api.Infrastructure;
 using Filer.Modules.Auth;
 using Filer.Modules.Auth.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Cross-cutting host services.
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
+
+// Backstop for unhandled exceptions: logs server-side, returns problem-details
+// without leaking internals (Infrastructure/GlobalExceptionHandler.cs, 05-security.md).
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // Modules register themselves through their public entry point only
 // (10-solution-structure.md). The host adds no business logic.

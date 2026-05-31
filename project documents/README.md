@@ -12,7 +12,10 @@ Start at `00` for context and `01` for the product vision. `02`–`07` are the
 design specifications. `08` is the rule set for AI coding assistants. `09` is the
 running decision log — read it to understand *why* things are the way they are.
 `10` defines how the codebase is physically structured before implementation
-begins.
+begins. `11` is the Git workflow. `12` is the testing strategy (required tests and
+coverage), and `13` is the code-quality and design standard (coding rules,
+OOP/SOLID, design patterns, and the Definition of Done) — read `12`/`13` before
+writing code.
 
 ---
 
@@ -31,6 +34,9 @@ begins.
 | 08  | AI Development Guidelines    | Rules for AI coding assistants                       | Active |
 | 09  | Decision Log (ADRs)         | Significant decisions and their rationale            | Active |
 | 10  | Solution & Architecture Layout | Projects, module structure, dependency rules, slices | Active |
+| 11  | Git Workflow                | Branching, commits, PR, CI, branch protection        | Active |
+| 12  | Testing Strategy            | Test pyramid, required tests per slice, coverage gate | Active |
+| 13  | Code Quality & Design       | Coding standards, OOP/SOLID, patterns, Definition of Done | Active |
 
 ---
 

@@ -33,9 +33,9 @@ public class Result
 
     public static Result Failure(Error error) => new(false, error);
 
-    public static Result<T> Success<T>(T value) => Result<T>.Success(value);
+    public static Result<T> Success<T>(T value) => new(true, value, null);
 
-    public static Result<T> Failure<T>(Error error) => Result<T>.Failure(error);
+    public static Result<T> Failure<T>(Error error) => new(false, default!, error);
 }
 
 /// <summary>A <see cref="Result"/> that carries a value on success.</summary>
@@ -43,7 +43,7 @@ public sealed class Result<T> : Result
 {
     private readonly T _value;
 
-    private Result(bool isSuccess, T value, Error? error)
+    internal Result(bool isSuccess, T value, Error? error)
         : base(isSuccess, error)
     {
         _value = value;
@@ -52,8 +52,4 @@ public sealed class Result<T> : Result
     public T Value => IsSuccess
         ? _value
         : throw new InvalidOperationException("Cannot read the value of a failed result.");
-
-    public static Result<T> Success(T value) => new(true, value, null);
-
-    public static new Result<T> Failure(Error error) => new(false, default!, error);
 }
