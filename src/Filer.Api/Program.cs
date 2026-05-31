@@ -1,9 +1,38 @@
+using System.Text.Json;
 using Filer.Api.Infrastructure;
 using Filer.Modules.Auth;
 using Filer.Modules.Auth.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Structured logging in JSON across API and workers (04-non-functional.md). Replace
+// the default text console with the JSON formatter and include scopes, so the
+// framework's request trace context (configured just below) surfaces as queryable
+// properties. Levels stay configuration-driven via appsettings (Logging:LogLevel).
+builder.Logging.ClearProviders();
+builder.Logging.AddJsonConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.UseUtcTimestamp = true;
+    options.JsonWriterOptions = new JsonWriterOptions { Indented = false };
+});
+
+// Surface the W3C trace context on every log line. Combined with IncludeScopes
+// above, each entry carries the request's TraceId/SpanId as structured properties,
+// tying a request to the work it spawns — and propagating to the future worker tier
+// for free via traceparent. Set explicitly rather than leaning on the host default.
+builder.Logging.Configure(options =>
+    options.ActivityTrackingOptions =
+        ActivityTrackingOptions.TraceId
+        | ActivityTrackingOptions.SpanId
+        | ActivityTrackingOptions.ParentId);
+
+if (builder.Environment.IsDevelopment())
+{
+    // Mirror logs to the IDE/debug window during development only.
+    builder.Logging.AddDebug();
+}
 
 // Cross-cutting host services.
 builder.Services.AddOpenApi();

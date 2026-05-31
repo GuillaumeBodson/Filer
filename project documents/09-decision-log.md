@@ -239,3 +239,80 @@ records the choices and why.
   deferred, consistent with deferring CQRS in ADR-003.
 
 ---
+
+## ADR-005 — Logging: trace-context correlation and PII-safe auth events
+
+* **Date:** 2026-05-31
+* **Status:** Accepted
+
+### Context
+
+`04-non-functional.md` and `13-code-quality-and-design.md` already mandate
+structured JSON logging, the `[LoggerMessage]` source-generator convention, and
+correlation ids tying a request to the work it spawns. Two implementation choices
+were left open when the API host was wired and the first slices (Auth) were
+instrumented:
+
+1. **What supplies the correlation id.** ASP.NET Core already establishes a W3C
+   trace context (`Activity` → `TraceId`/`SpanId`) per request, but a bespoke
+   `X-Correlation-ID` is a common alternative. A custom middleware for the latter
+   was prototyped in this session, then removed.
+2. **How to log failed authentication.** `05-security.md` requires that secrets and
+   personal data stay out of logs and that personal data is redacted where not
+   needed. Failed logins are a security signal worth capturing, which puts the
+   audit value in tension with the redaction rule (the attempted email is PII).
+
+### Decision
+
+* **Correlate via the framework's trace context, not a custom id.** Enable
+  `ActivityTrackingOptions` (`TraceId | SpanId | ParentId`) and the JSON console's
+  `IncludeScopes`, so every `Information`-and-above line carries the trace id as a
+  structured property. No bespoke correlation id is introduced. The client-facing
+  reference is the `traceId` that `AddProblemDetails()` already writes into error
+  responses.
+* **Log auth events at the `13` levels, identifying by user id only.** Sign-in and
+  account creation log at `Information` with the user's GUID. A failed login on an
+  **existing** account logs at `Warning` with that user's GUID; a failed login on an
+  **unknown** email logs at `Warning` with **no** identifier. Unexpected
+  registration rejections log at `Warning` with Identity's error **codes** only.
+  Email, password, and Identity error **descriptions** are never logged.
+
+### Rationale
+
+* **Trace context propagates for free.** W3C `traceparent` flows across HTTP and,
+  later, messaging boundaries, giving the request→analysis-job correlation `04`
+  requires without any hand-written plumbing into the future worker tier. A custom
+  id would duplicate the trace id and have to be manually forwarded across every hop.
+* **Zero new dependency, client reference already covered.** The built-in JSON
+  console plus `AddProblemDetails()`'s `traceId` cover both the structured-log and
+  the quotable-by-a-client needs without extra code.
+* **Auth logs are a real security signal.** Logging the user id on a known-account
+  failure makes repeated attempts against a real account visible to brute-force
+  monitoring, while withholding any identifier for unknown emails keeps the raw
+  email — PII under `05` — out of the logs. Identity error codes (not descriptions)
+  avoid echoing submitted input.
+
+### Trade-offs accepted
+
+* The trace id is an infrastructure identifier, not a memorable business reference;
+  acceptable since it is surfaced via problem-details rather than presented as a
+  product feature.
+* Failed-login logs cannot attribute the unknown-email case to a target account;
+  accepted as the privacy-preserving default. Brute-force protection (rate limiting,
+  `05`) is a separate control to be designed later, and can revisit this if it needs
+  a richer signal.
+* A `Warning` per wrong-password attempt adds some log volume; accepted for the
+  security visibility.
+
+### Alternatives considered
+
+* **Bespoke `X-Correlation-ID` middleware** — gives a single id across hops and a
+  client-facing value, but duplicates the framework trace id, must be propagated to
+  the worker tier by hand, and adds middleware to maintain. Prototyped and removed
+  this session as redundant.
+* **Failed login — log nothing** — fully privacy-safe but discards the security
+  signal; rejected.
+* **Failed login — log the raw email** — best forensics, but stores PII against
+  `05`'s redaction default; rejected.
+
+---
