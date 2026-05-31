@@ -62,5 +62,24 @@ jobs:
       - name: Build
         run: dotnet build Filer.slnx --configuration Release --no-restore
 
+      # Coverage is collected on every run (12-testing-strategy.md). The failing
+      # threshold is staged: it is enabled in the PR that introduces the first
+      # module's tests, so it never blocks an empty baseline.
       - name: Test
-        run: dotnet test Filer.slnx --configuration Release --no-build --verbosity normal
+        run: >-
+          dotnet test Filer.slnx --configuration Release --no-build --verbosity normal
+          --collect:"XPlat Code Coverage" --results-directory ./TestResults
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: ./TestResults/**/coverage.cobertura.xml
+          if-no-files-found: ignore
+
+      # Fail on a known-vulnerable dependency (13-code-quality-and-design.md).
+      - name: Vulnerable package scan
+        run: |
+          dotnet list Filer.slnx package --vulnerable --include-transitive 2>&1 | tee vuln.txt
+          ! grep -q "has the following vulnerable packages" vuln.txt

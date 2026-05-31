@@ -23,6 +23,8 @@ Tout le *quoi* vit dans `project documents/`. En cas de conflit avec ce fichier,
 | Décisions et leur rationale (ADR)                   | `09-decision-log.md` |
 | Layout solution, projets, règles de dépendance      | `10-solution-structure.md` |
 | Workflow Git, branches, commits, PR, CI, releases   | `11-git-workflow.md` |
+| Stratégie de tests, tests requis, seuil de couverture | `12-testing-strategy.md` |
+| Standards de code, OOP/SOLID, patterns, Definition of Done | `13-code-quality-and-design.md` |
 
 ## Commandes
 
@@ -64,6 +66,13 @@ sans besoin concret justifié.
   (allow-list de type, taille, content sniffing — `04`/`05`).
 - **Secrets** : jamais en source control. `Jwt__SigningKey` (≥32 car.) via env/
   secret store. La clé de `appsettings.Development.json` est dev-only.
+- **Qualité de code** : résultats attendus via `Result`/`Error` (pas d'exceptions
+  pour le flux métier) ; `CancellationToken` propagé partout ; logging structuré,
+  jamais de secret loggé ; OOP/SOLID/patterns appliqués seulement quand ils
+  suppriment une complexité réelle, jamais par anticipation (`13`).
+- **Tests obligatoires** : une slice n'est pas terminée sans ses tests (`12`) —
+  service de feature (succès + chaque `Error`) et tests d'intégration critiques
+  (ownership → 404, auth, validation upload). Definition of Done complète : `13`.
 
 ## Conventions de structure
 
@@ -75,4 +84,5 @@ sans besoin concret justifié.
   `Directory.Packages.props` (versions NuGet centralisées), `.editorconfig`
   (namespaces file-scoped, style imposé au build).
 
-Ordre de construction, style de code et priorités : voir `08`.
+Ordre de construction et priorités : voir `08`. Standards de code et design
+(OOP/SOLID, patterns, error handling, Definition of Done) : `13`. Tests : `12`.
