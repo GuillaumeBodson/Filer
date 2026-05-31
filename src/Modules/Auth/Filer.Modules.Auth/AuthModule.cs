@@ -5,6 +5,7 @@ using Filer.Modules.Auth.Features.Login;
 using Filer.Modules.Auth.Features.Me;
 using Filer.Modules.Auth.Features.Register;
 using Filer.Modules.Auth.Persistence;
+using Filer.SharedKernel.Configuration;
 using Filer.SharedKernel.Time;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -40,8 +41,8 @@ public static class AuthModule
             ?? throw new InvalidOperationException("The 'Jwt' configuration section is missing.");
 
         // The module owns its data in the 'auth' Postgres schema.
-        string connectionString = configuration.GetConnectionString("Postgres")
-            ?? throw new InvalidOperationException("The 'Postgres' connection string is missing.");
+        string connectionString = configuration.GetConnectionString(ConnectionStringNames.Postgres)
+            ?? throw new InvalidOperationException($"The '{ConnectionStringNames.Postgres}' connection string is missing.");
 
         services.AddDbContext<AuthDbContext>(options =>
             options.UseNpgsql(connectionString, npgsql =>

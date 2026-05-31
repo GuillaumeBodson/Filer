@@ -1,3 +1,4 @@
+using Filer.Modules.Auth.Contracts;
 using Filer.SharedKernel.Results;
 
 namespace Filer.Modules.Auth.Features.Register;
@@ -13,12 +14,12 @@ public static class RegisterValidator
         if (string.IsNullOrWhiteSpace(request.Email) ||
             !request.Email.Contains('@', StringComparison.Ordinal))
         {
-            return Result.Failure(Error.Validation("A valid email is required.", "email"));
+            return Result.Failure(Error.Validation("A valid email is required.", AuthErrorCodes.Email));
         }
 
         if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 8)
         {
-            return Result.Failure(Error.Validation("Password must be at least 8 characters.", "password"));
+            return Result.Failure(Error.Validation("Password must be at least 8 characters.", AuthErrorCodes.Password));
         }
 
         return Result.Success();
