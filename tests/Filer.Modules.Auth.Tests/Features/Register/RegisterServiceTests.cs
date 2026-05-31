@@ -5,6 +5,7 @@ using Filer.Modules.Auth.Features.Register;
 using Filer.Modules.Auth.Tests.TestSupport;
 using Filer.SharedKernel.Results;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -17,7 +18,8 @@ public sealed class RegisterServiceTests
     private readonly Mock<UserManager<ApplicationUser>> _userManager = MockUserManager.Create();
     private readonly FixedClock _clock = new(Now);
 
-    private RegisterService CreateSut() => new(_userManager.Object, _clock);
+    private RegisterService CreateSut() =>
+        new(_userManager.Object, _clock, NullLogger<RegisterService>.Instance);
 
     [Fact]
     public async Task HandleAsync_WhenRequestInvalid_ReturnsValidationErrorWithoutCreatingUser()

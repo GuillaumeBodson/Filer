@@ -6,6 +6,7 @@ using Filer.Modules.Auth.Features.Login;
 using Filer.Modules.Auth.Tests.TestSupport;
 using Filer.SharedKernel.Results;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -16,7 +17,8 @@ public sealed class LoginServiceTests
     private readonly Mock<UserManager<ApplicationUser>> _userManager = MockUserManager.Create();
     private readonly Mock<ITokenService> _tokenService = new();
 
-    private LoginService CreateSut() => new(_userManager.Object, _tokenService.Object);
+    private LoginService CreateSut() =>
+        new(_userManager.Object, _tokenService.Object, NullLogger<LoginService>.Instance);
 
     [Fact]
     public async Task HandleAsync_WhenRequestInvalid_ReturnsValidationErrorWithoutTouchingCollaborators()
@@ -80,9 +82,11 @@ public sealed class LoginServiceTests
         var request = new LoginRequest("user@example.com", "password123");
 
         Result<LoginResponse> unknownEmail =
-            await new LoginService(unknownEmailManager.Object, _tokenService.Object).HandleAsync(request, CancellationToken.None);
+            await new LoginService(unknownEmailManager.Object, _tokenService.Object, NullLogger<LoginService>.Instance)
+                .HandleAsync(request, CancellationToken.None);
         Result<LoginResponse> wrongPassword =
-            await new LoginService(wrongPasswordManager.Object, _tokenService.Object).HandleAsync(request, CancellationToken.None);
+            await new LoginService(wrongPasswordManager.Object, _tokenService.Object, NullLogger<LoginService>.Instance)
+                .HandleAsync(request, CancellationToken.None);
 
         wrongPassword.Error.Should().Be(unknownEmail.Error);
     }
