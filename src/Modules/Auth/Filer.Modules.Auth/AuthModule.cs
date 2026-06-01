@@ -86,7 +86,7 @@ public static class AuthModule
 
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder routes)
     {
-        RouteGroupBuilder group = routes.MapGroup("/api/v1/auth");
+        RouteGroupBuilder group = routes.MapGroup(AuthRoutes.BasePath);
 
         group.MapRegister();
         group.MapLogin();

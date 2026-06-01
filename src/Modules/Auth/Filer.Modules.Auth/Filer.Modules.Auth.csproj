@@ -6,6 +6,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Filer.Modules.Auth.Contracts\Filer.Modules.Auth.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\Filer.WebKernel\Filer.WebKernel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shared web-layer kernel: cross-cutting ASP.NET Core conventions every module's
+       endpoints rely on — the Error -> problem-details mapping and the versioned API
+       route prefixes. The web sibling of Filer.SharedKernel, which deliberately stays
+       free of web concerns. Module implementations reference this project; it
+       references SharedKernel only and never a module or a *.Contracts project
+       (10-solution-structure.md, ADR-006). Common settings come from
+       Directory.Build.props. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

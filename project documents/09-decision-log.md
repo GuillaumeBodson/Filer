@@ -316,3 +316,84 @@ instrumented:
   `05`'s redaction default; rejected.
 
 ---
+
+## ADR-006 — Shared web kernel for cross-cutting route and error-mapping conventions
+
+* **Date:** 2026-06-01
+* **Status:** Accepted
+
+### Context
+
+Two web-layer conventions are written identically by every module that exposes
+endpoints: the `Error` → RFC 7807 problem-details mapping (`03`/`05`) and the
+versioned API route prefix `/api/v1` (`03`). With only the Auth module built, both
+lived inside it — `ErrorResults` carried an explicit note that it could be
+"promoted to a shared web kernel via ADR" once a second consumer appeared, and the
+route prefix was a literal repeated between the endpoint group and the synthesized
+`Location` header.
+
+A second module (Documents, per the `08` build order) is a certainty, not a
+hypothesis, so the second consumer is guaranteed. The open question was where these
+conventions belong without violating the dependency rules (`10`): `SharedKernel` is
+the domain bottom layer and must stay free of web concerns, and `*.Contracts`
+projects must carry no infrastructure. A discussion also resolved that sharing the
+version prefix does **not** force lockstep versioning — a registry can expose `V1`,
+`V2`, … and each module picks its version independently.
+
+### Decision
+
+Introduce **`Filer.WebKernel`**, a shared web-layer library — the web sibling of
+`SharedKernel`.
+
+* It holds `ApiRoutes` (versioned prefixes: `V1 = "/api/v1"`, with later versions
+  added additively) and `ErrorResults` (the `Error` → problem-details mapping),
+  moved out of the Auth module.
+* It references `Filer.SharedKernel` (for `Error`/`Result`) and the ASP.NET Core
+  shared framework only; it never references a module or a `*.Contracts` project.
+* Module implementations reference it. A module **composes** its own base path from
+  the shared version — `AuthRoutes.BasePath = ApiRoutes.V1 + "/auth"` — keeping the
+  version atom central and the per-module segment module-owned.
+* Per-feature suffixes (`/register`, `/login`, `/me`) appear once each and stay
+  co-located with their slice (ADR-003).
+* This adds a sixth dependency rule in `10` for `Filer.Architecture.Tests` to
+  enforce.
+
+### Rationale
+
+* **Dedupes a fact, not a slice.** The error mapping and the version prefix are
+  single facts every module must agree on and that change together — exactly what
+  belongs in a shared component, unlike vertical-slice logic where ADR-003 prefers
+  duplication.
+* **Keeps the domain layer web-free.** Putting web conventions in `SharedKernel`
+  would expand its charter; a dedicated web kernel preserves the clean bottom of
+  the graph and the "contracts carry no infrastructure" rule.
+* **No lockstep versioning.** Exposing versions as additive constants lets modules
+  adopt `V2` independently, so centralising the prefix costs nothing in flexibility.
+* **Tests still guard the contract.** `ApiRoutes`/`ErrorResults` are referenced by
+  production code only; the integration tests restate routes and problem shapes
+  independently, so a route or status change still surfaces as a failing test
+  rather than recompiling silently.
+
+### Trade-offs accepted
+
+* A new shared project the moment the second consumer is certain, rather than after
+  it physically lands — accepted because the duplication and its drift risk
+  (group prefix vs. `Location`) already exist today, and the move is small and
+  reversible.
+* One more boundary for `Filer.Architecture.Tests` to assert. Accepted: an
+  unenforced boundary erodes (`10`).
+
+### Alternatives considered
+
+* **Leave both conventions in the Auth module and copy into each new module** —
+  honours "duplication beats premature sharing," but these are shared facts, not
+  slice logic; copying invites the mapping and the version prefix to drift across
+  modules. Rejected.
+* **Put the constants/mapping in `SharedKernel`** — no new project, but pushes
+  ASP.NET Core (`IResult`, route conventions) into the dependency-free domain layer
+  and through to every `*.Contracts` consumer. Rejected as a charter violation.
+* **A global single `/api/v1` constant with no version registry** — simplest, but
+  encodes an implicit all-modules-version-together assumption. Rejected in favour of
+  an additive `ApiRoutes` that keeps versions independent.
+
+---

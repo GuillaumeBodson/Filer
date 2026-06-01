@@ -1,13 +1,13 @@
 using Filer.SharedKernel.Results;
 using Microsoft.AspNetCore.Http;
 
-namespace Filer.Modules.Auth.Web;
+namespace Filer.WebKernel;
 
 /// <summary>
 /// Maps a domain <see cref="Error"/> to an RFC 7807-style problem result
-/// (03-api-specification.md). Lives in the module for now; if a second module
-/// needs the identical mapping it can be promoted to a shared web kernel via ADR
-/// (10-solution-structure.md — duplication is preferred over premature sharing).
+/// (03-api-specification.md). Promoted from the Auth module to this shared web
+/// kernel (ADR-006) so every module's endpoints map failures identically — the
+/// second consumer the original in-module note anticipated has arrived.
 /// </summary>
 public static class ErrorResults
 {
