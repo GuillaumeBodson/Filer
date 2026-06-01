@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
 using Testcontainers.PostgreSql;
 using Xunit;
 
@@ -20,52 +18,43 @@ namespace Filer.IntegrationTests.Infrastructure;
 /// </list>
 /// The host applies its EF migrations at startup (<c>Program.cs</c>), so the schema
 /// is created against whichever database is resolved here.
+///
+/// <para>
+/// Configuration is supplied through <b>environment variables</b>, deliberately not
+/// through <c>ConfigureAppConfiguration</c>. The Auth module reads the <c>Jwt</c>
+/// section and the Postgres connection string <i>eagerly</i> inside
+/// <c>AddAuthModule</c>, which runs while <c>Program</c> is still configuring the
+/// builder — before <see cref="WebApplicationFactory{TEntryPoint}"/> merges any
+/// <c>ConfigureAppConfiguration</c> source. Environment variables are part of the
+/// default configuration <c>CreateBuilder</c> reads up front, so they are visible to
+/// that eager read; in-memory sources are not. The signing key is a test-only value
+/// of ≥32 chars (satisfies <c>JwtOptions</c> validation — 05-security.md).
+/// </para>
 /// </summary>
 public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private const string ExternalConnectionEnvVar = "ConnectionStrings__Postgres";
+    private const string ConnectionEnvVar = "ConnectionStrings__Postgres";
 
     // Non-null only when this process owns the database lifecycle (local/dev).
     private readonly PostgreSqlContainer? _postgres;
 
-    // The connection string the host is configured with, known after InitializeAsync.
-    private string _connectionString;
-
     public FilerApiFactory()
     {
-        string? external = Environment.GetEnvironmentVariable(ExternalConnectionEnvVar);
-
+        string? external = Environment.GetEnvironmentVariable(ConnectionEnvVar);
         if (string.IsNullOrWhiteSpace(external))
         {
             _postgres = new PostgreSqlBuilder()
                 .WithImage("postgres:17")
                 .Build();
-            _connectionString = string.Empty; // filled in once the container starts
         }
-        else
-        {
-            _connectionString = external;
-        }
-    }
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
-    {
-        builder.UseEnvironment("Testing");
-
-        // Added after the host's appsettings sources, so these win. Supplies the
-        // resolved Postgres plus a self-contained JWT config (the signing key is
-        // test-only and ≥32 chars to satisfy JwtOptions validation — 05-security.md).
-        builder.ConfigureAppConfiguration((_, config) =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:Postgres"] = _connectionString,
-                ["Jwt:Issuer"] = "filer-test",
-                ["Jwt:Audience"] = "filer-test-clients",
-                ["Jwt:SigningKey"] = "filer-integration-test-signing-key-which-is-long-enough",
-                ["Jwt:AccessTokenMinutes"] = "15",
-            });
-        });
+        // Set before the host is built (lazily, on first CreateClient — always after
+        // this constructor). See the type remarks for why env vars, not in-memory.
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
+        Environment.SetEnvironmentVariable("Jwt__Issuer", "filer-test");
+        Environment.SetEnvironmentVariable("Jwt__Audience", "filer-test-clients");
+        Environment.SetEnvironmentVariable("Jwt__SigningKey", "filer-integration-test-signing-key-which-is-long-enough");
+        Environment.SetEnvironmentVariable("Jwt__AccessTokenMinutes", "15");
     }
 
     async Task IAsyncLifetime.InitializeAsync()
@@ -73,7 +62,10 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
         if (_postgres is not null)
         {
             await _postgres.StartAsync();
-            _connectionString = _postgres.GetConnectionString();
+            // Must be present as an env var before the host builds, for the same
+            // eager-read reason as the JWT config. In CI the Postgres service already
+            // exports this variable, so this branch is skipped.
+            Environment.SetEnvironmentVariable(ConnectionEnvVar, _postgres.GetConnectionString());
         }
     }
 
@@ -81,6 +73,7 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
     {
         if (_postgres is not null)
         {
+            Environment.SetEnvironmentVariable(ConnectionEnvVar, null);
             await _postgres.DisposeAsync();
         }
 
