@@ -78,3 +78,8 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 
 app.Run();
+
+// The top-level statements above compile into an internal Program class. Expose it
+// as a public partial so Filer.IntegrationTests can bootstrap the real host through
+// WebApplicationFactory<Program> (12-testing-strategy.md). No behaviour is added.
+public partial class Program;
