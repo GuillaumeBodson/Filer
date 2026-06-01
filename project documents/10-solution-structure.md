@@ -46,6 +46,7 @@ Full rationale lives in ADR-004 (`09-decision-log.md`).
 ├── src/
 │   ├── Filer.Api/                 # ASP.NET Core host — composition root
 │   ├── Filer.SharedKernel/        # cross-cutting primitives, no business logic
+│   ├── Filer.WebKernel/           # shared web conventions (routes, error mapping)
 │   ├── Modules/                   # one folder per module (see below)
 │   └── Clients/                   # Blazor / MAUI front-ends (summarized below)
 └── tests/
@@ -108,6 +109,17 @@ does not force the decision now.
   a UTC clock abstraction, and the ownership/authorization marker interfaces.
 * Depends on nothing else in the solution. No business rules, no persistence.
 
+### `Filer.WebKernel`
+
+* The web sibling of `SharedKernel`: cross-cutting ASP.NET Core conventions every
+  module's endpoints rely on — the `Error` → problem-details mapping (`03`) and the
+  versioned API route prefixes (`ApiRoutes.V1`, …). Each module composes its own base
+  path from these (`ApiRoutes.V1 + "/auth"`) while keeping ownership of its segment.
+* References `Filer.SharedKernel` only (for `Error`/`Result`) plus the ASP.NET Core
+  shared framework. Never references a module or a `*.Contracts` project. Kept
+  separate from `SharedKernel` precisely so web concerns stay out of the domain
+  bottom layer (ADR-006).
+
 ### `Filer.Modules.* ` (implementation)
 
 * The module's entities, EF Core `DbContext`, migrations, feature slices, and
@@ -143,12 +155,17 @@ the compiler and by `Filer.Architecture.Tests`.
 5. **Infrastructure stays behind its abstraction.** Domain and feature code
    depends on `IFileStorageProvider` / `IAIAnalysisProvider` (from Contracts),
    never on a concrete provider (`05`, `07`, `08`).
+6. **WebKernel is web-only and module-agnostic.** Module implementations may
+   reference `Filer.WebKernel`; it references `SharedKernel` (plus the ASP.NET Core
+   framework) only, and never a module or a `*.Contracts` project (ADR-006). A
+   `*.Contracts` project must not reference it — contracts stay web-free.
 
 Allowed direction, in short:
 
 ```
 Filer.Api ──▶ Modules.*  (impl, for registration only)
 Modules.* (impl) ──▶ own Contracts ──▶ other Modules' Contracts ──▶ SharedKernel
+Modules.* (impl) ──▶ WebKernel ──▶ SharedKernel
 Modules.*.Contracts ──▶ SharedKernel
 ```
 

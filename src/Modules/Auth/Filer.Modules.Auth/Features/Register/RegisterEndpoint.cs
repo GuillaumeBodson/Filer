@@ -1,5 +1,5 @@
-using Filer.Modules.Auth.Web;
 using Filer.SharedKernel.Results;
+using Filer.WebKernel;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -22,7 +22,7 @@ public static class RegisterEndpoint
             Result<RegisterResponse> result = await service.HandleAsync(request, ct);
 
             return result.IsSuccess
-                ? Results.Created($"/api/v1/auth/users/{result.Value.Id}", result.Value)
+                ? Results.Created($"{AuthRoutes.BasePath}/users/{result.Value.Id}", result.Value)
                 : result.Error!.ToHttpResult();
         })
         .WithName("Register")
