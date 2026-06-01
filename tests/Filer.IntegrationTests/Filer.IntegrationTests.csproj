@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Integration tests: a slice end to end through the real HTTP pipeline and a
+       real Postgres. One project for the whole API surface, mirroring the host
+       rather than a single module (10/12-testing-strategy.md). Locally the harness
+       owns an ephemeral Postgres via Testcontainers; in CI it reuses the Postgres
+       service when ConnectionStrings__Postgres is provided. -->
+
+  <ItemGroup>
+    <!-- Reference the host for WebApplicationFactory<Program>, and Auth.Contracts
+         for the stable error codes / claim names asserted in tests. -->
+    <ProjectReference Include="..\..\src\Filer.Api\Filer.Api.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Auth\Filer.Modules.Auth.Contracts\Filer.Modules.Auth.Contracts.csproj" />
+  </ItemGroup>
+
+  <!-- ProblemDetails, IWebHostBuilder and the test host pull in the shared
+       framework; declare it so the test assembly resolves them. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+
+</Project>

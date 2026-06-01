@@ -11,6 +11,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Filer.SharedKernel.Tests/Filer.SharedKernel.Tests.csproj" />
     <Project Path="tests/Filer.Modules.Auth.Tests/Filer.Modules.Auth.Tests.csproj" />
+    <Project Path="tests/Filer.IntegrationTests/Filer.IntegrationTests.csproj" />
   </Folder>
   <Project Path="docker-compose.dcproj">
     <Build />
