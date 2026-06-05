@@ -292,8 +292,8 @@ never changes the module's public contract.
 
 ## Boundary Enforcement
 
-`Filer.Architecture.Tests` (using an architecture-rules library such as
-NetArchTest) asserts the dependency rules as executable tests, run in CI:
+`Filer.Architecture.Tests` (using `NetArchTest.eNhancedEdition`, the maintained
+fork of NetArchTest) asserts the dependency rules as executable tests, run in CI:
 
 * no `Filer.Modules.X` references `Filer.Modules.Y` (only `*.Contracts`);
 * no `*.Contracts` project references EF Core or another module;
@@ -322,5 +322,6 @@ any document feature is added.
   organization module (revisit after the first slices are built).
 * Whether in-process integration events need a lightweight dispatcher or can stay
   as direct interface calls in V1 (`06`).
-* Exact architecture-test tooling and the CI gate that runs it (ties into the
-  not-yet-written CI/CD doc).
+* ~~Exact architecture-test tooling and the CI gate that runs it.~~ Resolved:
+  `NetArchTest.eNhancedEdition`, asserted by `Filer.Architecture.Tests` and run
+  in the existing `build-test` job via `dotnet test Filer.slnx` (`11-git-workflow.md`).
