@@ -69,6 +69,16 @@ Every feature slice merges with, at minimum:
   ownership applies — it is the single most important behavioural guarantee in the
   system and must never regress.
 
+  Until the first owned-resource module (Documents, `08` build order) exists,
+  this guarantee is proven against a **temporary, `Testing`-environment-only
+  probe**: `Filer.Api/Infrastructure/OwnershipProbeEndpoints.cs` maps a throwaway
+  owned resource, and `OwnershipProbeTests` drives the real JWT → `ICurrentUser`
+  → `OwnershipGuard` → problem-details chain through it to assert cross-owner →
+  404 ahead of any real resource. The probe is scaffolding, not a fixture: it is
+  gated to the Testing environment (never shipped) and is **deleted** when
+  Documents lands and the live `OwnershipTests` (today skipped) take the
+  guarantee over against a real resource.
+
 ### Security-critical behaviours that always require a test
 
 These come from `05`/`04` and are not optional once the relevant slice exists:
@@ -169,3 +179,6 @@ pass. `build-test` remains the single required status check for branch protectio
   matrix of provider configs once more `IAIAnalysisProvider` adapters exist.
 * Mutation testing (e.g. Stryker.NET) as a later quality ratchet — deferred, noted
   so it is not forgotten.
+* Remove the temporary ownership probe (`OwnershipProbeEndpoints` +
+  `OwnershipProbeTests`) once the Documents slice lands and the live
+  `OwnershipTests` cover cross-owner → 404 against a real owned resource.
