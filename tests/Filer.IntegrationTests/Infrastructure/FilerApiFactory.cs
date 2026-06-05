@@ -43,8 +43,7 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
         string? external = Environment.GetEnvironmentVariable(ConnectionEnvVar);
         if (string.IsNullOrWhiteSpace(external))
         {
-            _postgres = new PostgreSqlBuilder()
-                .WithImage("postgres:17")
+            _postgres = new PostgreSqlBuilder("postgres:17")
                 .Build();
         }
 
