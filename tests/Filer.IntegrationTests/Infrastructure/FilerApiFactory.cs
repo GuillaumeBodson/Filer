@@ -56,7 +56,7 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
         Environment.SetEnvironmentVariable("Jwt__AccessTokenMinutes", "15");
     }
 
-    async Task IAsyncLifetime.InitializeAsync()
+    async ValueTask IAsyncLifetime.InitializeAsync()
     {
         if (_postgres is not null)
         {
@@ -68,7 +68,7 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
         }
     }
 
-    async Task IAsyncLifetime.DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         if (_postgres is not null)
         {
