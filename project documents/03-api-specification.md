@@ -110,8 +110,9 @@ it never blocks on AI processing.
 | PATCH  | `/api/v1/folders/{id}`           | Rename or move folder              |
 | DELETE | `/api/v1/folders/{id}`           | Soft-delete folder                 |
 
-Deleting a non-empty folder: behavior to confirm (reject vs cascade vs move
-children to parent) — see open questions in `02`.
+Deleting a non-empty folder: **reject with `409` by default; opt-in cascade
+soft-delete via `?recursive=true`** (no silent reparenting). Resolved in
+ADR-007 (`09`).
 
 ---
 
@@ -170,6 +171,4 @@ Maps to the modular-monolith modules (ADR-003):
 * Non-empty folder deletion semantics.
 * Whether `PUT /documents/{id}/tags` distinguishes user vs AI-sourced tags on
   replace (model supports `Source`).
-* Bulk operations (multi-delete, multi-move) — deferred unless needed.
-
----
+* Bulk operations (multi-delete, multi-move

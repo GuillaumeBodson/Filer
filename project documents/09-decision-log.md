@@ -397,3 +397,95 @@ Introduce **`Filer.WebKernel`**, a shared web-layer library — the web sibling 
   an additive `ApiRoutes` that keeps versions independent.
 
 ---
+
+## ADR-007 — Non-empty folder deletion: reject by default, explicit opt-in cascade
+
+* **Date:** 2026-06-05
+* **Status:** Proposed (awaiting ratification)
+
+### Context
+
+`DELETE /api/v1/folders/{id}` soft-deletes a folder (`03`), but the behavior when
+the folder still contains documents or sub-folders was left open: reject, cascade,
+or move children to the parent (`02` open questions, `03`). Backlog issue **#44
+"Folders: delete (non-empty semantics)"** is blocked on this entry.
+
+The surrounding model constrains the choice. Folders and documents use **soft
+delete** (`DeletedAt`), and the data model states recoverability is exactly why
+(`02`). Folders form a self-referencing hierarchy with a `ParentId` (`NULL` = top
+level) and a unique `(OwnerId, ParentId, Name)` constraint (`02`). V1 is
+single-user and personal (`00`/`01`); the product philosophy is advisory and keeps
+the user in control of destructive actions (`01`). The three candidate behaviors
+trade off differently against those facts:
+
+* **Reject** — safe and predictable, but forces the client to empty the folder
+  first.
+* **Cascade** — convenient, but couples a folder's lifecycle to its documents'.
+* **Move-to-parent** — loses nothing, but silently relocates a user's files as a
+  side effect of a delete, which is surprising for a personal-document tool.
+
+### Decision
+
+**Reject non-empty deletion by default; support an explicit, opt-in recursive
+cascade.**
+
+* `DELETE /api/v1/folders/{id}` with no flag: if the folder has any non-deleted
+  child folder or document, return **`409 Conflict`** (standard problem-details,
+  `03`) and make no change. An empty folder soft-deletes as today.
+* `DELETE /api/v1/folders/{id}?recursive=true`: **cascade soft-delete** the folder
+  and its entire non-deleted subtree — descendant folders and the documents within
+  them — in one transaction, each row stamped with the same `DeletedAt`.
+* Cascade is **soft only**: bytes in the storage provider are untouched (`07`);
+  the subtree remains recoverable, consistent with the soft-delete rationale (`02`).
+* Documents soft-deleted by cascade have their queued/running `AnalysisJob`s
+  cancelled, identical to a direct document delete (ADR per `06`, issue #38).
+* No silent reparenting: a delete never moves a user's content to a different
+  folder.
+* Ownership is enforced over the whole subtree; cross-owner access anywhere returns
+  **404 not 403** (`05`).
+
+### Rationale
+
+* **Safe default, no surprises.** Rejecting a non-empty delete means no content
+  ever disappears or moves without an explicit instruction — the right default for
+  a personal-document tool where the folder *is* the user's filing (`01`).
+* **Cascade is honest and reversible.** When the user does intend to remove a
+  subtree, one opt-in flag does it, and because the cascade is soft the action
+  stays recoverable — leaning on machinery `02` already mandates rather than
+  introducing hard deletes.
+* **Rejects silent relocation.** Move-to-parent is the most "lossless" option on
+  paper but mutates the user's organization as a side effect of an unrelated verb;
+  rejected as astonishing.
+* **Consistent with existing delete semantics.** Cascade reuses the document
+  soft-delete + job-cancellation behavior (`06`, #38), so there is one delete story,
+  not two.
+
+### Trade-offs accepted
+
+* A two-step UX for the common "delete this whole folder" case (try → 409 → retry
+  with `recursive=true`, or the client surfaces a confirm). Accepted: an explicit
+  destructive action is worth one extra round-trip.
+* A recursive soft-delete must walk a potentially deep subtree in a single
+  transaction. Accepted for V1's personal scale; if depth/volume grows it can move
+  to a background job without changing the contract (the `recursive` flag stays).
+* **Restore semantics are deferred.** Cascade stamps a shared `DeletedAt` so a
+  subtree *can* be restored coherently later, but no restore endpoint is specified
+  in V1 — flagged as a follow-up, not resolved here.
+* Does **not** resolve maximum folder nesting depth (`02`), which remains a separate
+  open question.
+
+### Alternatives considered
+
+* **Always reject (no cascade).** Simplest and safest, but pushes recursive
+  client-side deletion (walk the tree, delete leaves up) onto every client for a
+  routine operation; rejected as offloading avoidable work.
+* **Always cascade (no flag).** Fewest round-trips, but makes the destructive,
+  whole-subtree case the unguarded default — too easy to wipe a filing tree by
+  deleting one folder; rejected.
+* **Move children to parent (or root).** Never loses data, but silently relocates
+  the user's documents as a side effect of a delete and can collide with the
+  `(OwnerId, ParentId, Name)` uniqueness constraint on merge; rejected as
+  surprising and constraint-fragile.
+* **Hard delete on cascade.** Frees storage immediately, but discards the
+  recoverability `02` is built around and would require deleting provider bytes
+  inline; rejected for V1.

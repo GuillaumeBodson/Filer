@@ -97,6 +97,8 @@ Hierarchical organization. A folder belongs to one owner and may have a parent.
 
 Constraint: unique `(OwnerId, ParentId, Name)`. Cycles must be prevented in
 application logic. Decision pending: maximum nesting depth (see open questions).
+Non-empty deletion semantics are resolved in ADR-007 (`09`): reject with `409` by
+default, opt-in cascade soft-delete via `?recursive=true`.
 
 ### Tag
 
@@ -187,7 +189,4 @@ is a later enhancement layered on top, not a V1 requirement.
 * Maximum folder nesting depth (or unlimited with cycle prevention only).
 * Whether a document may belong to multiple folders (current model: single
   folder). If yes, replace `FolderId` with a join table.
-* Supported file types and maximum upload size (belongs in `04-non-functional`).
-* Tag scope when SaaS arrives: per-user vs shared per-tenant.
-
----
+* Support
