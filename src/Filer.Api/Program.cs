@@ -2,6 +2,7 @@ using System.Text.Json;
 using Filer.Api.Infrastructure;
 using Filer.Modules.Auth;
 using Filer.Modules.Auth.Persistence;
+using Filer.SharedKernel.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,6 +49,12 @@ builder.Services.AddAuthModule(builder.Configuration);
 
 builder.Services.AddAuthorization();
 
+// Resolve the authenticated caller from the validated token's claims so feature
+// services and the OwnershipGuard never trust a client-supplied id (05-security.md).
+// The adapter reads the current ClaimsPrincipal via the HTTP context accessor.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
+
 var app = builder.Build();
 
 // Apply pending migrations for each module's DbContext at startup so the
@@ -76,6 +83,14 @@ app.UseAuthorization();
 
 // Each module assembles its routes from its own slices.
 app.MapAuthEndpoints();
+
+// Test-only: a throwaway owned resource that exercises the ownership primitive end
+// to end (cross-owner → 404) until the first real owned-resource module lands. Gated
+// to the Testing environment so it never ships (Infrastructure/OwnershipProbeEndpoints.cs).
+if (app.Environment.IsEnvironment("Testing"))
+{
+    app.MapOwnershipProbeEndpoints();
+}
 
 app.Run();
 
