@@ -28,7 +28,7 @@ public sealed class RegisterEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        RegisterResult? body = await response.Content.ReadFromJsonAsync<RegisterResult>();
+        RegisterResult? body = await response.Content.ReadFromJsonAsync<RegisterResult>(CancellationToken.None);
         body.Should().NotBeNull();
         body!.Id.Should().NotBe(Guid.Empty);
         body.Email.Should().Be(request.Email);
@@ -48,7 +48,7 @@ public sealed class RegisterEndpointTests(FilerApiFactory factory)
         HttpResponseMessage duplicate = await client.RegisterAsync(request);
 
         duplicate.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        ProblemDetails? problem = await duplicate.Content.ReadFromJsonAsync<ProblemDetails>();
+        ProblemDetails? problem = await duplicate.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
         problem!.Title.Should().Be(AuthErrorCodes.EmailTaken);
     }
 
@@ -61,7 +61,7 @@ public sealed class RegisterEndpointTests(FilerApiFactory factory)
         HttpResponseMessage response = await client.RegisterAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
         problem!.Title.Should().Be(AuthErrorCodes.Email);
     }
 
@@ -74,7 +74,7 @@ public sealed class RegisterEndpointTests(FilerApiFactory factory)
         HttpResponseMessage response = await client.RegisterAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
         problem!.Title.Should().Be(AuthErrorCodes.Password);
     }
 }

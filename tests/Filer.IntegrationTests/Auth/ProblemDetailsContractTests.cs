@@ -26,7 +26,7 @@ public sealed class ProblemDetailsContractTests(FilerApiFactory factory)
 
         response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
 
-        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
         problem.Should().NotBeNull();
         problem!.Status.Should().Be((int)response.StatusCode);
         problem.Title.Should().NotBeNullOrWhiteSpace();
@@ -39,7 +39,7 @@ public sealed class ProblemDetailsContractTests(FilerApiFactory factory)
         HttpClient client = _factory.CreateClient();
 
         HttpResponseMessage response = await client.LoginAsync(TestData.UniqueEmail(), TestData.ValidPassword);
-        string body = await response.Content.ReadAsStringAsync();
+        string body = await response.Content.ReadAsStringAsync(CancellationToken.None);
 
         body.Should().NotContainEquivalentOf("stackTrace");
         body.Should().NotContainEquivalentOf("at Filer.");
