@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Boundary-rule enforcement (10-solution-structure.md, "Boundary Enforcement").
+       Encodes the dependency rules as executable tests so a violation fails the
+       build in CI, not just review. Uses NetArchTest.eNhancedEdition (the
+       maintained fork of NetArchTest) for type-level dependency checks, plus
+       plain reflection over the assembly graph where project-reference precision
+       is what the rule is actually about.
+
+       Only the host is referenced: Filer.Api is the composition root and pulls in
+       every module implementation (to register it) and, transitively, every
+       *.Contracts and kernel assembly. The whole production closure therefore
+       lands in this project's output, so new modules come under test the moment
+       they are wired into the host - no per-module reference to maintain here. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Filer.Api\Filer.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="NetArchTest.eNhancedEdition" />
+  </ItemGroup>
+
+</Project>
