@@ -75,9 +75,13 @@ Every feature slice merges with, at minimum:
   owned resource, and `OwnershipProbeTests` drives the real JWT → `ICurrentUser`
   → `OwnershipGuard` → problem-details chain through it to assert cross-owner →
   404 ahead of any real resource. The probe is scaffolding, not a fixture: it is
-  gated to the Testing environment (never shipped) and is **deleted** when
-  Documents lands and the live `OwnershipTests` (today skipped) take the
-  guarantee over against a real resource.
+  gated to the Testing environment (never shipped). Its **removal trigger is
+  defined**: the `Documents: get metadata` slice (`GET /api/v1/documents/{id}`,
+  milestone M3, issue **#35**) — the same endpoint the skipped `OwnershipTests`
+  waits on. When #35 lands, the probe and `OwnershipProbeTests` are deleted and
+  `OwnershipTests` takes the guarantee over against a real resource; deleting the
+  probe is an acceptance criterion on #35, so it cannot be closed with the
+  scaffold still present.
 
 ### Security-critical behaviours that always require a test
 
@@ -180,5 +184,6 @@ pass. `build-test` remains the single required status check for branch protectio
 * Mutation testing (e.g. Stryker.NET) as a later quality ratchet — deferred, noted
   so it is not forgotten.
 * Remove the temporary ownership probe (`OwnershipProbeEndpoints` +
-  `OwnershipProbeTests`) once the Documents slice lands and the live
-  `OwnershipTests` cover cross-owner → 404 against a real owned resource.
+  `OwnershipProbeTests`) when `Documents: get metadata` (issue **#35**, milestone
+  M3) lands and the live `OwnershipTests` cover cross-owner → 404 against a real
+  owned resource. Tracked as an acceptance criterion on #35.

@@ -210,6 +210,7 @@ Documents: get metadata,M3 — Upload pipeline,"type:feature,module:documents","
 - [ ] Owner -> metadata DTO (no entity leakage)
 - [ ] Cross-owner / missing -> 404
 - [ ] Unit test for mapping; integration: ownership -> 404
+- [ ] Remove the temporary ownership probe: delete OwnershipProbeEndpoints + OwnershipProbeTests and enable the skipped OwnershipTests against this endpoint (12-testing-strategy.md)
 
 **Definition of Done** (`13`): warnings-as-errors clean; `Result`/`Error` for business outcomes (no exceptions); `CancellationToken` propagated; structured logs, no secrets logged; required tests present (`12`).
 

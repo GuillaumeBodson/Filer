@@ -16,8 +16,10 @@ namespace Filer.IntegrationTests.Ownership;
 public sealed class OwnershipTests
 {
     [Fact(Skip = "Pending the first owned resource (Documents module). Enable when GET " +
-                 "/api/v1/documents/{id} exists: owner A creates a document, owner B " +
-                 "requests it, expect 404 (not 403/200). See 05-security.md.")]
+                 "/api/v1/documents/{id} exists (issue #35): owner A creates a document, " +
+                 "owner B requests it, expect 404 (not 403/200). When enabling, delete the " +
+                 "temporary OwnershipProbeEndpoints + OwnershipProbeTests. See 05-security.md, " +
+                 "12-testing-strategy.md.")]
     public void CrossOwnerAccessToOwnedResource_Returns404()
     {
         // Arrange: register owner A and owner B (RegisterAndAuthenticateAsync).
