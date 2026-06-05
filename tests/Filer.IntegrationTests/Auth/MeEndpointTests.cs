@@ -21,7 +21,7 @@ public sealed class MeEndpointTests(FilerApiFactory factory)
     {
         HttpClient client = _factory.CreateClient();
 
-        HttpResponseMessage response = await client.GetAsync("/api/v1/auth/me");
+        HttpResponseMessage response = await client.GetAsync("/api/v1/auth/me", CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -31,7 +31,7 @@ public sealed class MeEndpointTests(FilerApiFactory factory)
     {
         HttpClient client = _factory.CreateClient().WithBearer("this.is.not-a-valid-jwt");
 
-        HttpResponseMessage response = await client.GetAsync("/api/v1/auth/me");
+        HttpResponseMessage response = await client.GetAsync("/api/v1/auth/me", CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -43,10 +43,10 @@ public sealed class MeEndpointTests(FilerApiFactory factory)
         AuthenticatedUser user = await client.RegisterAndAuthenticateAsync();
         client.WithBearer(user.AccessToken);
 
-        HttpResponseMessage response = await client.GetAsync("/api/v1/auth/me");
+        HttpResponseMessage response = await client.GetAsync("/api/v1/auth/me", CancellationToken.None);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        MeResult? me = await response.Content.ReadFromJsonAsync<MeResult>();
+        MeResult? me = await response.Content.ReadFromJsonAsync<MeResult>(CancellationToken.None);
         me.Should().NotBeNull();
         me!.Id.Should().Be(user.Id);
         me.Email.Should().Be(user.Email);

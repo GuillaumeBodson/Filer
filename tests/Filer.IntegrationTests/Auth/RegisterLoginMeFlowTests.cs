@@ -24,16 +24,16 @@ public sealed class RegisterLoginMeFlowTests(FilerApiFactory factory)
 
         HttpResponseMessage register = await client.RegisterAsync(account);
         register.StatusCode.Should().Be(HttpStatusCode.Created);
-        RegisterResult registered = (await register.Content.ReadFromJsonAsync<RegisterResult>())!;
+        RegisterResult registered = (await register.Content.ReadFromJsonAsync<RegisterResult>(CancellationToken.None))!;
 
         HttpResponseMessage login = await client.LoginAsync(account.Email, account.Password);
         login.StatusCode.Should().Be(HttpStatusCode.OK);
-        LoginResult token = (await login.Content.ReadFromJsonAsync<LoginResult>())!;
+        LoginResult token = (await login.Content.ReadFromJsonAsync<LoginResult>(CancellationToken.None))!;
 
         client.WithBearer(token.AccessToken);
-        HttpResponseMessage me = await client.GetAsync("/api/v1/auth/me");
+        HttpResponseMessage me = await client.GetAsync("/api/v1/auth/me", CancellationToken.None);
         me.StatusCode.Should().Be(HttpStatusCode.OK);
-        MeResult profile = (await me.Content.ReadFromJsonAsync<MeResult>())!;
+        MeResult profile = (await me.Content.ReadFromJsonAsync<MeResult>(CancellationToken.None))!;
 
         profile.Id.Should().Be(registered.Id);
         profile.Email.Should().Be(account.Email);

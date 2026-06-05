@@ -28,7 +28,7 @@ public sealed class LoginEndpointTests(FilerApiFactory factory)
         HttpResponseMessage response = await client.LoginAsync(account.Email, account.Password);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        LoginResult? token = await response.Content.ReadFromJsonAsync<LoginResult>();
+        LoginResult? token = await response.Content.ReadFromJsonAsync<LoginResult>(CancellationToken.None);
         token.Should().NotBeNull();
         token!.AccessToken.Should().NotBeNullOrWhiteSpace();
         token.TokenType.Should().Be("Bearer");
@@ -45,7 +45,7 @@ public sealed class LoginEndpointTests(FilerApiFactory factory)
         HttpResponseMessage response = await client.LoginAsync(account.Email, "WrongPassword!1");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
         problem!.Title.Should().Be(AuthErrorCodes.InvalidCredentials);
     }
 
@@ -57,7 +57,7 @@ public sealed class LoginEndpointTests(FilerApiFactory factory)
         HttpResponseMessage response = await client.LoginAsync(TestData.UniqueEmail(), TestData.ValidPassword);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
         problem!.Title.Should().Be(AuthErrorCodes.InvalidCredentials);
     }
 }
