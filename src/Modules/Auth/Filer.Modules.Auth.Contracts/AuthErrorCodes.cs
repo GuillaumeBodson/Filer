@@ -23,4 +23,13 @@ public static class AuthErrorCodes
 
     /// <summary>The supplied credentials did not match an account.</summary>
     public const string InvalidCredentials = "invalid_credentials";
+
+    /// <summary>The refresh-token field was missing or empty.</summary>
+    public const string RefreshToken = "refresh_token";
+
+    /// <summary>
+    /// The presented refresh token was unknown, expired, already used, or revoked.
+    /// Deliberately generic so the API never distinguishes the cause (05-security.md).
+    /// </summary>
+    public const string InvalidRefreshToken = "invalid_refresh_token";
 }

@@ -84,4 +84,44 @@ public sealed class JwtTokenServiceTests
 
         decoded.Claims.Should().NotContain(c => c.Type == AuthClaimTypes.TenantId);
     }
+
+    [Fact]
+    public void CreateRefreshToken_ReturnsRawTokenWhoseHashMatchesHashRefreshToken()
+    {
+        JwtTokenService sut = CreateSut();
+
+        RefreshTokenMaterial material = sut.CreateRefreshToken();
+
+        material.RawToken.Should().NotBeNullOrWhiteSpace();
+        material.TokenHash.Should().NotBe(material.RawToken, "the raw token is never stored in clear (05-security.md)");
+        material.TokenHash.Should().Be(sut.HashRefreshToken(material.RawToken));
+    }
+
+    [Fact]
+    public void CreateRefreshToken_ExpiresAtClockTimePlusConfiguredDays()
+    {
+        RefreshTokenMaterial material = CreateSut().CreateRefreshToken();
+
+        material.ExpiresAt.Should().Be(Now.AddDays(Options.RefreshTokenDays));
+    }
+
+    [Fact]
+    public void CreateRefreshToken_ProducesAUniqueValueEachCall()
+    {
+        JwtTokenService sut = CreateSut();
+
+        RefreshTokenMaterial first = sut.CreateRefreshToken();
+        RefreshTokenMaterial second = sut.CreateRefreshToken();
+
+        second.RawToken.Should().NotBe(first.RawToken);
+        second.TokenHash.Should().NotBe(first.TokenHash);
+    }
+
+    [Fact]
+    public void HashRefreshToken_IsDeterministicForTheSameInput()
+    {
+        JwtTokenService sut = CreateSut();
+
+        sut.HashRefreshToken("some-token").Should().Be(sut.HashRefreshToken("some-token"));
+    }
 }

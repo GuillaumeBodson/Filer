@@ -33,6 +33,8 @@ public sealed class LoginEndpointTests(FilerApiFactory factory)
         token!.AccessToken.Should().NotBeNullOrWhiteSpace();
         token.TokenType.Should().Be("Bearer");
         token.ExpiresAt.Should().BeAfter(DateTimeOffset.UtcNow);
+        token.RefreshToken.Should().NotBeNullOrWhiteSpace();
+        token.RefreshTokenExpiresAt.Should().BeAfter(token.ExpiresAt);
     }
 
     [Fact]
