@@ -15,6 +15,8 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options)
 {
     public const string Schema = "auth";
 
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -26,6 +28,24 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options)
             user.Property(u => u.Email).IsRequired();
             user.Property(u => u.CreatedAt);
             user.Property(u => u.UpdatedAt);
+        });
+
+        builder.Entity<RefreshToken>(token =>
+        {
+            token.ToTable("RefreshTokens");
+            token.HasKey(t => t.Id);
+
+            token.Property(t => t.TokenHash).IsRequired();
+            // Lookups at refresh time are by hash; it is unique per stored token.
+            token.HasIndex(t => t.TokenHash).IsUnique();
+            // Theft-detection revokes a whole family in one go — index the chain key.
+            token.HasIndex(t => t.FamilyId);
+            token.HasIndex(t => t.UserId);
+
+            token.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -20,11 +20,19 @@ public static class TestData
     public sealed record RegisterRequest(string Email, string Password);
 
     public sealed record LoginRequest(string Email, string Password);
+
+    public sealed record RefreshRequest(string RefreshToken);
 }
 
 /// <summary>Response shapes asserted by tests, matching the API's JSON output.</summary>
 public sealed record RegisterResult(Guid Id, string Email);
 
-public sealed record LoginResult(string AccessToken, DateTimeOffset ExpiresAt, string TokenType);
+public sealed record LoginResult(
+    string AccessToken, DateTimeOffset ExpiresAt, string RefreshToken,
+    DateTimeOffset RefreshTokenExpiresAt, string TokenType);
+
+public sealed record RefreshResult(
+    string AccessToken, DateTimeOffset ExpiresAt, string RefreshToken,
+    DateTimeOffset RefreshTokenExpiresAt, string TokenType);
 
 public sealed record MeResult(Guid Id, string Email);

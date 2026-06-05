@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Filer.Modules.Auth.Contracts;
 using Filer.Modules.Auth.Domain;
@@ -12,6 +13,9 @@ namespace Filer.Modules.Auth.Authentication;
 /// <summary>JWT implementation of <see cref="ITokenService"/>.</summary>
 public sealed class JwtTokenService(IOptions<JwtOptions> options, IClock clock) : ITokenService
 {
+    // 256 bits of entropy: collision- and guess-resistant, the opaque-token bar in 05-security.md.
+    private const int RefreshTokenBytes = 32;
+
     private readonly JwtOptions _options = options.Value;
     private readonly IClock _clock = clock;
 
@@ -45,5 +49,19 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options, IClock clock) 
 
         string encoded = new JwtSecurityTokenHandler().WriteToken(token);
         return new AccessToken(encoded, expiresAt);
+    }
+
+    public RefreshTokenMaterial CreateRefreshToken()
+    {
+        // Opaque, cryptographically random; URL-safe so it survives transport intact.
+        string rawToken = Base64UrlEncoder.Encode(RandomNumberGenerator.GetBytes(RefreshTokenBytes));
+        DateTimeOffset expiresAt = _clock.UtcNow.AddDays(_options.RefreshTokenDays);
+        return new RefreshTokenMaterial(rawToken, HashRefreshToken(rawToken), expiresAt);
+    }
+
+    public string HashRefreshToken(string rawToken)
+    {
+        byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(rawToken));
+        return Convert.ToHexString(hash);
     }
 }

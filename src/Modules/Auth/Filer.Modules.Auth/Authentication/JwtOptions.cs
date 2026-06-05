@@ -24,4 +24,8 @@ public sealed class JwtOptions
     /// <summary>Access-token lifetime; short-lived per 05-security.md (target 15 minutes).</summary>
     [Range(1, 1440)]
     public int AccessTokenMinutes { get; init; } = 15;
+
+    /// <summary>Refresh-token lifetime in days; long-lived per 05-security.md (default 14).</summary>
+    [Range(1, 365)]
+    public int RefreshTokenDays { get; init; } = 14;
 }

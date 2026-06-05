@@ -18,6 +18,9 @@ public static class ApiClientExtensions
         this HttpClient client, string email, string password) =>
         client.PostAsJsonAsync("/api/v1/auth/login", new TestData.LoginRequest(email, password));
 
+    public static Task<HttpResponseMessage> RefreshAsync(this HttpClient client, string refreshToken) =>
+        client.PostAsJsonAsync("/api/v1/auth/refresh", new TestData.RefreshRequest(refreshToken));
+
     /// <summary>
     /// Registers a fresh account and returns its credentials and a valid token —
     /// the standard arrange step for tests that need an authenticated caller.

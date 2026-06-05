@@ -3,6 +3,7 @@ using Filer.Modules.Auth.Authentication;
 using Filer.Modules.Auth.Domain;
 using Filer.Modules.Auth.Features.Login;
 using Filer.Modules.Auth.Features.Me;
+using Filer.Modules.Auth.Features.Refresh;
 using Filer.Modules.Auth.Features.Register;
 using Filer.Modules.Auth.Persistence;
 using Filer.SharedKernel.Configuration;
@@ -77,9 +78,13 @@ public static class AuthModule
                 };
             });
 
+        // Server-side refresh-token persistence (05-security.md).
+        services.AddScoped<IRefreshTokenStore, EfRefreshTokenStore>();
+
         // Feature services (vertical slices).
         services.AddScoped<RegisterService>();
         services.AddScoped<LoginService>();
+        services.AddScoped<RefreshService>();
 
         return services;
     }
@@ -90,6 +95,7 @@ public static class AuthModule
 
         group.MapRegister();
         group.MapLogin();
+        group.MapRefresh();
         group.MapMe();
 
         return routes;
