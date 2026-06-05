@@ -13,6 +13,11 @@ updates:
       # One PR for routine patch/minor bumps to keep review light for a solo dev.
       minor-and-patch:
         update-types: [minor, patch]
+    # FluentAssertions 8.x moved to a paid commercial licence; stay on the free
+    # 7.x (Apache-2.0) line. Patch/minor 7.x bumps still flow through.
+    ignore:
+      - dependency-name: "FluentAssertions"
+        update-types: ["version-update:semver-major"]
 
   # Keep the Actions in ci.yml current and patched.
   - package-ecosystem: github-actions
