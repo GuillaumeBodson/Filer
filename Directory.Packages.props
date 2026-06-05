@@ -20,14 +20,16 @@
 
   <!-- Test stack (12-testing-strategy.md). xUnit runner; FluentAssertions for
        readable failures; Moq at the designed seams; coverlet for coverage.
-       FluentAssertions is pinned to the 7.x line - the last version under the
-       free Apache-2.0 licence (8.x moved to a paid commercial licence). -->
+       FluentAssertions 8.x is used under the Xceed Community Licence, which is
+       free for non-commercial use; Filer is a personal, non-commercial project.
+       If this ever becomes commercial, a paid licence (or staying on 7.x) is
+       required. -->
   <ItemGroup>
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
     <PackageVersion Include="Moq" Version="4.20.72" />
-    <PackageVersion Include="FluentAssertions" Version="7.2.2" />
+    <PackageVersion Include="FluentAssertions" Version="8.10.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
     <!-- Architecture/boundary tests (10-solution-structure.md): assert the
          dependency rules as executable tests. eNhancedEdition is the maintained
