@@ -34,4 +34,13 @@ Content-Type: application/json
 GET {{Filer.Api_HostAddress}}/api/v1/auth/me
 Authorization: Bearer {{login.response.body.$.accessToken}}
 
+### Logout (revokes the refresh-token family; requires auth) -> 204
+POST {{Filer.Api_HostAddress}}/api/v1/auth/logout
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "refreshToken": "{{login.response.body.$.refreshToken}}"
+}
+
 ###

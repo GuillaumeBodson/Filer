@@ -22,6 +22,8 @@ public static class TestData
     public sealed record LoginRequest(string Email, string Password);
 
     public sealed record RefreshRequest(string RefreshToken);
+
+    public sealed record LogoutRequest(string RefreshToken);
 }
 
 /// <summary>Response shapes asserted by tests, matching the API's JSON output.</summary>

@@ -2,6 +2,7 @@ using System.Text;
 using Filer.Modules.Auth.Authentication;
 using Filer.Modules.Auth.Domain;
 using Filer.Modules.Auth.Features.Login;
+using Filer.Modules.Auth.Features.Logout;
 using Filer.Modules.Auth.Features.Me;
 using Filer.Modules.Auth.Features.Refresh;
 using Filer.Modules.Auth.Features.Register;
@@ -85,6 +86,7 @@ public static class AuthModule
         services.AddScoped<RegisterService>();
         services.AddScoped<LoginService>();
         services.AddScoped<RefreshService>();
+        services.AddScoped<LogoutService>();
 
         return services;
     }
@@ -96,6 +98,7 @@ public static class AuthModule
         group.MapRegister();
         group.MapLogin();
         group.MapRefresh();
+        group.MapLogout();
         group.MapMe();
 
         return routes;
