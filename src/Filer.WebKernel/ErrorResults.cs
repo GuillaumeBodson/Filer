@@ -19,6 +19,8 @@ public static class ErrorResults
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
             ErrorType.NotFound => StatusCodes.Status404NotFound,
             ErrorType.Conflict => StatusCodes.Status409Conflict,
+            ErrorType.PayloadTooLarge => StatusCodes.Status413PayloadTooLarge,
+            ErrorType.UnsupportedMediaType => StatusCodes.Status415UnsupportedMediaType,
             _ => StatusCodes.Status500InternalServerError,
         };
 

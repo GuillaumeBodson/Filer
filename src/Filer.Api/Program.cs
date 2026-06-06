@@ -3,6 +3,8 @@ using Filer.Api.Infrastructure;
 using Filer.Modules.Auth;
 using Filer.Modules.BackgroundJobs;
 using Filer.Modules.BackgroundJobs.Persistence;
+using Filer.Modules.Documents;
+using Filer.Modules.Documents.Persistence;
 using Filer.Modules.Storage;
 using Filer.Modules.Auth.Persistence;
 using Filer.SharedKernel.Authorization;
@@ -51,6 +53,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddBackgroundJobsModule(builder.Configuration);
 builder.Services.AddStorageModule(builder.Configuration);
+builder.Services.AddDocumentsModule(builder.Configuration);
 
 builder.Services.AddAuthorization();
 
@@ -73,6 +76,9 @@ await using (var scope = app.Services.CreateAsyncScope())
 
     var jobsDb = scope.ServiceProvider.GetRequiredService<JobsDbContext>();
     await jobsDb.Database.MigrateAsync();
+
+    var documentsDb = scope.ServiceProvider.GetRequiredService<DocumentsDbContext>();
+    await documentsDb.Database.MigrateAsync();
 }
 
 // Problem-details for unhandled exceptions and non-success status codes (03-api-specification.md).
@@ -98,6 +104,7 @@ app.UseAuthorization();
 
 // Each module assembles its routes from its own slices.
 app.MapAuthEndpoints();
+app.MapDocumentsEndpoints();
 
 // Test-only: a throwaway owned resource that exercises the ownership primitive end
 // to end (cross-owner → 404) until the first real owned-resource module lands. Gated

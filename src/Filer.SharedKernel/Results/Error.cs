@@ -19,6 +19,12 @@ public sealed record Error(ErrorType Type, string Code, string Message)
     public static Error Conflict(string message, string code = "conflict") =>
         new(ErrorType.Conflict, code, message);
 
+    public static Error PayloadTooLarge(string message, string code = "payload_too_large") =>
+        new(ErrorType.PayloadTooLarge, code, message);
+
+    public static Error UnsupportedMediaType(string message, string code = "unsupported_media_type") =>
+        new(ErrorType.UnsupportedMediaType, code, message);
+
     public static Error Unexpected(string message = "An unexpected error occurred.", string code = "unexpected") =>
         new(ErrorType.Unexpected, code, message);
 }
@@ -30,5 +36,12 @@ public enum ErrorType
     Unauthorized,
     NotFound,
     Conflict,
+
+    /// <summary>A request or file exceeds a configured size limit (04-non-functional.md) — 413.</summary>
+    PayloadTooLarge,
+
+    /// <summary>A declared or sniffed file type falls outside the allow-list (04/05) — 415.</summary>
+    UnsupportedMediaType,
+
     Unexpected,
 }

@@ -65,7 +65,15 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
         // table deterministically — the worker's orchestration is unit-tested at its
         // seams, the claim SQL is exercised here directly (12-testing-strategy.md).
         Environment.SetEnvironmentVariable("BackgroundJobs__Enabled", "false");
+        // Documents: shrink the upload ceiling (prod default 50 MB, 04) so the
+        // oversize→413 path is exercised with a 1 MB payload instead of a 50 MB
+        // one; eagerly read by AddDocumentsModule like the sections above.
+        Environment.SetEnvironmentVariable(
+            "Documents__MaxUploadBytes", MaxUploadBytes.ToString(System.Globalization.CultureInfo.InvariantCulture));
     }
+
+    /// <summary>The upload size ceiling the host under test runs with (1 MB).</summary>
+    public const long MaxUploadBytes = 1024 * 1024;
 
     async ValueTask IAsyncLifetime.InitializeAsync()
     {
