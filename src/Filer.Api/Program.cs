@@ -78,7 +78,14 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// Skip the HTTPS redirect in Development: local containers expose plain HTTP, and
+// tooling that injects an https port (e.g. VS container tools setting
+// ASPNETCORE_HTTPS_PORTS) would turn every http call into a 307 - clients drop the
+// Authorization header when following it, breaking authenticated endpoints.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
