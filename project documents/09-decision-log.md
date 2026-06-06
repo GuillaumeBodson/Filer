@@ -489,3 +489,100 @@ cascade.**
 * **Hard delete on cascade.** Frees storage immediately, but discards the
   recoverability `02` is built around and would require deleting provider bytes
   inline; rejected for V1.
+
+---
+
+## ADR-008 — Job dispatch: adopt RabbitMQ, keep PostgreSQL as the durable outbox
+
+* **Date:** 2026-06-06
+* **Status:** Accepted (implementation deferred until after M3)
+
+### Context
+
+Issue #32 shipped the V1 background-job infrastructure per `06`: the module-owned
+`AnalysisJob` table in the `jobs` schema is the durable work source, claimed by a
+polling hosted worker with `FOR UPDATE SKIP LOCKED`. `06` explicitly reserves "a
+dedicated message broker for the scale-out phase".
+
+For the project's measurable V1 needs (single user, low job volume), the
+DB-backed queue is sufficient — by throughput alone, a broker is **not** a
+pragmatic necessity today. The drivers for deciding now are different:
+
+1. **Learning value.** Filer is in part a vehicle for extending the developer's
+   experience; RabbitMQ is the most widely used message broker in the .NET
+   ecosystem and operating one end to end (publishing, acks, redelivery,
+   dead-lettering) is a deliberate goal. For a solo personal project this is a
+   legitimate requirement, recorded honestly rather than disguised as a scale
+   argument.
+2. **Scale-out path.** The broker is the already-documented destination (`06`),
+   so adopting it early walks the path the architecture reserved anyway:
+   push-based dispatch (no poll latency/traffic) and workers that scale
+   independently of the API.
+
+The open design question was what the broker *replaces*. A naive adoption
+(publish the job content to RabbitMQ, drop the table) loses the transactional
+"persist metadata + enqueue job" guarantee `06`/`08` rely on and would discard
+job-state tracking (`AnalysisJob.Status/AttemptCount/Result`, `02`).
+
+### Decision
+
+Adopt **RabbitMQ for job dispatch**, keeping **PostgreSQL as the durable source
+of truth** — broker-for-dispatch, database-for-durability.
+
+* The `AnalysisJobs` table stays exactly as shipped: it is the **outbox** and the
+  job-state record. Enqueueing still inserts the row in the caller's transaction;
+  a message ("job {id} is ready") is then published to RabbitMQ.
+* The consumer receives the message and runs the **same claim** through
+  `IAnalysisJobStore` (`FOR UPDATE SKIP LOCKED`), so the single-claim guarantee
+  remains database-enforced; the broker only replaces the *polling* as the wake-up
+  signal. The polling loop is retained as a configurable fallback/sweeper so a
+  broker outage degrades to today's behavior instead of stopping work.
+* Implementation is a second `IBackgroundJobQueue` implementation in
+  `Filer.Modules.BackgroundJobs`, selected by configuration exactly like the
+  storage provider (`07`); no code outside the module changes. `docker-compose`
+  gains a `rabbitmq` service.
+* **Sequencing:** after the upload pipeline (M3) runs end to end on the current
+  queue, so there is real traffic to migrate; before or alongside M5.
+
+### Rationale
+
+* **Keeps the transactional enqueue.** Writing the job row in the caller's
+  transaction and relaying a message afterwards (the outbox pattern) is the
+  standard answer to dual-write inconsistency; the V1 design already *is* the
+  outbox, so the migration adds the relay rather than rebuilding durability.
+* **Push without losing crash-safety.** Messages can be lost or redelivered;
+  rows cannot. Re-running the claim on the consumer makes a duplicated or raced
+  message harmless (claim returns nothing), and the sweeper recovers any job
+  whose message was lost.
+* **Honest driver.** Recording learning value as the primary motivation keeps the
+  decision log truthful and prevents the precedent that infrastructure can be
+  added under a vague scale pretext (`08`'s anti-overengineering rule is about
+  unjustified complexity; this entry is the justification).
+* **Seams already paid for.** `IBackgroundJobQueue` / `IAnalysisJobStore` /
+  `IAnalysisJobHandler` (#32) confine the change to one module.
+
+### Trade-offs accepted
+
+* A new piece of infrastructure to run, monitor, and secure in a Docker-first
+  personal deployment — the cost accepted in exchange for the learning value and
+  the scale-out path.
+* Two dispatch mechanisms (message + fallback sweeper) instead of one; accepted
+  because the sweeper is the existing, already-tested loop.
+* Not pragmatic by V1 load alone; accepted explicitly (see Context).
+
+### Alternatives considered
+
+* **Stay DB-only until scale demands a broker** — the most pragmatic choice and
+  the default this ADR consciously overrides; rejected because it serves neither
+  driver (learning, scale-out rehearsal) and the override is cheap given the seams.
+* **Broker as the only queue (drop the table)** — loses transactional enqueue and
+  job-state tracking; requires solving exactly-once delivery in the broker layer.
+  Rejected.
+* **Hangfire / Quartz.NET** — "real background jobs" with dashboards and
+  scheduling, but their storage is itself a polled database (same mechanics as
+  V1, less control), and they teach a library, not messaging. Rejected for this
+  project's goals.
+* **Other brokers (Azure Service Bus, Kafka, NATS)** — managed offerings conflict
+  with self-hostable Docker-first deployment (`07`); Kafka is a streaming log,
+  oversized for a work queue. RabbitMQ is the fit for both the workload and the
+  learning goal.

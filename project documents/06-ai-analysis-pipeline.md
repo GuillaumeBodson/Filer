@@ -10,7 +10,7 @@ user. AI is an assistive feature, never a blocking dependency (`01`, `08`).
 
 Related documents: `02-data-model.md` (AnalysisJob), `03-api-specification.md`
 (analysis endpoints), `04-non-functional.md`, `05-security.md`. Related decisions:
-ADR-002, ADR-003.
+ADR-002, ADR-003, ADR-008.
 
 ---
 
@@ -93,8 +93,11 @@ public interface IAIAnalysisProvider
 * A background worker (hosted service in the modular monolith for V1, separately
   deployable later — ADR-003) consumes queued jobs.
 * The queue is durable so a crash loses no work; for V1 the persisted
-  `AnalysisJob` table itself can act as the work source (poll/claim with row
-  locking), with a dedicated message broker reserved for the scale-out phase.
+  `AnalysisJob` table itself acts as the work source (poll/claim with row
+  locking). **RabbitMQ is adopted for dispatch after the upload pipeline
+  milestone (ADR-008):** the table remains the durable outbox and job-state
+  record; the broker replaces polling as the wake-up signal, with the polling
+  loop retained as a fallback sweeper.
 * Workers are horizontally scalable independent of the API (`04`).
 * Job claiming must be safe under concurrency (no two workers run the same job).
 
@@ -147,7 +150,9 @@ Per `08` (background jobs must support these):
 
 ## Future Evolution
 
-* Dedicated message broker for the queue at scale.
+* ~~Dedicated message broker for the queue at scale.~~ Decided: RabbitMQ for
+  dispatch over the Postgres outbox (ADR-008), sequenced after the upload
+  pipeline milestone.
 * Embedding generation feeding pgvector for semantic search (`02`).
 * Summarization and AI chat capabilities layered on the same provider
   abstraction.
