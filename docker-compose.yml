@@ -35,8 +35,13 @@ services:
       Jwt__Audience: "filer-clients"
       Jwt__SigningKey: "dev-only-signing-key-change-me-please-32-bytes-min"
       Jwt__AccessTokenMinutes: "15"
+      # Blob root inside the container; backed by the named volume below (07-storage-and-deployment.md).
+      Storage__RootPath: "/data/storage"
     ports:
       - "8080:8080"
+    volumes:
+      - filer-storage:/data/storage
 
 volumes:
   filer-pgdata:
+  filer-storage:

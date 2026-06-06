@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Storage module implementation. Private to the module; the host references it
+       only to register it (10-solution-structure.md). The concrete provider lives
+       here, behind IFileStorageProvider from the Contracts project (07). -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Filer.Modules.Storage.Contracts\Filer.Modules.Storage.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <!-- No endpoints yet — the framework reference supplies the shared Extensions
+       stack (options + validation, configuration binder, DI, logging) without
+       per-package version entries, matching the Auth module. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

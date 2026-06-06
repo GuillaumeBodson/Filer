@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Filer.Api.Infrastructure;
 using Filer.Modules.Auth;
+using Filer.Modules.Storage;
 using Filer.Modules.Auth.Persistence;
 using Filer.SharedKernel.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -46,6 +47,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 // Modules register themselves through their public entry point only
 // (10-solution-structure.md). The host adds no business logic.
 builder.Services.AddAuthModule(builder.Configuration);
+builder.Services.AddStorageModule(builder.Configuration);
 
 builder.Services.AddAuthorization();
 

@@ -38,6 +38,10 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
     // Non-null only when this process owns the database lifecycle (local/dev).
     private readonly PostgreSqlContainer? _postgres;
 
+    // Throwaway blob root for the Storage module; removed on dispose.
+    private readonly string _storageRoot =
+        Path.Combine(Path.GetTempPath(), "filer-it-storage-" + Guid.NewGuid().ToString("N"));
+
     public FilerApiFactory()
     {
         string? external = Environment.GetEnvironmentVariable(ConnectionEnvVar);
@@ -54,6 +58,9 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
         Environment.SetEnvironmentVariable("Jwt__Audience", "filer-test-clients");
         Environment.SetEnvironmentVariable("Jwt__SigningKey", "filer-integration-test-signing-key-which-is-long-enough");
         Environment.SetEnvironmentVariable("Jwt__AccessTokenMinutes", "15");
+        // Storage module: blobs go to a throwaway temp root, eagerly read by
+        // AddStorageModule for the same reason as the Jwt section above.
+        Environment.SetEnvironmentVariable("Storage__RootPath", _storageRoot);
     }
 
     async ValueTask IAsyncLifetime.InitializeAsync()
@@ -74,6 +81,11 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
         {
             Environment.SetEnvironmentVariable(ConnectionEnvVar, null);
             await _postgres.DisposeAsync();
+        }
+
+        if (Directory.Exists(_storageRoot))
+        {
+            Directory.Delete(_storageRoot, recursive: true);
         }
 
         await base.DisposeAsync();

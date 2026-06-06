@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Modules\Auth\Filer.Modules.Auth\Filer.Modules.Auth.csproj" />
+    <ProjectReference Include="..\Modules\Storage\Filer.Modules.Storage\Filer.Modules.Storage.csproj" />
   </ItemGroup>
 
 </Project>
