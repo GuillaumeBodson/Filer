@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Filer.Api.Infrastructure;
 using Filer.Modules.Auth;
+using Filer.Modules.BackgroundJobs;
+using Filer.Modules.BackgroundJobs.Persistence;
 using Filer.Modules.Storage;
 using Filer.Modules.Auth.Persistence;
 using Filer.SharedKernel.Authorization;
@@ -47,6 +49,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 // Modules register themselves through their public entry point only
 // (10-solution-structure.md). The host adds no business logic.
 builder.Services.AddAuthModule(builder.Configuration);
+builder.Services.AddBackgroundJobsModule(builder.Configuration);
 builder.Services.AddStorageModule(builder.Configuration);
 
 builder.Services.AddAuthorization();
@@ -65,8 +68,11 @@ var app = builder.Build();
 // migrations under Filer.Modules.Auth/Persistence/Migrations.
 await using (var scope = app.Services.CreateAsyncScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-    await db.Database.MigrateAsync();
+    var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+    await authDb.Database.MigrateAsync();
+
+    var jobsDb = scope.ServiceProvider.GetRequiredService<JobsDbContext>();
+    await jobsDb.Database.MigrateAsync();
 }
 
 // Problem-details for unhandled exceptions and non-success status codes (03-api-specification.md).

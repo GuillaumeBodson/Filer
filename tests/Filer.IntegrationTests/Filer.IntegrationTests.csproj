@@ -16,6 +16,10 @@
          for the stable error codes / claim names asserted in tests. -->
     <ProjectReference Include="..\..\src\Filer.Api\Filer.Api.csproj" />
     <ProjectReference Include="..\..\src\Modules\Auth\Filer.Modules.Auth.Contracts\Filer.Modules.Auth.Contracts.csproj" />
+    <!-- BackgroundJobs implementation: the module maps no endpoints, so its
+         queue/claim guarantees are asserted directly against the module's services
+         and the real Postgres-backed table (12-testing-strategy.md). -->
+    <ProjectReference Include="..\..\src\Modules\BackgroundJobs\Filer.Modules.BackgroundJobs\Filer.Modules.BackgroundJobs.csproj" />
   </ItemGroup>
 
   <!-- ProblemDetails, IWebHostBuilder and the test host pull in the shared

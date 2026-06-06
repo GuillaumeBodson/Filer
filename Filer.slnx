@@ -9,6 +9,10 @@
     <Project Path="src/Modules/Auth/Filer.Modules.Auth.Contracts/Filer.Modules.Auth.Contracts.csproj" Id="14bac8cc-6963-49ea-96ba-51444cbe38c5" />
     <Project Path="src/Modules/Auth/Filer.Modules.Auth/Filer.Modules.Auth.csproj" Id="d544c4a8-d736-4d6d-9ec8-db11a480f604" />
   </Folder>
+  <Folder Name="/src/Modules/BackgroundJobs/">
+    <Project Path="src/Modules/BackgroundJobs/Filer.Modules.BackgroundJobs.Contracts/Filer.Modules.BackgroundJobs.Contracts.csproj" />
+    <Project Path="src/Modules/BackgroundJobs/Filer.Modules.BackgroundJobs/Filer.Modules.BackgroundJobs.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Storage/">
     <Project Path="src/Modules/Storage/Filer.Modules.Storage.Contracts/Filer.Modules.Storage.Contracts.csproj" />
     <Project Path="src/Modules/Storage/Filer.Modules.Storage/Filer.Modules.Storage.csproj" />
@@ -16,6 +20,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Filer.SharedKernel.Tests/Filer.SharedKernel.Tests.csproj" />
     <Project Path="tests/Filer.Modules.Auth.Tests/Filer.Modules.Auth.Tests.csproj" />
+    <Project Path="tests/Filer.Modules.BackgroundJobs.Tests/Filer.Modules.BackgroundJobs.Tests.csproj" />
     <Project Path="tests/Filer.Modules.Storage.Tests/Filer.Modules.Storage.Tests.csproj" />
     <Project Path="tests/Filer.IntegrationTests/Filer.IntegrationTests.csproj" />
     <Project Path="tests/Filer.Architecture.Tests/Filer.Architecture.Tests.csproj" />

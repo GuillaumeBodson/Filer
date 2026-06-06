@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- BackgroundJobs module implementation. Private to the module; the host
+       references it only to register it (10-solution-structure.md). Owns the
+       'jobs' Postgres schema: the AnalysisJob table is the V1 durable work
+       source (06-ai-analysis-pipeline.md, Worker & Queue). -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Filer.Modules.BackgroundJobs.Contracts\Filer.Modules.BackgroundJobs.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <!-- Hosted-service worker and options binding come from the shared framework. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- The worker's per-iteration orchestration is internal; its unit tests assert
+       it through the designed seams (12-testing-strategy.md). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Filer.Modules.BackgroundJobs.Tests" />
+  </ItemGroup>
+
+</Project>
