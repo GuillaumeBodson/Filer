@@ -61,6 +61,10 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
         // Storage module: blobs go to a throwaway temp root, eagerly read by
         // AddStorageModule for the same reason as the Jwt section above.
         Environment.SetEnvironmentVariable("Storage__RootPath", _storageRoot);
+        // BackgroundJobs: keep the hosted worker idle so queue/claim tests own the
+        // table deterministically — the worker's orchestration is unit-tested at its
+        // seams, the claim SQL is exercised here directly (12-testing-strategy.md).
+        Environment.SetEnvironmentVariable("BackgroundJobs__Enabled", "false");
     }
 
     async ValueTask IAsyncLifetime.InitializeAsync()
