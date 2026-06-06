@@ -39,6 +39,9 @@ ScaffoldingReadMe.txt
 # dotenv environment variables file
 .env
 
+# Dev-only local blob storage root (appsettings.Development.json, 07)
+.storage/
+
 # Others
 ~$*
 *~
