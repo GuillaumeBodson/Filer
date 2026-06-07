@@ -1,4 +1,5 @@
 using Filer.Modules.Documents.Features.Upload;
+using Filer.Modules.Documents.Files;
 using Filer.Modules.Documents.Persistence;
 using Filer.SharedKernel.Configuration;
 using Filer.SharedKernel.Time;
@@ -36,6 +37,17 @@ public static class DocumentsModule
         services.AddOptions<DocumentsOptions>()
             .Bind(configuration.GetSection(DocumentsOptions.SectionName))
             .ValidateDataAnnotations()
+            // Sniffing is mandatory for every accepted upload (05-security.md), and
+            // FileSignatures fails closed for types it has no signature for — so an
+            // allow-list entry without one could never be uploaded. Surface that
+            // misconfiguration here, at startup, instead of as request-time 415s.
+            .Validate(
+                options => options.AllowedContentTypes
+                    .Select(UploadDocumentValidator.NormalizeMediaType)
+                    .All(FileSignatures.IsKnown),
+                $"'{DocumentsOptions.SectionName}:{nameof(DocumentsOptions.AllowedContentTypes)}' contains a media " +
+                "type without a registered content signature. Sniffing is mandatory (05-security.md); register a " +
+                "signature in FileSignatures/KnownMediaTypes before allowing the type.")
             .ValidateOnStart();
 
         // Eager read, mirroring the other modules: the request-size limits below

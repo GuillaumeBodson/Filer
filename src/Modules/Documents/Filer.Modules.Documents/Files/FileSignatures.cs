@@ -22,10 +22,11 @@ internal static class FileSignatures
 
     /// <summary>
     /// Whether the sampled head of the file is plausible for the declared media
-    /// type. Types without a registered signature (added later purely through
-    /// configuration, 04) pass: for those the declared type is the only evidence
-    /// available, and rejecting them would make the allow-list non-extensible
-    /// without code changes.
+    /// type. Fail-closed: a type without a registered signature never passes —
+    /// sniffing is mandatory for every accepted upload (05-security.md), so the
+    /// allow-list may only contain types this table knows. That invariant is
+    /// enforced at startup (<c>DocumentsModule</c>) via <see cref="IsKnown"/>;
+    /// this default is the defense-in-depth backstop behind it.
     /// </summary>
     public static bool Matches(string mediaType, ReadOnlySpan<byte> sample) =>
         mediaType switch
@@ -37,7 +38,27 @@ internal static class FileSignatures
             KnownMediaTypes.Docx or KnownMediaTypes.Xlsx or KnownMediaTypes.Pptx =>
                 sample.StartsWith(Zip),
             KnownMediaTypes.PlainText or KnownMediaTypes.Markdown => LooksLikeText(sample),
-            _ => true,
+            _ => false,
+        };
+
+    /// <summary>
+    /// Whether <see cref="Matches"/> has a registered signature for the media
+    /// type. Kept adjacent to the switch above so the two cannot drift unnoticed;
+    /// the defaults-stay-known invariant is also pinned by a unit test.
+    /// </summary>
+    public static bool IsKnown(string mediaType) =>
+        mediaType switch
+        {
+            KnownMediaTypes.Pdf or
+            KnownMediaTypes.Png or
+            KnownMediaTypes.Jpeg or
+            KnownMediaTypes.Webp or
+            KnownMediaTypes.Docx or
+            KnownMediaTypes.Xlsx or
+            KnownMediaTypes.Pptx or
+            KnownMediaTypes.PlainText or
+            KnownMediaTypes.Markdown => true,
+            _ => false,
         };
 
     /// <summary>WebP: RIFF container with the WEBP fourcc at offset 8.</summary>

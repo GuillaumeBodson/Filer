@@ -51,8 +51,25 @@ public sealed class FileSignaturesTests
         FileSignatures.Matches("image/webp", Encoding.ASCII.GetBytes("RIFFWAVEfmt ")).Should().BeFalse();
 
     [Fact]
-    public void Matches_WhenTypeHasNoRegisteredSignature_AcceptsDeclaredType() =>
-        // Config-extensible allow-list (04): unknown types carry no signature to
-        // check, so the declared type is accepted as-is.
-        FileSignatures.Matches("application/x-custom", [0x01, 0x02]).Should().BeTrue();
+    public void Matches_WhenTypeHasNoRegisteredSignature_FailsClosed() =>
+        // Sniffing is mandatory (05): a type without a signature can never pass,
+        // whatever its bytes. Startup validation keeps such types out of the
+        // allow-list in the first place; this is the backstop behind it.
+        FileSignatures.Matches("application/x-custom", [0x01, 0x02]).Should().BeFalse();
+
+    [Fact]
+    public void IsKnown_ForEveryDefaultAllowedType_ReturnsTrue()
+    {
+        // Pins the invariant the startup validation relies on: the shipped
+        // defaults and the sniffing table cannot drift apart unnoticed.
+        foreach (string mediaType in new DocumentsOptions().AllowedContentTypes)
+        {
+            FileSignatures.IsKnown(mediaType).Should().BeTrue(
+                $"the default allow-list entry '{mediaType}' must have a registered signature");
+        }
+    }
+
+    [Fact]
+    public void IsKnown_ForTypeWithoutSignature_ReturnsFalse() =>
+        FileSignatures.IsKnown("application/zip").Should().BeFalse();
 }

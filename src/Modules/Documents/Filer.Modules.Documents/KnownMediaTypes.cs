@@ -10,8 +10,11 @@ namespace Filer.Modules.Documents;
 /// pass by design); referencing one constant from both sites makes that failure
 /// impossible. Reuses the BCL's <see cref="MediaTypeNames"/> where it defines the
 /// value; that class is static and cannot be extended, so the OOXML trio it lacks
-/// is defined once here. The allow-list itself stays plain configuration strings —
-/// deployments may add types with no code change (04-non-functional.md).
+/// is defined once here. The allow-list itself stays plain configuration strings,
+/// but every configured type must carry a registered signature in
+/// <c>FileSignatures</c> — enforced at startup — so narrowing the list is pure
+/// configuration while expanding it is a deliberate (small) code change
+/// (04-non-functional.md, 05-security.md).
 /// </summary>
 internal static class KnownMediaTypes
 {
