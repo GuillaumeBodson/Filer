@@ -41,9 +41,9 @@ public sealed class EfBackgroundJobQueueTests
     }
 
     [Fact]
-    public async Task CancelQueuedForDocumentAsync_WhenDocumentIdEmpty_ReturnsValidationError()
+    public async Task CancelForDocumentAsync_WhenDocumentIdEmpty_ReturnsValidationError()
     {
-        Result<int> result = await CreateSut().CancelQueuedForDocumentAsync(Guid.Empty, CancellationToken.None);
+        Result<int> result = await CreateSut().CancelForDocumentAsync(Guid.Empty, CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Type.Should().Be(ErrorType.Validation);

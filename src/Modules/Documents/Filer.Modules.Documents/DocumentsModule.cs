@@ -1,3 +1,4 @@
+using Filer.Modules.Documents.Features.Delete;
 using Filer.Modules.Documents.Features.DownloadContent;
 using Filer.Modules.Documents.Features.GetMetadata;
 using Filer.Modules.Documents.Features.ListDocuments;
@@ -86,6 +87,7 @@ public static class DocumentsModule
         services.AddScoped<GetDocumentMetadataService>();
         services.AddScoped<ListDocumentsService>();
         services.AddScoped<UpdateDocumentMetadataService>();
+        services.AddScoped<DeleteDocumentService>();
 
         return services;
     }
@@ -99,6 +101,7 @@ public static class DocumentsModule
         group.MapDownloadDocumentContent();
         group.MapGetDocumentMetadata();
         group.MapUpdateDocumentMetadata();
+        group.MapDeleteDocument();
 
         return routes;
     }

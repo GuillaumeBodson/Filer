@@ -50,22 +50,25 @@ public sealed class EfBackgroundJobQueue(
         return Result.Success(job.Id);
     }
 
-    public async Task<Result<int>> CancelQueuedForDocumentAsync(Guid documentId, CancellationToken cancellationToken)
+    public async Task<Result<int>> CancelForDocumentAsync(Guid documentId, CancellationToken cancellationToken)
     {
         if (documentId == Guid.Empty)
         {
             return Result.Failure<int>(Error.Validation(
-                "A document id is required to cancel its queued jobs.",
+                "A document id is required to cancel its analysis jobs.",
                 BackgroundJobsErrorCodes.DocumentIdRequired));
         }
 
         DateTimeOffset now = clock.UtcNow;
 
-        // A single set-based update: only rows still Queued flip to Cancelled, so a
-        // job a worker claimed in the meantime (Running) is untouched — mid-flight
-        // cancellation is the worker's concern (06-ai-analysis-pipeline.md).
+        // A single set-based update over Queued and Running rows (06-ai-analysis-
+        // pipeline.md: deleting a document cancels its in-flight/queued jobs). Safe
+        // against a concurrently finishing worker: its completion writes are guarded
+        // on Status == Running, so whichever side commits first wins and the loser
+        // is a no-op — a cancelled job can never be resurrected to Succeeded/Failed.
         int cancelled = await dbContext.AnalysisJobs
-            .Where(j => j.DocumentId == documentId && j.Status == AnalysisJobStatus.Queued)
+            .Where(j => j.DocumentId == documentId
+                && (j.Status == AnalysisJobStatus.Queued || j.Status == AnalysisJobStatus.Running))
             .ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(j => j.Status, AnalysisJobStatus.Cancelled)
@@ -75,7 +78,7 @@ public sealed class EfBackgroundJobQueue(
 
         if (cancelled > 0)
         {
-            logger.QueuedJobsCancelled(cancelled, documentId);
+            logger.JobsCancelled(cancelled, documentId);
         }
 
         return Result.Success(cancelled);
@@ -92,6 +95,6 @@ internal static partial class EfBackgroundJobQueueLog
     [LoggerMessage(Level = LogLevel.Information, Message = "Enqueued analysis job {JobId} for document {DocumentId}.")]
     public static partial void AnalysisJobEnqueued(this ILogger logger, Guid jobId, Guid documentId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Cancelled {Count} queued analysis job(s) for document {DocumentId}.")]
-    public static partial void QueuedJobsCancelled(this ILogger logger, int count, Guid documentId);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Cancelled {Count} analysis job(s) for document {DocumentId}.")]
+    public static partial void JobsCancelled(this ILogger logger, int count, Guid documentId);
 }
