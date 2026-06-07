@@ -1,4 +1,5 @@
 using Filer.Modules.Documents.Features.DownloadContent;
+using Filer.Modules.Documents.Features.GetMetadata;
 using Filer.Modules.Documents.Features.Upload;
 using Filer.Modules.Documents.Files;
 using Filer.Modules.Documents.Persistence;
@@ -80,6 +81,7 @@ public static class DocumentsModule
         // Feature services (vertical slices).
         services.AddScoped<UploadDocumentService>();
         services.AddScoped<DownloadDocumentContentService>();
+        services.AddScoped<GetDocumentMetadataService>();
 
         return services;
     }
@@ -90,6 +92,7 @@ public static class DocumentsModule
 
         group.MapUploadDocument();
         group.MapDownloadDocumentContent();
+        group.MapGetDocumentMetadata();
 
         return routes;
     }

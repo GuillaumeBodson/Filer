@@ -106,14 +106,6 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapDocumentsEndpoints();
 
-// Test-only: a throwaway owned resource that exercises the ownership primitive end
-// to end (cross-owner → 404) until the first real owned-resource module lands. Gated
-// to the Testing environment so it never ships (Infrastructure/OwnershipProbeEndpoints.cs).
-if (app.Environment.IsEnvironment("Testing"))
-{
-    app.MapOwnershipProbeEndpoints();
-}
-
 app.Run();
 
 // The top-level statements above compile into an internal Program class. Expose it
