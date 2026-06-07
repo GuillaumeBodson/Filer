@@ -110,6 +110,8 @@ it never blocks on AI processing.
 | PATCH  | `/api/v1/folders/{id}`           | Rename or move folder              |
 | DELETE | `/api/v1/folders/{id}`           | Soft-delete folder                 |
 
+Listing: `?view=tree|flat`, default `flat`; invalid value → `400`.
+
 Deleting a non-empty folder: **reject with `409` by default; opt-in cascade
 soft-delete via `?recursive=true`** (no silent reparenting). Resolved in
 ADR-007 (`09`).
@@ -127,6 +129,12 @@ ADR-007 (`09`).
 | PUT    | `/api/v1/documents/{id}/tags`          | Replace a document's tag set |
 | POST   | `/api/v1/documents/{id}/tags/{tagId}`  | Add a tag to a document      |
 | DELETE | `/api/v1/documents/{id}/tags/{tagId}`  | Remove a tag from a document |
+
+Replace semantics: `PUT /documents/{id}/tags` manages only `Source=User`
+associations. `AiSuggested` rows are preserved on replace, unless their tag is
+included in the new set — the existing row is then promoted to `Source=User`
+(composite PK `(DocumentId, TagId)`, `02`). AI suggestions are removed only via
+explicit `DELETE`.
 
 ---
 
@@ -168,7 +176,4 @@ Maps to the modular-monolith modules (ADR-003):
 ## Open Questions
 
 * Refresh-token strategy details (rotation, lifetime) — to expand in `05-security`.
-* Non-empty folder deletion semantics.
-* Whether `PUT /documents/{id}/tags` distinguishes user vs AI-sourced tags on
-  replace (model supports `Source`).
 * Bulk operations (multi-delete, multi-move
