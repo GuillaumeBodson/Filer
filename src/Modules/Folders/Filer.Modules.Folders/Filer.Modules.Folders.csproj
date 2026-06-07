@@ -6,6 +6,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Filer.Modules.Folders.Contracts\Filer.Modules.Folders.Contracts.csproj" />
+    <!-- Delete cascade reaches the documents inside a deleted subtree through the
+         Documents module's contracts only (ADR-007, 10-solution-structure.md) —
+         the mirror of Documents -> Folders.Contracts for move targets. -->
+    <ProjectReference Include="..\..\Documents\Filer.Modules.Documents.Contracts\Filer.Modules.Documents.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
     <ProjectReference Include="..\..\..\Filer.WebKernel\Filer.WebKernel.csproj" />
   </ItemGroup>

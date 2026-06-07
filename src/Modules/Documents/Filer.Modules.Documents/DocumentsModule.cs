@@ -1,3 +1,4 @@
+using Filer.Modules.Documents.Contracts;
 using Filer.Modules.Documents.Features.Delete;
 using Filer.Modules.Documents.Features.DownloadContent;
 using Filer.Modules.Documents.Features.GetMetadata;
@@ -80,6 +81,10 @@ public static class DocumentsModule
             form.MultipartBodyLengthLimit = options.MaxUploadBytes + UploadRequestOverheadBytes);
 
         services.AddScoped<IDocumentStore, EfDocumentStore>();
+
+        // Public surface for other modules (Folders' delete cascade, ADR-007); the
+        // implementation stays internal behind the Contracts interface.
+        services.AddScoped<IFolderDocumentRemover, FolderDocumentRemover>();
 
         // Feature services (vertical slices).
         services.AddScoped<UploadDocumentService>();
