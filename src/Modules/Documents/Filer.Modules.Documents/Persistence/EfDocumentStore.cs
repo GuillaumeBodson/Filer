@@ -73,9 +73,26 @@ public sealed class EfDocumentStore(DocumentsDbContext db) : IDocumentStore
             .Replace("%", @"\%", StringComparison.Ordinal)
             .Replace("_", @"\_", StringComparison.Ordinal);
 
+    // Folders arrive in M4 (#40–#44). Until the folders table exists nobody owns
+    // any folder, so the check fails by definition — short-circuit instead of
+    // fabricating a join, exactly like the tag filter above. M4 replaces this
+    // body with the real owner-scoped lookup behind the same seam.
+    public Task<bool> OwnedFolderExistsAsync(
+        Guid ownerId, Guid folderId, CancellationToken cancellationToken) =>
+        Task.FromResult(false);
+
     public async Task AddAsync(Document document, CancellationToken cancellationToken)
     {
         db.Documents.Add(document);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateAsync(Document document, CancellationToken cancellationToken)
+    {
+        // Reads on this seam are no-tracking, so reattach explicitly. Marking the
+        // whole entity modified trades a minimal UPDATE for simplicity — fine at
+        // this row size (13-code-quality-and-design.md, no anticipation).
+        db.Documents.Update(document);
         await db.SaveChangesAsync(cancellationToken);
     }
 

@@ -32,8 +32,18 @@ public interface IDocumentStore
     /// </summary>
     Task<PagedResult<Document>> ListActiveAsync(DocumentListFilter filter, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Whether the caller owns a folder with the given id — the move-target check
+    /// for the update slice, owner-scoped like every read on this seam so a
+    /// missing and a cross-owner folder are indistinguishable (05-security.md).
+    /// </summary>
+    Task<bool> OwnedFolderExistsAsync(Guid ownerId, Guid folderId, CancellationToken cancellationToken);
+
     /// <summary>Persists a new document immediately.</summary>
     Task AddAsync(Document document, CancellationToken cancellationToken);
+
+    /// <summary>Persists changes to an already-loaded document immediately.</summary>
+    Task UpdateAsync(Document document, CancellationToken cancellationToken);
 
     /// <summary>
     /// Hard-removes a row — compensation for a just-created document whose upload
