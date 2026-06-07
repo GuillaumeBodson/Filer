@@ -21,6 +21,7 @@
     <ProjectReference Include="..\Modules\Auth\Filer.Modules.Auth\Filer.Modules.Auth.csproj" />
     <ProjectReference Include="..\Modules\BackgroundJobs\Filer.Modules.BackgroundJobs\Filer.Modules.BackgroundJobs.csproj" />
     <ProjectReference Include="..\Modules\Documents\Filer.Modules.Documents\Filer.Modules.Documents.csproj" />
+    <ProjectReference Include="..\Modules\Folders\Filer.Modules.Folders\Filer.Modules.Folders.csproj" />
     <ProjectReference Include="..\Modules\Storage\Filer.Modules.Storage\Filer.Modules.Storage.csproj" />
   </ItemGroup>
 

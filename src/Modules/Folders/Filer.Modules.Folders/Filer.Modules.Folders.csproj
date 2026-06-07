@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Folders module implementation. Private to the module; the host references
+       it only to register it (10-solution-structure.md). Owns the 'folders'
+       Postgres schema. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Filer.Modules.Folders.Contracts\Filer.Modules.Folders.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\Filer.WebKernel\Filer.WebKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <!-- The module exposes its routes to the host via IEndpointRouteBuilder. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- The validator is a slice internal; its unit tests assert it directly
+       (12-testing-strategy.md). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Filer.Modules.Folders.Tests" />
+  </ItemGroup>
+
+</Project>

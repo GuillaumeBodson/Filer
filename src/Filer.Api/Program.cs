@@ -5,6 +5,8 @@ using Filer.Modules.BackgroundJobs;
 using Filer.Modules.BackgroundJobs.Persistence;
 using Filer.Modules.Documents;
 using Filer.Modules.Documents.Persistence;
+using Filer.Modules.Folders;
+using Filer.Modules.Folders.Persistence;
 using Filer.Modules.Storage;
 using Filer.Modules.Auth.Persistence;
 using Filer.SharedKernel.Authorization;
@@ -54,6 +56,7 @@ builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddBackgroundJobsModule(builder.Configuration);
 builder.Services.AddStorageModule(builder.Configuration);
 builder.Services.AddDocumentsModule(builder.Configuration);
+builder.Services.AddFoldersModule(builder.Configuration);
 
 builder.Services.AddAuthorization();
 
@@ -79,6 +82,9 @@ await using (var scope = app.Services.CreateAsyncScope())
 
     var documentsDb = scope.ServiceProvider.GetRequiredService<DocumentsDbContext>();
     await documentsDb.Database.MigrateAsync();
+
+    var foldersDb = scope.ServiceProvider.GetRequiredService<FoldersDbContext>();
+    await foldersDb.Database.MigrateAsync();
 }
 
 // Problem-details for unhandled exceptions and non-success status codes (03-api-specification.md).
@@ -105,6 +111,7 @@ app.UseAuthorization();
 // Each module assembles its routes from its own slices.
 app.MapAuthEndpoints();
 app.MapDocumentsEndpoints();
+app.MapFoldersEndpoints();
 
 app.Run();
 
