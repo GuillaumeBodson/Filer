@@ -27,7 +27,11 @@ Allow a controlled list rather than "anything":
 
 Type is validated by both declared `Content-Type` **and** content sniffing
 (magic bytes); mismatches are rejected (415). The allowed list is configuration,
-not hardcoded, so it can expand without code changes.
+not hardcoded, so it can be narrowed or reordered per deployment. Because
+sniffing is mandatory for every accepted type (`05`), each listed type must have
+a registered content signature in code; the API refuses to start otherwise.
+Expanding the list is therefore a deliberate (small) code change — a signature
+plus the config entry — never a silent bypass of sniffing.
 
 ### Size limits (V1)
 

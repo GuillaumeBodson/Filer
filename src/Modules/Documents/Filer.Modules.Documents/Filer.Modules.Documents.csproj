@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Documents module implementation. Private to the module; the host references
+       it only to register it (10-solution-structure.md). Owns the 'documents'
+       Postgres schema. Consumes storage and background jobs strictly through their
+       Contracts projects (rule 1; 06/07). -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Filer.Modules.Documents.Contracts\Filer.Modules.Documents.Contracts.csproj" />
+    <ProjectReference Include="..\..\BackgroundJobs\Filer.Modules.BackgroundJobs.Contracts\Filer.Modules.BackgroundJobs.Contracts.csproj" />
+    <ProjectReference Include="..\..\Storage\Filer.Modules.Storage.Contracts\Filer.Modules.Storage.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\Filer.WebKernel\Filer.WebKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <!-- The module exposes its routes to the host via IEndpointRouteBuilder. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- The validator and content sniffer are slice internals; their unit tests
+       assert them directly (12-testing-strategy.md). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Filer.Modules.Documents.Tests" />
+  </ItemGroup>
+
+</Project>
