@@ -8,6 +8,8 @@ using Filer.Modules.Documents.Persistence;
 using Filer.Modules.Folders;
 using Filer.Modules.Folders.Persistence;
 using Filer.Modules.Storage;
+using Filer.Modules.Tags;
+using Filer.Modules.Tags.Persistence;
 using Filer.Modules.Auth.Persistence;
 using Filer.SharedKernel.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -57,6 +59,7 @@ builder.Services.AddBackgroundJobsModule(builder.Configuration);
 builder.Services.AddStorageModule(builder.Configuration);
 builder.Services.AddDocumentsModule(builder.Configuration);
 builder.Services.AddFoldersModule(builder.Configuration);
+builder.Services.AddTagsModule(builder.Configuration);
 
 builder.Services.AddAuthorization();
 
@@ -85,6 +88,9 @@ await using (var scope = app.Services.CreateAsyncScope())
 
     var foldersDb = scope.ServiceProvider.GetRequiredService<FoldersDbContext>();
     await foldersDb.Database.MigrateAsync();
+
+    var tagsDb = scope.ServiceProvider.GetRequiredService<TagsDbContext>();
+    await tagsDb.Database.MigrateAsync();
 }
 
 // Problem-details for unhandled exceptions and non-success status codes (03-api-specification.md).
@@ -112,6 +118,7 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapDocumentsEndpoints();
 app.MapFoldersEndpoints();
+app.MapTagsEndpoints();
 
 app.Run();
 

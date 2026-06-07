@@ -25,6 +25,10 @@
     <Project Path="src/Modules/Storage/Filer.Modules.Storage.Contracts/Filer.Modules.Storage.Contracts.csproj" />
     <Project Path="src/Modules/Storage/Filer.Modules.Storage/Filer.Modules.Storage.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Tags/">
+    <Project Path="src/Modules/Tags/Filer.Modules.Tags.Contracts/Filer.Modules.Tags.Contracts.csproj" />
+    <Project Path="src/Modules/Tags/Filer.Modules.Tags/Filer.Modules.Tags.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Filer.SharedKernel.Tests/Filer.SharedKernel.Tests.csproj" />
     <Project Path="tests/Filer.Modules.Auth.Tests/Filer.Modules.Auth.Tests.csproj" />
@@ -32,6 +36,7 @@
     <Project Path="tests/Filer.Modules.Documents.Tests/Filer.Modules.Documents.Tests.csproj" />
     <Project Path="tests/Filer.Modules.Folders.Tests/Filer.Modules.Folders.Tests.csproj" />
     <Project Path="tests/Filer.Modules.Storage.Tests/Filer.Modules.Storage.Tests.csproj" />
+    <Project Path="tests/Filer.Modules.Tags.Tests/Filer.Modules.Tags.Tests.csproj" />
     <Project Path="tests/Filer.IntegrationTests/Filer.IntegrationTests.csproj" />
     <Project Path="tests/Filer.Architecture.Tests/Filer.Architecture.Tests.csproj" />
   </Folder>
