@@ -1,6 +1,7 @@
 using Filer.Modules.Documents.Features.DownloadContent;
 using Filer.Modules.Documents.Features.GetMetadata;
 using Filer.Modules.Documents.Features.ListDocuments;
+using Filer.Modules.Documents.Features.UpdateMetadata;
 using Filer.Modules.Documents.Features.Upload;
 using Filer.Modules.Documents.Files;
 using Filer.Modules.Documents.Persistence;
@@ -84,6 +85,7 @@ public static class DocumentsModule
         services.AddScoped<DownloadDocumentContentService>();
         services.AddScoped<GetDocumentMetadataService>();
         services.AddScoped<ListDocumentsService>();
+        services.AddScoped<UpdateDocumentMetadataService>();
 
         return services;
     }
@@ -96,6 +98,7 @@ public static class DocumentsModule
         group.MapUploadDocument();
         group.MapDownloadDocumentContent();
         group.MapGetDocumentMetadata();
+        group.MapUpdateDocumentMetadata();
 
         return routes;
     }

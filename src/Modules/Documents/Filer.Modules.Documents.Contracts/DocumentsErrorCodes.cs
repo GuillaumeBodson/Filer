@@ -42,4 +42,13 @@ public static class DocumentsErrorCodes
 
     /// <summary>The list <c>?q=</c> search term exceeds the accepted length — 400.</summary>
     public const string SearchTermInvalid = "search_term_invalid";
+
+    /// <summary>The metadata patch carried no updatable field — 400.</summary>
+    public const string UpdateEmpty = "update_empty";
+
+    /// <summary>
+    /// The move target is no folder the caller owns — deliberately covers
+    /// cross-owner folders too (404, never 403; 05-security.md).
+    /// </summary>
+    public const string FolderNotFound = "folder_not_found";
 }
