@@ -53,4 +53,25 @@ public sealed class EfFolderStore(FoldersDbContext db) : IFolderStore
         db.Folders.Update(folder);
         await db.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<int> SoftDeleteAsync(
+        Guid ownerId, IReadOnlyCollection<Guid> folderIds, DateTimeOffset deletedAt,
+        CancellationToken cancellationToken)
+    {
+        // One tracked load + one SaveChanges = one transaction for the whole
+        // folder half of the cascade (ADR-007).
+        List<Folder> folders = await db.Folders
+            .Where(f => f.OwnerId == ownerId && folderIds.Contains(f.Id) && f.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+
+        foreach (Folder folder in folders)
+        {
+            folder.DeletedAt = deletedAt;
+            folder.UpdatedAt = deletedAt;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return folders.Count;
+    }
 }

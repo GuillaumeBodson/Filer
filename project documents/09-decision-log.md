@@ -401,7 +401,7 @@ Introduce **`Filer.WebKernel`**, a shared web-layer library — the web sibling 
 ## ADR-007 — Non-empty folder deletion: reject by default, explicit opt-in cascade
 
 * **Date:** 2026-06-05
-* **Status:** Proposed (awaiting ratification)
+* **Status:** Accepted (ratified 2026-06-07 with the delete slice, #44)
 
 ### Context
 

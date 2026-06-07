@@ -39,6 +39,23 @@ public interface IDocumentStore
     /// </summary>
     Task<bool> OwnedFolderExistsAsync(Guid ownerId, Guid folderId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Whether the caller has a non-deleted document directly in the folder — the
+    /// document half of the folder-emptiness check behind ADR-007's 409.
+    /// Owner-scoped like every read on this seam (05-security.md).
+    /// </summary>
+    Task<bool> AnyActiveInFolderAsync(Guid ownerId, Guid folderId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stamps <c>DeletedAt</c> (and <c>UpdatedAt</c>) with the given timestamp on
+    /// every non-deleted document of the caller inside the given folders, in one
+    /// transaction (ADR-007: the cascade shares one timestamp). Returns the ids of
+    /// the documents affected, so the caller can cancel their analysis jobs.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> SoftDeleteActiveInFoldersAsync(
+        Guid ownerId, IReadOnlyCollection<Guid> folderIds, DateTimeOffset deletedAt,
+        CancellationToken cancellationToken);
+
     /// <summary>Persists a new document immediately.</summary>
     Task AddAsync(Document document, CancellationToken cancellationToken);
 

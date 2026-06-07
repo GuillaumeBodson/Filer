@@ -1,5 +1,6 @@
 using Filer.Modules.Folders.Contracts;
 using Filer.Modules.Folders.Features.Create;
+using Filer.Modules.Folders.Features.Delete;
 using Filer.Modules.Folders.Features.Get;
 using Filer.Modules.Folders.Features.List;
 using Filer.Modules.Folders.Features.Update;
@@ -46,6 +47,7 @@ public static class FoldersModule
         services.AddScoped<ListFoldersService>();
         services.AddScoped<GetFolderService>();
         services.AddScoped<UpdateFolderService>();
+        services.AddScoped<DeleteFolderService>();
 
         return services;
     }
@@ -58,6 +60,7 @@ public static class FoldersModule
         group.MapListFolders();
         group.MapGetFolder();
         group.MapUpdateFolder();
+        group.MapDeleteFolder();
 
         return routes;
     }

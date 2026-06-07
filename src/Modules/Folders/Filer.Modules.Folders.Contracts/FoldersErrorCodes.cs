@@ -48,4 +48,11 @@ public static class FoldersErrorCodes
     /// logic (02-data-model.md) — 409.
     /// </summary>
     public const string MoveCycle = "folder_move_cycle";
+
+    /// <summary>
+    /// The folder still contains a non-deleted child folder or document and the
+    /// delete did not opt into the recursive cascade (ADR-007: reject by default,
+    /// no silent reparenting) — 409.
+    /// </summary>
+    public const string NotEmpty = "folder_not_empty";
 }

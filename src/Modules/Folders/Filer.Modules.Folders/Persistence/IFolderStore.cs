@@ -43,4 +43,15 @@ public interface IFolderStore
     Task<Folder?> FindActiveByIdAsync(Guid ownerId, Guid folderId, CancellationToken cancellationToken);
 
     Task UpdateAsync(Folder folder, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Stamps <c>DeletedAt</c> (and <c>UpdatedAt</c>) with the given timestamp on
+    /// every non-deleted folder of the caller in the given set, in one
+    /// transaction (ADR-007: the cascade shares one timestamp). Owner-scoped by
+    /// construction, so a foreign id in the set could never touch another owner's
+    /// rows. Returns the number of folders stamped.
+    /// </summary>
+    Task<int> SoftDeleteAsync(
+        Guid ownerId, IReadOnlyCollection<Guid> folderIds, DateTimeOffset deletedAt,
+        CancellationToken cancellationToken);
 }

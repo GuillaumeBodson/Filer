@@ -82,6 +82,39 @@ public sealed class EfDocumentStore(DocumentsDbContext db, IFolderOwnershipCheck
         Guid ownerId, Guid folderId, CancellationToken cancellationToken) =>
         folderOwnership.OwnsActiveFolderAsync(ownerId, folderId, cancellationToken);
 
+    public Task<bool> AnyActiveInFolderAsync(
+        Guid ownerId, Guid folderId, CancellationToken cancellationToken) =>
+        db.Documents
+            .AsNoTracking()
+            .AnyAsync(
+                d => d.OwnerId == ownerId && d.FolderId == folderId && d.DeletedAt == null,
+                cancellationToken);
+
+    public async Task<IReadOnlyList<Guid>> SoftDeleteActiveInFoldersAsync(
+        Guid ownerId, IReadOnlyCollection<Guid> folderIds, DateTimeOffset deletedAt,
+        CancellationToken cancellationToken)
+    {
+        // One tracked load + one SaveChanges = one transaction for the whole
+        // document half of the cascade (ADR-007). Owner-scoped and
+        // soft-delete-aware like every read on this seam (05-security.md), so a
+        // cross-owner folder id in the set could never touch foreign rows.
+        List<Document> documents = await db.Documents
+            .Where(d => d.OwnerId == ownerId
+                && d.FolderId != null && folderIds.Contains(d.FolderId.Value)
+                && d.DeletedAt == null)
+            .ToListAsync(cancellationToken);
+
+        foreach (Document document in documents)
+        {
+            document.DeletedAt = deletedAt;
+            document.UpdatedAt = deletedAt;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return documents.Select(d => d.Id).ToList();
+    }
+
     public async Task AddAsync(Document document, CancellationToken cancellationToken)
     {
         db.Documents.Add(document);
