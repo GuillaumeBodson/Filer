@@ -1,4 +1,5 @@
 using Filer.Modules.Documents.Contracts;
+using Filer.Modules.Documents.Domain;
 using Filer.Modules.Documents.Features.Upload;
 using Filer.SharedKernel.Results;
 using FluentAssertions;
@@ -40,7 +41,7 @@ public sealed class UploadDocumentValidatorTests
     [Fact]
     public void Validate_WhenFileNameTooLong_FailsWithFileNameInvalid()
     {
-        string longName = new('a', UploadDocumentValidator.MaxFileNameLength + 1);
+        string longName = new('a', Document.MaxFileNameLength + 1);
 
         Result result = UploadDocumentValidator.Validate(Command(fileName: longName), _options);
 

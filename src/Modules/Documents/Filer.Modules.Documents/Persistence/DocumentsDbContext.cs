@@ -26,10 +26,10 @@ public sealed class DocumentsDbContext(DbContextOptions<DocumentsDbContext> opti
             document.ToTable("Documents");
             document.HasKey(d => d.Id);
 
-            // Stored as metadata only, never used in paths (05-security.md); bound
-            // to the same ceiling the upload validator enforces.
+            // Stored as metadata only, never used in paths (05-security.md); the
+            // ceiling is shared with the upload/update validators via the entity.
             document.Property(d => d.FileName)
-                .HasMaxLength(255)
+                .HasMaxLength(Document.MaxFileNameLength)
                 .IsRequired();
 
             document.Property(d => d.ContentType)

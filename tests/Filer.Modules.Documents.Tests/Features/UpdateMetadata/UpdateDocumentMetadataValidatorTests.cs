@@ -1,4 +1,5 @@
 using Filer.Modules.Documents.Contracts;
+using Filer.Modules.Documents.Domain;
 using Filer.Modules.Documents.Features.UpdateMetadata;
 using Filer.SharedKernel.Results;
 using FluentAssertions;
@@ -40,7 +41,7 @@ public sealed class UpdateDocumentMetadataValidatorTests
     {
         var request = new UpdateDocumentMetadataRequest
         {
-            FileName = new string('a', UpdateDocumentMetadataValidator.MaxFileNameLength + 1),
+            FileName = new string('a', Document.MaxFileNameLength + 1),
         };
 
         Result result = UpdateDocumentMetadataValidator.Validate(request);
@@ -54,7 +55,7 @@ public sealed class UpdateDocumentMetadataValidatorTests
     {
         var request = new UpdateDocumentMetadataRequest
         {
-            FileName = new string('a', UpdateDocumentMetadataValidator.MaxFileNameLength),
+            FileName = new string('a', Document.MaxFileNameLength),
         };
 
         UpdateDocumentMetadataValidator.Validate(request).IsSuccess.Should().BeTrue();
