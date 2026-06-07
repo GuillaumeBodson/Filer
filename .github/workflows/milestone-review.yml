@@ -1,0 +1,33 @@
+name: Milestone review issue
+
+# Auto-opens the cross-slice review issue when a milestone is created, so the
+# milestone can't reach 100% until the review is done. Template:
+# .github/ISSUE_TEMPLATE/milestone-review.md
+
+on:
+  milestone:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  open-review-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open the milestone review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MILESTONE: ${{ github.event.milestone.title }}
+        run: |
+          # Body = template minus the YAML frontmatter (everything after the 2nd '---')
+          awk 'f; /^---$/ && ++c == 2 {f=1}' .github/ISSUE_TEMPLATE/milestone-review.md > body.md
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Milestone review: $MILESTONE" \
+            --body-file body.md \
+            --milestone "$MILESTONE" \
+            --label milestone-review
