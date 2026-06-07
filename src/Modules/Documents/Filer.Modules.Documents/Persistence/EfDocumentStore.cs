@@ -1,4 +1,5 @@
 using Filer.Modules.Documents.Domain;
+using Filer.SharedKernel.Paging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Filer.Modules.Documents.Persistence;
@@ -21,6 +22,56 @@ public sealed class EfDocumentStore(DocumentsDbContext db) : IDocumentStore
             .FirstOrDefaultAsync(
                 d => d.Id == documentId && d.OwnerId == ownerId && d.DeletedAt == null,
                 cancellationToken);
+
+    public async Task<PagedResult<Document>> ListActiveAsync(
+        DocumentListFilter filter, CancellationToken cancellationToken)
+    {
+        // Tags arrive in M4 (#41–#45). Until the DocumentTag join exists no
+        // document carries any tag, so a tag filter matches nothing by
+        // definition — short-circuit instead of fabricating a join.
+        if (filter.TagId is not null)
+        {
+            return new PagedResult<Document>([], filter.Page, filter.PageSize, 0);
+        }
+
+        IQueryable<Document> query = db.Documents
+            .AsNoTracking()
+            .Where(d => d.OwnerId == filter.OwnerId && d.DeletedAt == null);
+
+        if (filter.FolderId is Guid folderId)
+        {
+            query = query.Where(d => d.FolderId == folderId);
+        }
+
+        if (filter.SearchTerm is { Length: > 0 } searchTerm)
+        {
+            // Case-insensitive contains on the file name (ILIKE), with LIKE
+            // metacharacters escaped so user input is matched literally.
+            // Upgraded to tsvector/GIN full-text in M6 (#56) behind this seam.
+            string pattern = $"%{EscapeLikePattern(searchTerm)}%";
+            query = query.Where(d => EF.Functions.ILike(d.FileName, pattern, "\\"));
+        }
+
+        long totalCount = await query.LongCountAsync(cancellationToken);
+
+        // Newest first; the id tiebreaker keeps paging stable when documents
+        // share a CreatedAt timestamp (bulk uploads).
+        List<Document> items = await query
+            .OrderByDescending(d => d.CreatedAt)
+            .ThenBy(d => d.Id)
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<Document>(items, filter.Page, filter.PageSize, totalCount);
+    }
+
+    /// <summary>Escapes <c>\</c>, <c>%</c> and <c>_</c> so a search term is a literal, not a pattern.</summary>
+    private static string EscapeLikePattern(string term) =>
+        term
+            .Replace(@"\", @"\\", StringComparison.Ordinal)
+            .Replace("%", @"\%", StringComparison.Ordinal)
+            .Replace("_", @"\_", StringComparison.Ordinal);
 
     public async Task AddAsync(Document document, CancellationToken cancellationToken)
     {
