@@ -27,4 +27,10 @@ public static class DocumentsErrorCodes
 
     /// <summary>The upload could not be completed; no document was created.</summary>
     public const string UploadFailed = "upload_failed";
+
+    /// <summary>
+    /// No owned, non-deleted document matches the id — deliberately covers
+    /// cross-owner access too (404, never 403; 05-security.md).
+    /// </summary>
+    public const string DocumentNotFound = "document_not_found";
 }

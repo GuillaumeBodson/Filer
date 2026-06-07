@@ -17,6 +17,13 @@ public interface IDocumentStore
     /// </summary>
     Task<Document?> FindActiveByContentHashAsync(Guid ownerId, string contentHash, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The caller's non-deleted document with the given id, or null. Owner-scoped
+    /// by construction so cross-owner and missing are indistinguishable — the
+    /// uniform-404 rule's single chokepoint (05-security.md).
+    /// </summary>
+    Task<Document?> FindActiveByIdAsync(Guid ownerId, Guid documentId, CancellationToken cancellationToken);
+
     /// <summary>Persists a new document immediately.</summary>
     Task AddAsync(Document document, CancellationToken cancellationToken);
 

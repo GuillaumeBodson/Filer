@@ -14,6 +14,14 @@ public sealed class EfDocumentStore(DocumentsDbContext db) : IDocumentStore
             .OrderBy(d => d.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
+    public Task<Document?> FindActiveByIdAsync(
+        Guid ownerId, Guid documentId, CancellationToken cancellationToken) =>
+        db.Documents
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                d => d.Id == documentId && d.OwnerId == ownerId && d.DeletedAt == null,
+                cancellationToken);
+
     public async Task AddAsync(Document document, CancellationToken cancellationToken)
     {
         db.Documents.Add(document);
