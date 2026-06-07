@@ -1,4 +1,4 @@
-@Filer.Api_HostAddress = http://localhost:5232
+@Filer.Api_HostAddress = http://localhost:8080
 @email = demo@filer.local
 @password = Passw0rd!
 

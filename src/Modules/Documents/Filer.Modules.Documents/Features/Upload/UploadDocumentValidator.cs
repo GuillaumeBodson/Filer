@@ -1,4 +1,5 @@
 using Filer.Modules.Documents.Contracts;
+using Filer.Modules.Documents.Domain;
 using Filer.SharedKernel.Results;
 
 namespace Filer.Modules.Documents.Features.Upload;
@@ -11,9 +12,6 @@ namespace Filer.Modules.Documents.Features.Upload;
 /// </summary>
 internal static class UploadDocumentValidator
 {
-    /// <summary>Matches the column bound in <c>DocumentsDbContext</c>.</summary>
-    internal const int MaxFileNameLength = 255;
-
     public static Result Validate(UploadDocumentCommand command, DocumentsOptions options)
     {
         if (command.SizeBytes <= 0)
@@ -23,10 +21,10 @@ internal static class UploadDocumentValidator
                 DocumentsErrorCodes.FileRequired));
         }
 
-        if (string.IsNullOrWhiteSpace(command.FileName) || command.FileName.Length > MaxFileNameLength)
+        if (string.IsNullOrWhiteSpace(command.FileName) || command.FileName.Length > Document.MaxFileNameLength)
         {
             return Result.Failure(Error.Validation(
-                $"A file name is required and must not exceed {MaxFileNameLength} characters.",
+                $"A file name is required and must not exceed {Document.MaxFileNameLength} characters.",
                 DocumentsErrorCodes.FileNameInvalid));
         }
 

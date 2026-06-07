@@ -10,6 +10,12 @@ namespace Filer.Modules.Documents.Domain;
 /// </summary>
 public sealed class Document : BaseEntity, IOwnedEntity, ISoftDeletable
 {
+    /// <summary>
+    /// Column bound for <see cref="FileName"/> — the single source shared by the
+    /// EF mapping and the upload/update validators so they cannot drift.
+    /// </summary>
+    public const int MaxFileNameLength = 255;
+
     public Guid OwnerId { get; set; }
 
     /// <summary>Reserved for the SaaS evolution; always null in V1 (02-data-model.md).</summary>
