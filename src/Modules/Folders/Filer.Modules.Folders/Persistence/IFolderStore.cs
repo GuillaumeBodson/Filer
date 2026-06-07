@@ -26,4 +26,11 @@ public interface IFolderStore
         Guid ownerId, Guid? parentId, string name, CancellationToken cancellationToken);
 
     Task AddAsync(Folder folder, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Every non-deleted folder the caller owns, ordered by name then id so the
+    /// listing is deterministic (03-api-specification.md). Owner-scoped by
+    /// construction and soft-deleted rows excluded (05-security.md, 02-data-model.md).
+    /// </summary>
+    Task<IReadOnlyList<Folder>> ListActiveAsync(Guid ownerId, CancellationToken cancellationToken);
 }

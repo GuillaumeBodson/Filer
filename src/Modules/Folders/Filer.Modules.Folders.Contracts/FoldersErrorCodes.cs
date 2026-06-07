@@ -21,4 +21,10 @@ public static class FoldersErrorCodes
     /// parent — unique (OwnerId, ParentId, Name) per 02-data-model.md — 409.
     /// </summary>
     public const string NameConflict = "folder_name_conflict";
+
+    /// <summary>
+    /// The list <c>view</c> parameter is neither <c>flat</c> nor <c>tree</c>
+    /// (03-api-specification.md: invalid value → 400).
+    /// </summary>
+    public const string ViewInvalid = "folder_view_invalid";
 }

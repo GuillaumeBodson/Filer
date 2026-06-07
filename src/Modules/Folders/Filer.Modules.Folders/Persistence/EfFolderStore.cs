@@ -27,4 +27,13 @@ public sealed class EfFolderStore(FoldersDbContext db) : IFolderStore
         db.Folders.Add(folder);
         await db.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Folder>> ListActiveAsync(
+        Guid ownerId, CancellationToken cancellationToken) =>
+        await db.Folders
+            .AsNoTracking()
+            .Where(f => f.OwnerId == ownerId && f.DeletedAt == null)
+            .OrderBy(f => f.Name)
+            .ThenBy(f => f.Id)
+            .ToListAsync(cancellationToken);
 }

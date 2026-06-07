@@ -1,5 +1,6 @@
 using Filer.Modules.Folders.Contracts;
 using Filer.Modules.Folders.Features.Create;
+using Filer.Modules.Folders.Features.List;
 using Filer.Modules.Folders.Persistence;
 using Filer.SharedKernel.Configuration;
 using Filer.SharedKernel.Time;
@@ -40,6 +41,7 @@ public static class FoldersModule
 
         // Feature services (vertical slices).
         services.AddScoped<CreateFolderService>();
+        services.AddScoped<ListFoldersService>();
 
         return services;
     }
@@ -49,6 +51,7 @@ public static class FoldersModule
         RouteGroupBuilder group = routes.MapGroup(FoldersRoutes.BasePath);
 
         group.MapCreateFolder();
+        group.MapListFolders();
 
         return routes;
     }
