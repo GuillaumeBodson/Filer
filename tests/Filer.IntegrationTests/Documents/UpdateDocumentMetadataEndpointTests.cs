@@ -15,8 +15,8 @@ namespace Filer.IntegrationTests.Documents;
 /// (03-api-specification.md): the owner renames and moves a document with
 /// merge-patch semantics, while unknown, soft-deleted, and cross-owner documents
 /// — and unowned move targets — are a uniform 404, never 403 (05-security.md).
-/// Until the Folders module lands (M4, #40–#44) no folder exists, so every
-/// non-null move target is the unowned case by definition.
+/// Move targets are checked against real folders through the Folders module's
+/// ownership contract (#96).
 /// </summary>
 [Collection(IntegrationCollection.Name)]
 public sealed class UpdateDocumentMetadataEndpointTests(FilerApiFactory factory)
@@ -61,19 +61,57 @@ public sealed class UpdateDocumentMetadataEndpointTests(FilerApiFactory factory)
     }
 
     [Fact]
-    public async Task UpdateMetadata_MoveToUnownedFolder_Returns404FolderNotFound()
+    public async Task UpdateMetadata_MoveToOwnedFolder_PersistsTheFolderReference()
+    {
+        HttpClient client = await AuthenticatedClientAsync();
+        Guid documentId = await UploadAsync(client);
+        Guid folderId = await CreateFolderAsync(client, "Invoices");
+
+        HttpResponseMessage response = await client.PatchAsJsonAsync(
+            $"{DocumentsRoute}/{documentId}", new { folderId }, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        DocumentMetadata updated = (await response.Content.ReadFromJsonAsync<DocumentMetadata>(Ct))!;
+        updated.FolderId.Should().Be(folderId);
+
+        // The move is durable, not just echoed: a subsequent read agrees.
+        DocumentMetadata reread = (await client.GetFromJsonAsync<DocumentMetadata>(
+            $"{DocumentsRoute}/{documentId}", Ct))!;
+        reread.FolderId.Should().Be(folderId);
+    }
+
+    [Fact]
+    public async Task UpdateMetadata_MoveToMissingFolder_Returns404FolderNotFound()
     {
         HttpClient client = await AuthenticatedClientAsync();
         Guid documentId = await UploadAsync(client);
 
-        // No folders exist before M4, so any non-null target is unowned — the
-        // same uniform 404 a cross-owner folder will produce once they do.
         HttpResponseMessage response = await client.PatchAsJsonAsync(
             $"{DocumentsRoute}/{documentId}", new { folderId = Guid.NewGuid() }, Ct);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_not_found");
+        await ShouldBeFolderNotFoundAsync(response);
+    }
+
+    [Fact]
+    public async Task UpdateMetadata_MoveToAnotherOwnersFolder_Returns404AndChangesNothing()
+    {
+        // The uniform-404 rule (05-security.md): a cross-owner folder responds
+        // exactly like a missing one, so folder ids cannot be probed — and the
+        // document stays where it was.
+        HttpClient folderOwner = await AuthenticatedClientAsync();
+        Guid foreignFolderId = await CreateFolderAsync(folderOwner, "Private");
+
+        HttpClient client = await AuthenticatedClientAsync();
+        Guid documentId = await UploadAsync(client);
+
+        HttpResponseMessage response = await client.PatchAsJsonAsync(
+            $"{DocumentsRoute}/{documentId}", new { folderId = foreignFolderId }, Ct);
+
+        await ShouldBeFolderNotFoundAsync(response);
+
+        DocumentMetadata unchanged = (await client.GetFromJsonAsync<DocumentMetadata>(
+            $"{DocumentsRoute}/{documentId}", Ct))!;
+        unchanged.FolderId.Should().BeNull();
     }
 
     [Fact]
@@ -196,6 +234,24 @@ public sealed class UpdateDocumentMetadataEndpointTests(FilerApiFactory factory)
         problem.Title.Should().Be("document_not_found");
     }
 
+    /// <summary>Same uniform-404 stance for move targets: cross-owner and missing are identical.</summary>
+    private static async Task ShouldBeFolderNotFoundAsync(HttpResponseMessage response)
+    {
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
+        problem.Title.Should().Be("folder_not_found");
+    }
+
+    /// <summary>Folder creation through the public POST endpoint, as a client would (#40).</summary>
+    private static async Task<Guid> CreateFolderAsync(HttpClient client, string name)
+    {
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/v1/folders", new { name }, Ct);
+        response.EnsureSuccessStatusCode();
+
+        return (await response.Content.ReadFromJsonAsync<CreatedFolder>(Ct))!.Id;
+    }
+
     private async Task<HttpClient> AuthenticatedClientAsync()
     {
         HttpClient client = _factory.CreateClient();
@@ -241,4 +297,7 @@ public sealed class UpdateDocumentMetadataEndpointTests(FilerApiFactory factory)
 
     /// <summary>The slice of the upload response these tests need.</summary>
     private sealed record UploadResult(Guid Id);
+
+    /// <summary>The slice of the create-folder response these tests need.</summary>
+    private sealed record CreatedFolder(Guid Id);
 }

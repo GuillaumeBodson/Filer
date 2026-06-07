@@ -1,11 +1,12 @@
 using Filer.Modules.Documents.Domain;
+using Filer.Modules.Folders.Contracts;
 using Filer.SharedKernel.Paging;
 using Microsoft.EntityFrameworkCore;
 
 namespace Filer.Modules.Documents.Persistence;
 
 /// <summary>EF Core implementation of <see cref="IDocumentStore"/> over the module's context.</summary>
-public sealed class EfDocumentStore(DocumentsDbContext db) : IDocumentStore
+public sealed class EfDocumentStore(DocumentsDbContext db, IFolderOwnershipChecker folderOwnership) : IDocumentStore
 {
     public Task<Document?> FindActiveByContentHashAsync(
         Guid ownerId, string contentHash, CancellationToken cancellationToken) =>
@@ -73,13 +74,13 @@ public sealed class EfDocumentStore(DocumentsDbContext db) : IDocumentStore
             .Replace("%", @"\%", StringComparison.Ordinal)
             .Replace("_", @"\_", StringComparison.Ordinal);
 
-    // Folders arrive in M4 (#40–#44). Until the folders table exists nobody owns
-    // any folder, so the check fails by definition — short-circuit instead of
-    // fabricating a join, exactly like the tag filter above. M4 replaces this
-    // body with the real owner-scoped lookup behind the same seam.
+    // The Folders module owns folder data; the check crosses the module boundary
+    // through its Contracts project only (10-solution-structure.md, ADR-004) —
+    // same seam the M3 stub promised, now backed by the real owner-scoped,
+    // soft-delete-aware lookup (#96).
     public Task<bool> OwnedFolderExistsAsync(
         Guid ownerId, Guid folderId, CancellationToken cancellationToken) =>
-        Task.FromResult(false);
+        folderOwnership.OwnsActiveFolderAsync(ownerId, folderId, cancellationToken);
 
     public async Task AddAsync(Document document, CancellationToken cancellationToken)
     {

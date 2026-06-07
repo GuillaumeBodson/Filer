@@ -2,12 +2,13 @@
 
   <!-- Documents module implementation. Private to the module; the host references
        it only to register it (10-solution-structure.md). Owns the 'documents'
-       Postgres schema. Consumes storage and background jobs strictly through their
-       Contracts projects (rule 1; 06/07). -->
+       Postgres schema. Consumes storage, background jobs, and folders strictly
+       through their Contracts projects (rule 1; 06/07). -->
 
   <ItemGroup>
     <ProjectReference Include="..\Filer.Modules.Documents.Contracts\Filer.Modules.Documents.Contracts.csproj" />
     <ProjectReference Include="..\..\BackgroundJobs\Filer.Modules.BackgroundJobs.Contracts\Filer.Modules.BackgroundJobs.Contracts.csproj" />
+    <ProjectReference Include="..\..\Folders\Filer.Modules.Folders.Contracts\Filer.Modules.Folders.Contracts.csproj" />
     <ProjectReference Include="..\..\Storage\Filer.Modules.Storage.Contracts\Filer.Modules.Storage.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
     <ProjectReference Include="..\..\..\Filer.WebKernel\Filer.WebKernel.csproj" />
