@@ -44,4 +44,13 @@ public sealed class EfFolderStore(FoldersDbContext db) : IFolderStore
             .FirstOrDefaultAsync(
                 f => f.Id == folderId && f.OwnerId == ownerId && f.DeletedAt == null,
                 cancellationToken);
+
+    public async Task UpdateAsync(Folder folder, CancellationToken cancellationToken)
+    {
+        // Reads on this seam are no-tracking, so reattach explicitly. Marking the
+        // whole entity modified trades a minimal UPDATE for simplicity — fine at
+        // this row size (13-code-quality-and-design.md, no anticipation).
+        db.Folders.Update(folder);
+        await db.SaveChangesAsync(cancellationToken);
+    }
 }

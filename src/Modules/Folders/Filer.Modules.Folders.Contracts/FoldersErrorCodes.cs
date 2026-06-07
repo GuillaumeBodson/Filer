@@ -35,4 +35,17 @@ public static class FoldersErrorCodes
     /// surfaces for an unowned move target.
     /// </summary>
     public const string FolderNotFound = "folder_not_found";
+
+    /// <summary>
+    /// The rename/move patch touches neither <c>name</c> nor <c>parentId</c> —
+    /// a client error, not a silent no-op — 400.
+    /// </summary>
+    public const string UpdateEmpty = "folder_update_empty";
+
+    /// <summary>
+    /// Re-parenting would make the folder its own ancestor — moving it under
+    /// itself or one of its descendants. Cycles are prevented in application
+    /// logic (02-data-model.md) — 409.
+    /// </summary>
+    public const string MoveCycle = "folder_move_cycle";
 }

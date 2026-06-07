@@ -2,6 +2,7 @@ using Filer.Modules.Folders.Contracts;
 using Filer.Modules.Folders.Features.Create;
 using Filer.Modules.Folders.Features.Get;
 using Filer.Modules.Folders.Features.List;
+using Filer.Modules.Folders.Features.Update;
 using Filer.Modules.Folders.Persistence;
 using Filer.SharedKernel.Configuration;
 using Filer.SharedKernel.Time;
@@ -44,6 +45,7 @@ public static class FoldersModule
         services.AddScoped<CreateFolderService>();
         services.AddScoped<ListFoldersService>();
         services.AddScoped<GetFolderService>();
+        services.AddScoped<UpdateFolderService>();
 
         return services;
     }
@@ -55,6 +57,7 @@ public static class FoldersModule
         group.MapCreateFolder();
         group.MapListFolders();
         group.MapGetFolder();
+        group.MapUpdateFolder();
 
         return routes;
     }

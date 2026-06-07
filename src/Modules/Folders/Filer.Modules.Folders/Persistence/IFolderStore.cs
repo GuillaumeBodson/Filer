@@ -41,4 +41,6 @@ public interface IFolderStore
     /// (05-security.md). Mirrors <c>IDocumentStore.FindActiveByIdAsync</c>.
     /// </summary>
     Task<Folder?> FindActiveByIdAsync(Guid ownerId, Guid folderId, CancellationToken cancellationToken);
+
+    Task UpdateAsync(Folder folder, CancellationToken cancellationToken);
 }
