@@ -20,6 +20,11 @@
          queue/claim guarantees are asserted directly against the module's services
          and the real Postgres-backed table (12-testing-strategy.md). -->
     <ProjectReference Include="..\..\src\Modules\BackgroundJobs\Filer.Modules.BackgroundJobs\Filer.Modules.BackgroundJobs.csproj" />
+    <!-- Documents implementation: no DELETE endpoint exists yet, so the
+         soft-deleted-document arrange step writes DeletedAt through the module's
+         DbContext directly. Replace with the API call once the delete slice
+         lands (03-api-specification.md). -->
+    <ProjectReference Include="..\..\src\Modules\Documents\Filer.Modules.Documents\Filer.Modules.Documents.csproj" />
   </ItemGroup>
 
   <!-- ProblemDetails, IWebHostBuilder and the test host pull in the shared

@@ -1,3 +1,4 @@
+using Filer.Modules.Documents.Features.DownloadContent;
 using Filer.Modules.Documents.Features.Upload;
 using Filer.Modules.Documents.Files;
 using Filer.Modules.Documents.Persistence;
@@ -78,6 +79,7 @@ public static class DocumentsModule
 
         // Feature services (vertical slices).
         services.AddScoped<UploadDocumentService>();
+        services.AddScoped<DownloadDocumentContentService>();
 
         return services;
     }
@@ -87,6 +89,7 @@ public static class DocumentsModule
         RouteGroupBuilder group = routes.MapGroup(DocumentsRoutes.BasePath);
 
         group.MapUploadDocument();
+        group.MapDownloadDocumentContent();
 
         return routes;
     }
