@@ -1,3 +1,4 @@
+using Filer.Modules.Folders.Contracts;
 using Filer.Modules.Folders.Features.Create;
 using Filer.Modules.Folders.Persistence;
 using Filer.SharedKernel.Configuration;
@@ -32,6 +33,10 @@ public static class FoldersModule
                 npgsql.MigrationsHistoryTable("__EFMigrationsHistory", FoldersDbContext.Schema)));
 
         services.AddScoped<IFolderStore, EfFolderStore>();
+
+        // Public surface for other modules (Documents' move-target check); the
+        // implementation stays internal behind the Contracts interface.
+        services.AddScoped<IFolderOwnershipChecker, FolderOwnershipChecker>();
 
         // Feature services (vertical slices).
         services.AddScoped<CreateFolderService>();

@@ -21,7 +21,10 @@ public sealed class Document : BaseEntity, IOwnedEntity, ISoftDeletable
     /// <summary>Reserved for the SaaS evolution; always null in V1 (02-data-model.md).</summary>
     public Guid? TenantId { get; set; }
 
-    /// <summary>Null = root / unfiled. The Folders slice is a separate feature (#34+).</summary>
+    /// <summary>
+    /// Null = root / unfiled. The Folders module owns folder data; move targets
+    /// are verified through its ownership contract (#96).
+    /// </summary>
     public Guid? FolderId { get; set; }
 
     /// <summary>
