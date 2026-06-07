@@ -27,14 +27,14 @@ public sealed class DocumentsOptions
     [MinLength(1)]
     public string[] AllowedContentTypes { get; set; } =
     [
-        "application/pdf",
-        "image/png",
-        "image/jpeg",
-        "image/webp",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        "text/plain",
-        "text/markdown",
+        KnownMediaTypes.Pdf,
+        KnownMediaTypes.Png,
+        KnownMediaTypes.Jpeg,
+        KnownMediaTypes.Webp,
+        KnownMediaTypes.Docx,
+        KnownMediaTypes.Xlsx,
+        KnownMediaTypes.Pptx,
+        KnownMediaTypes.PlainText,
+        KnownMediaTypes.Markdown,
     ];
 }

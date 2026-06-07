@@ -46,13 +46,7 @@ public sealed class UploadDocumentService(
 
         string mediaType = UploadDocumentValidator.NormalizeMediaType(command.ContentType);
 
-        // Declared MIME alone is client-controlled; corroborate it against the
-        // file's magic bytes before trusting it (05-security.md).
-        byte[] sample = new byte[FileSignatures.SampleLength];
-        int sampled = await command.Content.ReadAtLeastAsync(
-            sample, FileSignatures.SampleLength, throwOnEndOfStream: false, cancellationToken);
-
-        if (!FileSignatures.Matches(mediaType, sample.AsSpan(0, sampled)))
+        if (!await SniffsAsDeclaredAsync(command.Content, mediaType, cancellationToken))
         {
             return Result.Failure<UploadDocumentResult>(Error.UnsupportedMediaType(
                 $"The file content does not match the declared content type '{mediaType}'.",
@@ -99,13 +93,8 @@ public sealed class UploadDocumentService(
         Result<Guid> enqueued = await jobQueue.EnqueueAnalysisAsync(document.Id, cancellationToken);
         if (enqueued.IsFailure)
         {
-            // The upload contract is atomic from the client's perspective: either a
-            // document with a queued job, or nothing. Compensate without the request
-            // token so a cancelled call still cleans up after itself.
             logger.EnqueueFailed(document.Id, enqueued.Error!.Code);
-
-            await documents.RemoveAsync(document, CancellationToken.None);
-            await storage.DeleteAsync(storageKey, CancellationToken.None);
+            await RollBackUploadAsync(document, storageKey);
 
             return Result.Failure<UploadDocumentResult>(Error.Unexpected(
                 "The upload could not be completed.",
@@ -123,6 +112,31 @@ public sealed class UploadDocumentService(
             document.Status.ToString(),
             document.CreatedAt,
             enqueued.Value)));
+    }
+
+    /// <summary>
+    /// Declared MIME alone is client-controlled; corroborate it against the file's
+    /// magic bytes before trusting it (05-security.md).
+    /// </summary>
+    private static async Task<bool> SniffsAsDeclaredAsync(
+        Stream content, string mediaType, CancellationToken cancellationToken)
+    {
+        byte[] sample = new byte[FileSignatures.SampleLength];
+        int sampled = await content.ReadAtLeastAsync(
+            sample, FileSignatures.SampleLength, throwOnEndOfStream: false, cancellationToken);
+
+        return FileSignatures.Matches(mediaType, sample.AsSpan(0, sampled));
+    }
+
+    /// <summary>
+    /// The upload contract is atomic from the client's perspective: either a
+    /// document with a queued job, or nothing. Compensation runs without the
+    /// request token so a cancelled call still cleans up after itself.
+    /// </summary>
+    private async Task RollBackUploadAsync(Document document, string storageKey)
+    {
+        await documents.RemoveAsync(document, CancellationToken.None);
+        await storage.DeleteAsync(storageKey, CancellationToken.None);
     }
 }
 

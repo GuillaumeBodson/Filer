@@ -30,15 +30,13 @@ internal static class FileSignatures
     public static bool Matches(string mediaType, ReadOnlySpan<byte> sample) =>
         mediaType switch
         {
-            "application/pdf" => sample.StartsWith(Pdf),
-            "image/png" => sample.StartsWith(Png),
-            "image/jpeg" => sample.StartsWith(Jpeg),
-            "image/webp" => IsWebP(sample),
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" or
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" or
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation" =>
+            KnownMediaTypes.Pdf => sample.StartsWith(Pdf),
+            KnownMediaTypes.Png => sample.StartsWith(Png),
+            KnownMediaTypes.Jpeg => sample.StartsWith(Jpeg),
+            KnownMediaTypes.Webp => IsWebP(sample),
+            KnownMediaTypes.Docx or KnownMediaTypes.Xlsx or KnownMediaTypes.Pptx =>
                 sample.StartsWith(Zip),
-            "text/plain" or "text/markdown" => LooksLikeText(sample),
+            KnownMediaTypes.PlainText or KnownMediaTypes.Markdown => LooksLikeText(sample),
             _ => true,
         };
 
