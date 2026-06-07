@@ -25,6 +25,10 @@
          DbContext directly. Replace with the API call once the delete slice
          lands (03-api-specification.md). -->
     <ProjectReference Include="..\..\src\Modules\Documents\Filer.Modules.Documents\Filer.Modules.Documents.csproj" />
+    <!-- Folders implementation: same stance as Documents above — no DELETE
+         endpoint exists yet (#44), so the soft-deleted-folder arrange step writes
+         DeletedAt through the module's DbContext directly. -->
+    <ProjectReference Include="..\..\src\Modules\Folders\Filer.Modules.Folders\Filer.Modules.Folders.csproj" />
   </ItemGroup>
 
   <!-- ProblemDetails, IWebHostBuilder and the test host pull in the shared
