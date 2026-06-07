@@ -33,4 +33,12 @@ public interface IFolderStore
     /// construction and soft-deleted rows excluded (05-security.md, 02-data-model.md).
     /// </summary>
     Task<IReadOnlyList<Folder>> ListActiveAsync(Guid ownerId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The caller's non-deleted folder with the given id, or null. Owner-scoped
+    /// by construction so cross-owner, soft-deleted, and missing are
+    /// indistinguishable — the uniform-404 rule's single chokepoint
+    /// (05-security.md). Mirrors <c>IDocumentStore.FindActiveByIdAsync</c>.
+    /// </summary>
+    Task<Folder?> FindActiveByIdAsync(Guid ownerId, Guid folderId, CancellationToken cancellationToken);
 }

@@ -27,4 +27,12 @@ public static class FoldersErrorCodes
     /// (03-api-specification.md: invalid value → 400).
     /// </summary>
     public const string ViewInvalid = "folder_view_invalid";
+
+    /// <summary>
+    /// The requested folder does not exist for the caller. Covers missing,
+    /// soft-deleted, and cross-owner folders alike — 404, never 403, so folder
+    /// ids cannot be probed (05-security.md). Same wire code as the one Documents
+    /// surfaces for an unowned move target.
+    /// </summary>
+    public const string FolderNotFound = "folder_not_found";
 }
