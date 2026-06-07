@@ -17,6 +17,10 @@
     <Project Path="src/Modules/Documents/Filer.Modules.Documents.Contracts/Filer.Modules.Documents.Contracts.csproj" />
     <Project Path="src/Modules/Documents/Filer.Modules.Documents/Filer.Modules.Documents.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Folders/">
+    <Project Path="src/Modules/Folders/Filer.Modules.Folders.Contracts/Filer.Modules.Folders.Contracts.csproj" />
+    <Project Path="src/Modules/Folders/Filer.Modules.Folders/Filer.Modules.Folders.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Storage/">
     <Project Path="src/Modules/Storage/Filer.Modules.Storage.Contracts/Filer.Modules.Storage.Contracts.csproj" />
     <Project Path="src/Modules/Storage/Filer.Modules.Storage/Filer.Modules.Storage.csproj" />
@@ -26,6 +30,7 @@
     <Project Path="tests/Filer.Modules.Auth.Tests/Filer.Modules.Auth.Tests.csproj" />
     <Project Path="tests/Filer.Modules.BackgroundJobs.Tests/Filer.Modules.BackgroundJobs.Tests.csproj" />
     <Project Path="tests/Filer.Modules.Documents.Tests/Filer.Modules.Documents.Tests.csproj" />
+    <Project Path="tests/Filer.Modules.Folders.Tests/Filer.Modules.Folders.Tests.csproj" />
     <Project Path="tests/Filer.Modules.Storage.Tests/Filer.Modules.Storage.Tests.csproj" />
     <Project Path="tests/Filer.IntegrationTests/Filer.IntegrationTests.csproj" />
     <Project Path="tests/Filer.Architecture.Tests/Filer.Architecture.Tests.csproj" />
