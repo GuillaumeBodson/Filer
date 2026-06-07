@@ -1,3 +1,9 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text;
+using Filer.IntegrationTests.Infrastructure;
+using FluentAssertions;
 using Xunit;
 
 namespace Filer.IntegrationTests.Ownership;
@@ -7,23 +13,69 @@ namespace Filer.IntegrationTests.Ownership;
 /// (05-security.md) — the single most important behavioural guarantee in the
 /// system, and one that must never regress (12-testing-strategy.md).
 ///
-/// It cannot be exercised yet: no owned resource exists (only Auth: register /
-/// login / me, which reads claims, not per-owner rows). The first owned-resource
-/// slice — Documents (08 build order) — must land with this test enabled. The
-/// skipped fact keeps the obligation visible in the runner rather than buried in a
-/// doc's open-items list.
+/// Exercised end to end against the first real owned resource — a Document via
+/// <c>GET /api/v1/documents/{id}</c> (issue #35) — through the real pipeline:
+/// JWT validation → ICurrentUser → owner-scoped store lookup → problem-details.
+/// This test replaced the temporary ownership probe (OwnershipProbeEndpoints +
+/// OwnershipProbeTests), deleted when this slice landed, per the removal trigger
+/// in 12-testing-strategy.md.
 /// </summary>
-public sealed class OwnershipTests
+[Collection(IntegrationCollection.Name)]
+public sealed class OwnershipTests(FilerApiFactory factory)
 {
-    [Fact(Skip = "Pending the first owned resource (Documents module). Enable when GET " +
-                 "/api/v1/documents/{id} exists (issue #35): owner A creates a document, " +
-                 "owner B requests it, expect 404 (not 403/200). When enabling, delete the " +
-                 "temporary OwnershipProbeEndpoints + OwnershipProbeTests. See 05-security.md, " +
-                 "12-testing-strategy.md.")]
-    public void CrossOwnerAccessToOwnedResource_Returns404()
+    private const string DocumentsRoute = "/api/v1/documents";
+
+    private readonly FilerApiFactory _factory = factory;
+
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    [Fact]
+    public async Task CrossOwnerAccessToOwnedResource_Returns404()
     {
-        // Arrange: register owner A and owner B (RegisterAndAuthenticateAsync).
-        // Act:     A creates a resource; B GETs it with B's bearer token.
-        // Assert:  response is 404 NotFound — never 403, never 200.
+        // Owner A creates a document…
+        HttpClient owner = _factory.CreateClient();
+        AuthenticatedUser ownerUser = await owner.RegisterAndAuthenticateAsync();
+        owner.WithBearer(ownerUser.AccessToken);
+        Guid documentId = await UploadDocumentAsync(owner);
+
+        // …and owner B requests it with B's bearer token.
+        HttpClient intruder = _factory.CreateClient();
+        AuthenticatedUser intruderUser = await intruder.RegisterAndAuthenticateAsync();
+        intruder.WithBearer(intruderUser.AccessToken);
+
+        HttpResponseMessage response = await intruder.GetAsync($"{DocumentsRoute}/{documentId}", Ct);
+
+        // The whole point: not 403 (which would confirm the resource exists), not 200.
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task NonExistentResource_IsIndistinguishableFromNotOwned_Returns404()
+    {
+        HttpClient client = _factory.CreateClient();
+        AuthenticatedUser user = await client.RegisterAndAuthenticateAsync();
+        client.WithBearer(user.AccessToken);
+
+        HttpResponseMessage response = await client.GetAsync($"{DocumentsRoute}/{Guid.NewGuid()}", Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    private static async Task<Guid> UploadDocumentAsync(HttpClient client)
+    {
+        // Unique bytes per call so tests sharing one database never collide on the
+        // dedupe index.
+        var file = new ByteArrayContent(
+            Encoding.ASCII.GetBytes($"%PDF-1.7 ownership test content {Guid.NewGuid():N}"));
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        var form = new MultipartFormDataContent { { file, "file", "ownership.pdf" } };
+
+        HttpResponseMessage response = await client.PostAsync(DocumentsRoute, form, Ct);
+        response.EnsureSuccessStatusCode();
+
+        return (await response.Content.ReadFromJsonAsync<UploadResult>(Ct))!.Id;
+    }
+
+    /// <summary>The slice of the upload response this test needs.</summary>
+    private sealed record UploadResult(Guid Id);
 }
