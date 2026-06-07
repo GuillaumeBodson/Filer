@@ -33,4 +33,13 @@ public static class DocumentsErrorCodes
     /// cross-owner access too (404, never 403; 05-security.md).
     /// </summary>
     public const string DocumentNotFound = "document_not_found";
+
+    /// <summary>The list <c>?page=</c> parameter is below 1 — 400.</summary>
+    public const string PageInvalid = "page_invalid";
+
+    /// <summary>The list <c>?pageSize=</c> parameter is outside the accepted range — 400.</summary>
+    public const string PageSizeInvalid = "page_size_invalid";
+
+    /// <summary>The list <c>?q=</c> search term exceeds the accepted length — 400.</summary>
+    public const string SearchTermInvalid = "search_term_invalid";
 }

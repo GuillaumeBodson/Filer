@@ -1,5 +1,6 @@
 using Filer.Modules.Documents.Features.DownloadContent;
 using Filer.Modules.Documents.Features.GetMetadata;
+using Filer.Modules.Documents.Features.ListDocuments;
 using Filer.Modules.Documents.Features.Upload;
 using Filer.Modules.Documents.Files;
 using Filer.Modules.Documents.Persistence;
@@ -82,6 +83,7 @@ public static class DocumentsModule
         services.AddScoped<UploadDocumentService>();
         services.AddScoped<DownloadDocumentContentService>();
         services.AddScoped<GetDocumentMetadataService>();
+        services.AddScoped<ListDocumentsService>();
 
         return services;
     }
@@ -90,6 +92,7 @@ public static class DocumentsModule
     {
         RouteGroupBuilder group = routes.MapGroup(DocumentsRoutes.BasePath);
 
+        group.MapListDocuments();
         group.MapUploadDocument();
         group.MapDownloadDocumentContent();
         group.MapGetDocumentMetadata();

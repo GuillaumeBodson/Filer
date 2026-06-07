@@ -1,4 +1,5 @@
 using Filer.Modules.Documents.Domain;
+using Filer.SharedKernel.Paging;
 
 namespace Filer.Modules.Documents.Persistence;
 
@@ -23,6 +24,13 @@ public interface IDocumentStore
     /// uniform-404 rule's single chokepoint (05-security.md).
     /// </summary>
     Task<Document?> FindActiveByIdAsync(Guid ownerId, Guid documentId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// One page of the caller's non-deleted documents matching the filter,
+    /// newest first (03-api-specification.md, List filters). Owner-scoped by
+    /// construction, like every read on this seam (05-security.md).
+    /// </summary>
+    Task<PagedResult<Document>> ListActiveAsync(DocumentListFilter filter, CancellationToken cancellationToken);
 
     /// <summary>Persists a new document immediately.</summary>
     Task AddAsync(Document document, CancellationToken cancellationToken);
