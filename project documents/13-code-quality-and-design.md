@@ -146,7 +146,16 @@ consistently:
 * **Entities never cross the API boundary** (`03`, `10`). Map entity → response
   DTO explicitly; do not serialise EF entities directly.
 * Keep mapping simple and explicit (constructor / projection). A mapping library
-  is not warranted at V1 scale; revisit only if mapping volume justifies it.
+  is not warranted at V1 scale; revisit only if mapping volume justifies it
+  (e.g. the same mapping duplicated in 5+ places, or nested/conditional mapping
+  rules) — if adopted, prefer a source-generated mapper (Mapperly) and record
+  the decision in `09`.
+* House convention: each response DTO owns its projection as a static
+  `From(entity, …)` factory next to the record, called by the slice's service
+  (`UploadDocumentResponse.From(document, jobId)`,
+  `Select(DocumentListItemResponse.From)`). Mapping stays per-slice so
+  contracts can diverge independently; trivial non-entity mappings (e.g. Auth
+  token responses) may stay inline.
 
 ---
 

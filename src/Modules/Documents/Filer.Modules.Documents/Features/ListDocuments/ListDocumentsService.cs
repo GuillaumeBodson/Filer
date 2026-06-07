@@ -53,16 +53,7 @@ public sealed class ListDocumentsService(
         PagedResult<Document> page = await documents.ListActiveAsync(filter, cancellationToken);
 
         List<DocumentListItemResponse> items = page.Items
-            .Select(d => new DocumentListItemResponse(
-                d.Id,
-                d.FolderId,
-                d.FileName,
-                d.ContentType,
-                d.SizeBytes,
-                d.ContentHash,
-                d.Status.ToString(),
-                d.CreatedAt,
-                d.UpdatedAt))
+            .Select(DocumentListItemResponse.From)
             .ToList();
 
         logger.PageServed(currentUser.Id, page.Page, items.Count, page.TotalCount);

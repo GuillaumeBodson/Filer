@@ -103,15 +103,8 @@ public sealed class UploadDocumentService(
 
         logger.DocumentUploaded(document.Id, document.OwnerId, document.SizeBytes, enqueued.Value);
 
-        return Result.Success(UploadDocumentResult.Created(new UploadDocumentResponse(
-            document.Id,
-            document.FileName,
-            document.ContentType,
-            document.SizeBytes,
-            document.ContentHash,
-            document.Status.ToString(),
-            document.CreatedAt,
-            enqueued.Value)));
+        return Result.Success(UploadDocumentResult.Created(
+            UploadDocumentResponse.From(document, enqueued.Value)));
     }
 
     /// <summary>

@@ -1,3 +1,5 @@
+using Filer.Modules.Documents.Domain;
+
 namespace Filer.Modules.Documents.Features.Upload;
 
 /// <summary>
@@ -13,4 +15,20 @@ public sealed record UploadDocumentResponse(
     string ContentHash,
     string Status,
     DateTimeOffset CreatedAt,
-    Guid AnalysisJobId);
+    Guid AnalysisJobId)
+{
+    /// <summary>
+    /// The slice's single entity → DTO projection (13-code-quality-and-design.md:
+    /// explicit constructor/projection mapping, owned by the slice). The job id
+    /// comes from the enqueue step, not the entity.
+    /// </summary>
+    public static UploadDocumentResponse From(Document document, Guid analysisJobId) => new(
+        document.Id,
+        document.FileName,
+        document.ContentType,
+        document.SizeBytes,
+        document.ContentHash,
+        document.Status.ToString(),
+        document.CreatedAt,
+        analysisJobId);
+}
