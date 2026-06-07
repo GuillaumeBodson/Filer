@@ -63,7 +63,7 @@ public sealed class ListDocumentsEndpointTests(FilerApiFactory factory)
 
         Guid keptId = await UploadAsync(client, "kept.pdf");
         Guid deletedId = await UploadAsync(client, "deleted.pdf");
-        await SoftDeleteAsync(deletedId);
+        await SoftDeleteAsync(client, deletedId);
 
         Envelope envelope = await GetEnvelopeAsync(client, DocumentsRoute);
 
@@ -205,18 +205,11 @@ public sealed class ListDocumentsEndpointTests(FilerApiFactory factory)
         await db.SaveChangesAsync(Ct);
     }
 
-    /// <summary>
-    /// No DELETE endpoint exists yet; arranged through the module's DbContext.
-    /// Replace with the API call once the delete slice lands (#38).
-    /// </summary>
-    private async Task SoftDeleteAsync(Guid documentId)
+    /// <summary>Deletion through the public DELETE endpoint, as a client would (#38).</summary>
+    private static async Task SoftDeleteAsync(HttpClient client, Guid documentId)
     {
-        using IServiceScope scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<DocumentsDbContext>();
-
-        Document document = await db.Documents.SingleAsync(d => d.Id == documentId, Ct);
-        document.DeletedAt = DateTimeOffset.UtcNow;
-        await db.SaveChangesAsync(Ct);
+        HttpResponseMessage response = await client.DeleteAsync($"{DocumentsRoute}/{documentId}", Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     private static async Task<Guid> UploadAsync(HttpClient client, string fileName)

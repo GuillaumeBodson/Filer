@@ -14,7 +14,8 @@ namespace Filer.IntegrationTests.BackgroundJobs;
 /// <summary>
 /// The DB-backed queue against the real Postgres-owned <c>jobs</c> schema:
 /// enqueueing commits a Queued row before returning (durable — a crash loses no
-/// accepted work), and cancellation flips only still-queued jobs
+/// accepted work), and cancellation flips a document's queued and running jobs to
+/// Cancelled — a final state even against a worker finishing concurrently
 /// (06-ai-analysis-pipeline.md). The module maps no endpoints, so the contract is
 /// exercised directly through the host's DI container.
 /// </summary>
@@ -56,7 +57,7 @@ public sealed class BackgroundJobQueueTests(FilerApiFactory factory)
     }
 
     [Fact]
-    public async Task CancelQueuedForDocumentAsync_CancelsQueuedJobsButNotRunningOnes()
+    public async Task CancelForDocumentAsync_CancelsQueuedAndRunningJobs()
     {
         await _factory.DrainQueueAsync();
 
@@ -81,13 +82,13 @@ public sealed class BackgroundJobQueueTests(FilerApiFactory factory)
         {
             var queue = scope.ServiceProvider.GetRequiredService<IBackgroundJobQueue>();
             Result<int> result =
-                await queue.CancelQueuedForDocumentAsync(documentId, TestContext.Current.CancellationToken);
+                await queue.CancelForDocumentAsync(documentId, TestContext.Current.CancellationToken);
 
             result.IsSuccess.Should().BeTrue();
             cancelled = result.Value;
         }
 
-        cancelled.Should().Be(1, "only the still-queued job may be cancelled");
+        cancelled.Should().Be(2, "queued and running jobs are both cancelled (06)");
 
         await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
         {
@@ -100,19 +101,33 @@ public sealed class BackgroundJobQueueTests(FilerApiFactory factory)
 
             AnalysisJob runningJob = await db.AnalysisJobs.AsNoTracking()
                 .SingleAsync(j => j.Id == runningJobId, TestContext.Current.CancellationToken);
-            runningJob.Status.Should().Be(AnalysisJobStatus.Running,
-                "mid-flight cancellation is the worker's concern, not the queue's");
+            runningJob.Status.Should().Be(AnalysisJobStatus.Cancelled,
+                "deleting a document cancels its in-flight jobs too (06)");
+        }
+
+        // The worker that still holds the formerly running job now finishes: its
+        // completion write is guarded on Status == Running, so Cancelled is final.
+        await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
+            await store.MarkSucceededAsync(runningJobId, TestContext.Current.CancellationToken);
+
+            var db = scope.ServiceProvider.GetRequiredService<JobsDbContext>();
+            AnalysisJob runningJob = await db.AnalysisJobs.AsNoTracking()
+                .SingleAsync(j => j.Id == runningJobId, TestContext.Current.CancellationToken);
+            runningJob.Status.Should().Be(AnalysisJobStatus.Cancelled,
+                "a cancelled job can never be resurrected by a late worker");
         }
     }
 
     [Fact]
-    public async Task CancelQueuedForDocumentAsync_WhenDocumentHasNoJobs_SucceedsWithZero()
+    public async Task CancelForDocumentAsync_WhenDocumentHasNoJobs_SucceedsWithZero()
     {
         await using AsyncServiceScope scope = _factory.Services.CreateAsyncScope();
         var queue = scope.ServiceProvider.GetRequiredService<IBackgroundJobQueue>();
 
         Result<int> result =
-            await queue.CancelQueuedForDocumentAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
+            await queue.CancelForDocumentAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(0);

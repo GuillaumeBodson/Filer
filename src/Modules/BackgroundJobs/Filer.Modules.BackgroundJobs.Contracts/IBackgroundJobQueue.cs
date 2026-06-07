@@ -24,11 +24,14 @@ public interface IBackgroundJobQueue
     Task<Result<Guid>> EnqueueAnalysisAsync(Guid documentId, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Cancels the still-queued analysis jobs of a document (e.g. the document was
-    /// deleted before processing — 06-ai-analysis-pipeline.md). Jobs already running
-    /// are not interrupted here; mid-flight cancellation belongs to the worker's
-    /// lifecycle handling. Returns the number of jobs cancelled; cancelling a
-    /// document with no queued jobs is a success with count zero.
+    /// Cancels a document's queued and running analysis jobs (deleting a document
+    /// cancels its in-flight/queued work — 06-ai-analysis-pipeline.md). The flip to
+    /// Cancelled is immediate and final: the worker's completion writes are guarded
+    /// on a job still being Running, so a worker that finishes a just-cancelled job
+    /// records nothing. The worker is not interrupted mid-flight here — honoring
+    /// cancellation inside a running attempt belongs to the worker's lifecycle
+    /// handling. Returns the number of jobs cancelled; cancelling a document with
+    /// no active jobs is a success with count zero.
     /// </summary>
-    Task<Result<int>> CancelQueuedForDocumentAsync(Guid documentId, CancellationToken cancellationToken);
+    Task<Result<int>> CancelForDocumentAsync(Guid documentId, CancellationToken cancellationToken);
 }

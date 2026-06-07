@@ -3,12 +3,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using Filer.IntegrationTests.Infrastructure;
-using Filer.Modules.Documents.Domain;
-using Filer.Modules.Documents.Persistence;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Filer.IntegrationTests.Documents;
@@ -101,7 +97,7 @@ public sealed class DownloadDocumentContentEndpointTests(FilerApiFactory factory
         client.WithBearer(user.AccessToken);
 
         Guid documentId = await UploadAsync(client, UniquePdfBytes());
-        await SoftDeleteAsync(documentId);
+        await SoftDeleteAsync(client, documentId);
 
         // Soft-deleted is indistinguishable from never-existed (02-data-model.md).
         HttpResponseMessage response =
@@ -121,18 +117,11 @@ public sealed class DownloadDocumentContentEndpointTests(FilerApiFactory factory
         problem.Title.Should().Be("document_not_found");
     }
 
-    /// <summary>
-    /// No DELETE endpoint exists yet, so deletion is arranged through the module's
-    /// DbContext. Replace with the API call once the delete slice lands (03).
-    /// </summary>
-    private async Task SoftDeleteAsync(Guid documentId)
+    /// <summary>Deletion through the public DELETE endpoint, as a client would (#38).</summary>
+    private static async Task SoftDeleteAsync(HttpClient client, Guid documentId)
     {
-        using IServiceScope scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<DocumentsDbContext>();
-
-        Document document = await db.Documents.SingleAsync(d => d.Id == documentId, Ct);
-        document.DeletedAt = DateTimeOffset.UtcNow;
-        await db.SaveChangesAsync(Ct);
+        HttpResponseMessage response = await client.DeleteAsync($"{DocumentsRoute}/{documentId}", Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     private static async Task<Guid> UploadAsync(HttpClient client, byte[] bytes, string fileName = "document.pdf")
