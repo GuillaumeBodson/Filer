@@ -36,4 +36,12 @@ public sealed class EfFolderStore(FoldersDbContext db) : IFolderStore
             .OrderBy(f => f.Name)
             .ThenBy(f => f.Id)
             .ToListAsync(cancellationToken);
+
+    public Task<Folder?> FindActiveByIdAsync(
+        Guid ownerId, Guid folderId, CancellationToken cancellationToken) =>
+        db.Folders
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                f => f.Id == folderId && f.OwnerId == ownerId && f.DeletedAt == null,
+                cancellationToken);
 }
