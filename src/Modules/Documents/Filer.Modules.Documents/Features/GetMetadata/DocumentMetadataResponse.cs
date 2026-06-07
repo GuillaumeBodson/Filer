@@ -1,3 +1,5 @@
+using Filer.Modules.Documents.Domain;
+
 namespace Filer.Modules.Documents.Features.GetMetadata;
 
 /// <summary>
@@ -17,4 +19,20 @@ public sealed record DocumentMetadataResponse(
     string ContentHash,
     string Status,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt)
+{
+    /// <summary>
+    /// The slice's single entity → DTO projection (13-code-quality-and-design.md:
+    /// explicit constructor/projection mapping, owned by the slice).
+    /// </summary>
+    public static DocumentMetadataResponse From(Document document) => new(
+        document.Id,
+        document.FolderId,
+        document.FileName,
+        document.ContentType,
+        document.SizeBytes,
+        document.ContentHash,
+        document.Status.ToString(),
+        document.CreatedAt,
+        document.UpdatedAt);
+}

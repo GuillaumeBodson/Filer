@@ -73,16 +73,7 @@ public sealed class UpdateDocumentMetadataService(
 
         logger.MetadataUpdated(document.Id, currentUser.Id, request.HasFileName, request.HasFolderId);
 
-        return Result.Success(new UpdateDocumentMetadataResponse(
-            document.Id,
-            document.FolderId,
-            document.FileName,
-            document.ContentType,
-            document.SizeBytes,
-            document.ContentHash,
-            document.Status.ToString(),
-            document.CreatedAt,
-            document.UpdatedAt));
+        return Result.Success(UpdateDocumentMetadataResponse.From(document));
     }
 }
 

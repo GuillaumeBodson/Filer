@@ -40,16 +40,7 @@ public sealed class GetDocumentMetadataService(
 
         logger.MetadataServed(document.Id, currentUser.Id);
 
-        return Result.Success(new DocumentMetadataResponse(
-            document.Id,
-            document.FolderId,
-            document.FileName,
-            document.ContentType,
-            document.SizeBytes,
-            document.ContentHash,
-            document.Status.ToString(),
-            document.CreatedAt,
-            document.UpdatedAt));
+        return Result.Success(DocumentMetadataResponse.From(document));
     }
 }
 
