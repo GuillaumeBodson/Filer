@@ -2,6 +2,7 @@
 name: Milestone review
 about: Cross-slice consistency review — open as the last issue of each epic/milestone.
 title: "Milestone review: <milestone>"
+labels: milestone-review
 ---
 
 <!--
