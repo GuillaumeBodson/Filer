@@ -17,4 +17,13 @@ public interface ITagStore
     Task<bool> NameExistsAsync(Guid ownerId, string name, CancellationToken cancellationToken);
 
     Task AddAsync(Tag tag, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Every tag the caller owns, ordered by name then id so the listing is
+    /// deterministic (03-api-specification.md). Owner-scoped by construction —
+    /// the store cannot be queried without the caller's id (05-security.md).
+    /// Tags are hard-deleted (#48), so there is no soft-delete state to exclude,
+    /// unlike <c>IFolderStore.ListActiveAsync</c>.
+    /// </summary>
+    Task<IReadOnlyList<Tag>> ListAsync(Guid ownerId, CancellationToken cancellationToken);
 }

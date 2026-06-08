@@ -17,4 +17,13 @@ public sealed class EfTagStore(TagsDbContext db) : ITagStore
         db.Tags.Add(tag);
         await db.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Tag>> ListAsync(
+        Guid ownerId, CancellationToken cancellationToken) =>
+        await db.Tags
+            .AsNoTracking()
+            .Where(t => t.OwnerId == ownerId)
+            .OrderBy(t => t.Name)
+            .ThenBy(t => t.Id)
+            .ToListAsync(cancellationToken);
 }
