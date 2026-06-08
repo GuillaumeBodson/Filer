@@ -1,5 +1,6 @@
 using Filer.Modules.Tags.Features.Create;
 using Filer.Modules.Tags.Features.List;
+using Filer.Modules.Tags.Features.Rename;
 using Filer.Modules.Tags.Persistence;
 using Filer.SharedKernel.Configuration;
 using Filer.SharedKernel.Time;
@@ -37,6 +38,7 @@ public static class TagsModule
         // Feature services (vertical slices).
         services.AddScoped<CreateTagService>();
         services.AddScoped<ListTagsService>();
+        services.AddScoped<RenameTagService>();
 
         return services;
     }
@@ -47,6 +49,7 @@ public static class TagsModule
 
         group.MapListTags();
         group.MapCreateTag();
+        group.MapRenameTag();
 
         return routes;
     }

@@ -18,6 +18,21 @@ public sealed class EfTagStore(TagsDbContext db) : ITagStore
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public Task<Tag?> FindByIdAsync(
+        Guid ownerId, Guid tagId, CancellationToken cancellationToken) =>
+        db.Tags
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == tagId && t.OwnerId == ownerId, cancellationToken);
+
+    public async Task UpdateAsync(Tag tag, CancellationToken cancellationToken)
+    {
+        // Reads on this seam are no-tracking, so reattach explicitly. Marking the
+        // whole entity modified trades a minimal UPDATE for simplicity — fine at
+        // this row size (13-code-quality-and-design.md, no anticipation).
+        db.Tags.Update(tag);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Tag>> ListAsync(
         Guid ownerId, CancellationToken cancellationToken) =>
         await db.Tags
