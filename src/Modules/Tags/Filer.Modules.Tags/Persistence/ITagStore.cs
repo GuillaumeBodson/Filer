@@ -19,6 +19,17 @@ public interface ITagStore
     Task AddAsync(Tag tag, CancellationToken cancellationToken);
 
     /// <summary>
+    /// The caller's tag with the given id, or null. Owner-scoped by construction
+    /// so cross-owner and missing are indistinguishable — the uniform-404 rule's
+    /// single chokepoint (05-security.md). Tags are hard-deleted (#48), so unlike
+    /// <c>IFolderStore.FindActiveByIdAsync</c> there is no soft-delete state to
+    /// exclude.
+    /// </summary>
+    Task<Tag?> FindByIdAsync(Guid ownerId, Guid tagId, CancellationToken cancellationToken);
+
+    Task UpdateAsync(Tag tag, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Every tag the caller owns, ordered by name then id so the listing is
     /// deterministic (03-api-specification.md). Owner-scoped by construction —
     /// the store cannot be queried without the caller's id (05-security.md).
