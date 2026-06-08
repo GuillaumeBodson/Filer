@@ -1,4 +1,5 @@
 using Filer.Modules.Tags.Features.Create;
+using Filer.Modules.Tags.Features.List;
 using Filer.Modules.Tags.Persistence;
 using Filer.SharedKernel.Configuration;
 using Filer.SharedKernel.Time;
@@ -35,6 +36,7 @@ public static class TagsModule
 
         // Feature services (vertical slices).
         services.AddScoped<CreateTagService>();
+        services.AddScoped<ListTagsService>();
 
         return services;
     }
@@ -43,6 +45,7 @@ public static class TagsModule
     {
         RouteGroupBuilder group = routes.MapGroup(TagsRoutes.BasePath);
 
+        group.MapListTags();
         group.MapCreateTag();
 
         return routes;
