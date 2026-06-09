@@ -47,7 +47,7 @@ public sealed class DeleteTagService(
         if (tag is null)
         {
             return Result.Failure(
-                Error.NotFound("The tag was not found.", TagsErrorCodes.NotFound));
+                Error.NotFound("The tag was not found.", TagsErrorCodes.TagNotFound));
         }
 
         // Associations first (see the type remarks for the ordering rationale):
