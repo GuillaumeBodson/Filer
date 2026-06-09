@@ -40,6 +40,13 @@ public sealed class EfTagStore(TagsDbContext db) : ITagStore
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task DeleteAsync(Tag tag, CancellationToken cancellationToken)
+    {
+        // Reads on this seam are no-tracking, so attach explicitly before removing.
+        db.Tags.Remove(tag);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Tag>> ListAsync(
         Guid ownerId, CancellationToken cancellationToken) =>
         await db.Tags

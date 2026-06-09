@@ -1,5 +1,6 @@
 using Filer.Modules.Tags.Contracts;
 using Filer.Modules.Tags.Features.Create;
+using Filer.Modules.Tags.Features.Delete;
 using Filer.Modules.Tags.Features.List;
 using Filer.Modules.Tags.Features.Rename;
 using Filer.Modules.Tags.Persistence;
@@ -45,6 +46,7 @@ public static class TagsModule
         services.AddScoped<CreateTagService>();
         services.AddScoped<ListTagsService>();
         services.AddScoped<RenameTagService>();
+        services.AddScoped<DeleteTagService>();
 
         return services;
     }
@@ -56,6 +58,7 @@ public static class TagsModule
         group.MapListTags();
         group.MapCreateTag();
         group.MapRenameTag();
+        group.MapDeleteTag();
 
         return routes;
     }

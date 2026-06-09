@@ -40,6 +40,14 @@ public interface ITagStore
     Task UpdateAsync(Tag tag, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Hard-removes the caller's tag (#48). Tags carry no soft-delete state
+    /// (Tag.cs), so deletion is a real DELETE. The caller resolves the owned tag
+    /// first through <see cref="FindByIdAsync"/>, so by the time this runs the tag
+    /// is already proven to be the caller's (05-security.md).
+    /// </summary>
+    Task DeleteAsync(Tag tag, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Every tag the caller owns, ordered by name then id so the listing is
     /// deterministic (03-api-specification.md). Owner-scoped by construction —
     /// the store cannot be queried without the caller's id (05-security.md).

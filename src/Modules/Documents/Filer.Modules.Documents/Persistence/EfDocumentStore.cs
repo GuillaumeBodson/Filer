@@ -153,6 +153,21 @@ public sealed class EfDocumentStore(DocumentsDbContext db, IFolderOwnershipCheck
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task RemoveDocumentTagsForTagAsync(
+        Guid ownerId, Guid tagId, CancellationToken cancellationToken)
+    {
+        // Owner-scoping is transitive through the document: the join has no owner
+        // of its own, so the rows to delete are those whose tag matches AND whose
+        // document is the caller's (05-security.md). A cross-owner tag id matches
+        // none of the caller's documents, so it deletes nothing — the uniform-404
+        // rule's behaviour at the persistence seam. One ExecuteDelete = one
+        // statement, no rows loaded; idempotent by construction (no match → 0 rows).
+        await db.DocumentTags
+            .Where(dt => dt.TagId == tagId
+                && db.Documents.Any(d => d.Id == dt.DocumentId && d.OwnerId == ownerId))
+            .ExecuteDeleteAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Document document, CancellationToken cancellationToken)
     {
         db.Documents.Add(document);

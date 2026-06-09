@@ -6,6 +6,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Filer.Modules.Tags.Contracts\Filer.Modules.Tags.Contracts.csproj" />
+    <!-- Delete cascade removes a tag's document associations through the Documents
+         module's contracts only (ADR-009, #48, 10-solution-structure.md) — the
+         mirror of Folders -> Documents.Contracts for the folder delete cascade. -->
+    <ProjectReference Include="..\..\Documents\Filer.Modules.Documents.Contracts\Filer.Modules.Documents.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
     <ProjectReference Include="..\..\..\Filer.WebKernel\Filer.WebKernel.csproj" />
   </ItemGroup>
