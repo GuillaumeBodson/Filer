@@ -27,17 +27,19 @@ public sealed class EfDocumentStore(DocumentsDbContext db, IFolderOwnershipCheck
     public async Task<PagedResult<Document>> ListActiveAsync(
         DocumentListFilter filter, CancellationToken cancellationToken)
     {
-        // Tags arrive in M4 (#41–#45). Until the DocumentTag join exists no
-        // document carries any tag, so a tag filter matches nothing by
-        // definition — short-circuit instead of fabricating a join.
-        if (filter.TagId is not null)
-        {
-            return new PagedResult<Document>([], filter.Page, filter.PageSize, 0);
-        }
-
         IQueryable<Document> query = db.Documents
             .AsNoTracking()
             .Where(d => d.OwnerId == filter.OwnerId && d.DeletedAt == null);
+
+        // The DocumentTag join now exists (#49): a tag filter keeps documents that
+        // carry the tag in any Source. The join is owner-scoped transitively — the
+        // OwnerId predicate above already confines the documents — so a foreign
+        // tag id simply matches none of the caller's documents (05-security.md),
+        // no separate tag-ownership check needed for a read.
+        if (filter.TagId is Guid tagId)
+        {
+            query = query.Where(d => db.DocumentTags.Any(dt => dt.DocumentId == d.Id && dt.TagId == tagId));
+        }
 
         if (filter.FolderId is Guid folderId)
         {
@@ -113,6 +115,42 @@ public sealed class EfDocumentStore(DocumentsDbContext db, IFolderOwnershipCheck
         await db.SaveChangesAsync(cancellationToken);
 
         return documents.Select(d => d.Id).ToList();
+    }
+
+    public async Task<IReadOnlyList<DocumentTag>> ListTagsForDocumentAsync(
+        Guid documentId, CancellationToken cancellationToken) =>
+        await db.DocumentTags
+            .AsNoTracking()
+            .Where(dt => dt.DocumentId == documentId)
+            .ToListAsync(cancellationToken);
+
+    public async Task ApplyTagChangesAsync(
+        IReadOnlyCollection<DocumentTag> toInsert,
+        IReadOnlyCollection<DocumentTag> toPromote,
+        IReadOnlyCollection<DocumentTag> toRemove,
+        CancellationToken cancellationToken)
+    {
+        // Reads on this seam are no-tracking, so attach explicitly by operation.
+        // The slice has already split the diff, so there is no guessing here:
+        // inserts are new pairs, promotes are existing pairs with a changed Source,
+        // removes are deletions. One SaveChanges = one transaction for the whole
+        // diff (#49).
+        foreach (DocumentTag association in toRemove)
+        {
+            db.DocumentTags.Remove(association);
+        }
+
+        foreach (DocumentTag association in toPromote)
+        {
+            db.DocumentTags.Update(association);
+        }
+
+        if (toInsert.Count > 0)
+        {
+            db.DocumentTags.AddRange(toInsert);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task AddAsync(Document document, CancellationToken cancellationToken)

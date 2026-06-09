@@ -15,6 +15,8 @@ public sealed class DocumentsDbContext(DbContextOptions<DocumentsDbContext> opti
 
     public DbSet<Document> Documents => Set<Document>();
 
+    public DbSet<DocumentTag> DocumentTags => Set<DocumentTag>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -66,6 +68,35 @@ public sealed class DocumentsDbContext(DbContextOptions<DocumentsDbContext> opti
             // choose to keep both copies (03-api-specification.md, upload behavior).
             document.HasIndex(d => new { d.OwnerId, d.ContentHash })
                 .HasFilter("\"DeletedAt\" IS NULL");
+        });
+
+        modelBuilder.Entity<DocumentTag>(documentTag =>
+        {
+            documentTag.ToTable("DocumentTags");
+
+            // Composite PK (DocumentId, TagId): exactly one row per pair, so a
+            // re-add promotes the row's Source instead of inserting a duplicate
+            // (02-data-model.md, ADR-009).
+            documentTag.HasKey(dt => new { dt.DocumentId, dt.TagId });
+
+            // Stored as text per 02-data-model.md; readable in SQL and stable
+            // across enum reordering, exactly like Document.Status.
+            documentTag.Property(dt => dt.Source)
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .IsRequired();
+
+            // FK to Document WITHIN this context: deleting a document cascades to
+            // its associations. TagId stays a plain column — the Tag lives in
+            // another module's schema, so no cross-schema FK or navigation (ADR-009).
+            documentTag.HasOne<Document>()
+                .WithMany()
+                .HasForeignKey(dt => dt.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // The by-tag lookups (a tag's documents, and the tag-delete cascade
+            // from #48) scan on TagId, which the composite PK does not front.
+            documentTag.HasIndex(dt => dt.TagId);
         });
     }
 }

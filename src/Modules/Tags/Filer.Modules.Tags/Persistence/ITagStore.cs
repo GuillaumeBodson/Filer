@@ -16,6 +16,16 @@ public interface ITagStore
     /// </summary>
     Task<bool> NameExistsAsync(Guid ownerId, string name, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// How many of the given ids are tags owned by the caller — the
+    /// every-id-owned check behind <c>ITagOwnershipChecker</c> (#49). Owner-scoped
+    /// by construction, like every read on this seam, so cross-owner and missing
+    /// ids are counted identically as absent (05-security.md). The caller compares
+    /// the count to the distinct id count to decide ownership.
+    /// </summary>
+    Task<int> CountOwnedAsync(
+        Guid ownerId, IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken);
+
     Task AddAsync(Tag tag, CancellationToken cancellationToken);
 
     /// <summary>

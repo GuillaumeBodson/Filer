@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\BackgroundJobs\Filer.Modules.BackgroundJobs.Contracts\Filer.Modules.BackgroundJobs.Contracts.csproj" />
     <ProjectReference Include="..\..\Folders\Filer.Modules.Folders.Contracts\Filer.Modules.Folders.Contracts.csproj" />
     <ProjectReference Include="..\..\Storage\Filer.Modules.Storage.Contracts\Filer.Modules.Storage.Contracts.csproj" />
+    <ProjectReference Include="..\..\Tags\Filer.Modules.Tags.Contracts\Filer.Modules.Tags.Contracts.csproj" />
     <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
     <ProjectReference Include="..\..\..\Filer.WebKernel\Filer.WebKernel.csproj" />
   </ItemGroup>
