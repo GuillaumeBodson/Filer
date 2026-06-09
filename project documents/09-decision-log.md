@@ -682,3 +682,105 @@ Documents-module slices.
   couple the two schemas' migration order. Rejected.
 * **`PUT` wipes `AiSuggested` rows too.** Simpler, but silently discards
   suggestions on any user edit — against the advisory philosophy (`01`). Rejected.
+
+## ADR-010 — Bulk tag operations: synchronous and capped, async deferred behind a generalized job runner
+
+* **Date:** 2026-06-09
+* **Status:** Accepted (design; implementation under M8 — epic #109, slices #110/#111; async path #112 deferred)
+
+### Context
+
+The tag slices (#45–#49, M4) shipped single-document tag association
+(`PUT/POST/DELETE /documents/{id}/tags*`, ADR-009). The follow-up need is **bulk**
+tagging: add/remove tags across many documents at once — an explicit selection of
+files, or every document in selected folder(s) with optional recursion. `03`
+already lists "Bulk operations (multi-delete, multi-move…)" as an open question.
+
+The primitives exist; the open questions are about *contract* and *execution
+model*, not new domain concepts (the join, `Source` semantics, and the
+uniform-404 ownership rule are fixed by ADR-009):
+
+1. **Execution model.** A folder-recursive bulk can touch many documents. The
+   async-by-default principle (`06`/`08`) and the existing `BackgroundJobs` worker
+   make "run it as a job" tempting — but that module is today purpose-built for the
+   AI pipeline (`AnalysisJob` + `AnalysisJobWorker` + `IAnalysisJobHandler`,
+   single-document, analysis-shaped). There is no generic job runner; a job-backed
+   bulk op needs new infrastructure.
+2. **Failure semantics** of a multi-target write — atomic vs best-effort partial.
+3. **Where dispatch is heading.** ADR-008 replaces polling with RabbitMQ as the
+   wake-up signal, leaving the Postgres table as the durable outbox — the dispatch
+   layer is about to change.
+
+### Decision
+
+**Ship bulk tagging synchronously, atomically, and capped; defer the async path;
+and when async is needed, generalize the job runner rather than add a one-off job
+type.**
+
+* **One batch endpoint:** `POST /api/v1/documents/tags/batch` — an `operation`
+  (`add`/`remove`) over a `tagIds` set and a selector: either `documentIds`
+  (selected files, #110) or `folderIds` with a `?recursive=` query param
+  (folder-scoped, #111; recursion as a query param to match ADR-007's
+  `?recursive=true`). It lives in the Documents module, which owns the join
+  (ADR-009); folder-subtree resolution comes through a narrow `Folders.Contracts`
+  reader (`10`), not by reaching into Folders.
+* **Atomic, all-or-nothing.** The whole operation is one transaction; any
+  not-owned/not-found document, tag, or folder fails the request (uniform **404**,
+  `05`) and rolls everything back. Per-association idempotency (re-add / absent-
+  remove are no-ops) and the ADR-009 `Source` rules are preserved.
+* **Synchronous with a count-first cap.** The handler resolves and counts the
+  affected documents before mutating; above a configurable cap (default **500**)
+  it **rejects** behind a single named seam. No background-job infrastructure is
+  built now.
+* **Async is deferred (#112), not designed away.** The reject seam is the exact
+  point a later change flips to "enqueue + `202` + job id". When a real
+  oversized-bulk need appears, `BackgroundJobs` is **generalized** into a
+  multi-type runner (job-type discriminator + payload + `IJobHandler` registry),
+  **sequenced with the RabbitMQ migration (ADR-008)** — not extended with a
+  parallel `BulkTagJob`.
+
+### Rationale
+
+* **YAGNI on the expensive part.** Durable-job infrastructure for a capacity the
+  personal-scale V1 may never reach is the speculative complexity `08`/`13` warn
+  against. A cap + reject ships the feature now and makes the limit explicit, the
+  way the 50 MB upload limit does (`04`).
+* **The dispatch layer is in flux.** A `BulkTagJob` built on today's polling worker
+  would be rebuilt onto RabbitMQ almost immediately (ADR-008). Deferring avoids
+  throwaway plumbing; the synchronous path is insulated from that migration.
+* **Generalize once, against two real consumers.** A one-off second job type
+  duplicates the worker loop, status enum, store, `SKIP LOCKED` claim — and, post
+  ADR-008, the RabbitMQ consumer/binding. A single typed runner wires the broker
+  once and lets future bulk move/delete plug in as handlers. Doing it when a second
+  consumer actually exists (analysis + bulk) avoids designing the abstraction blind.
+* **Atomic is the predictable contract** for a personal-document tool: a bulk
+  action either took or it did not, with the uniform-404 rule intact — no partial
+  state to reconcile.
+
+### Trade-offs accepted
+
+* Selections above the cap are rejected rather than queued until #112 lands —
+  accepted; the seam keeps that a one-line behavior swap, not a contract change.
+* A folder-recursive op walks a possibly deep subtree in one synchronous
+  transaction (bounded by the cap) — accepted at V1 scale, as ADR-007's recursive
+  folder delete accepts.
+* Atomic all-or-nothing fails the whole batch on one bad id (no partial success /
+  per-item report) — accepted for contract simplicity; a best-effort mode can be
+  added later without breaking the atomic default.
+* The over-cap status code (422 vs 400) is left to the implementing slice — the
+  one open sub-decision.
+
+### Alternatives considered
+
+* **Add a `BulkTagJob` now.** Scales immediately and leaves the green analysis path
+  untouched, but duplicates the entire job mechanism (and future broker wiring) and
+  commits to async before it is needed; rejected in favor of deferring + generalizing.
+* **Generalize the job runner now.** Removes duplication up front, but touches
+  already-shipped analysis code speculatively and designs the abstraction with only
+  one real consumer; rejected as premature — revisit under #112.
+* **Best-effort with a per-item result report (207-style).** Allows partial success
+  on large selections, but pushes reconciliation onto every client and complicates
+  the contract; rejected as the default, deferrable later.
+* **No bulk endpoint — clients loop the single-document calls.** Zero new surface,
+  but N round-trips and no atomicity for a routine operation; rejected as offloading
+  avoidable work, the same reasoning as ADR-007.
