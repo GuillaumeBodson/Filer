@@ -81,6 +81,17 @@ public interface IDocumentStore
         IReadOnlyCollection<DocumentTag> toRemove,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Removes every <c>DocumentTag</c> row for the given tag whose document
+    /// belongs to the caller, in one transaction — the persistence half of the
+    /// tag-delete cascade (#48, ADR-009). Owner-scoping is transitive through the
+    /// document, since the join carries no owner of its own (05-security.md): a
+    /// cross-owner tag id matches none of the caller's documents and removes
+    /// nothing. Idempotent: a tag with no associations is a no-op success, so the
+    /// cascade is safe to retry.
+    /// </summary>
+    Task RemoveDocumentTagsForTagAsync(Guid ownerId, Guid tagId, CancellationToken cancellationToken);
+
     /// <summary>Persists a new document immediately.</summary>
     Task AddAsync(Document document, CancellationToken cancellationToken);
 

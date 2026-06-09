@@ -89,6 +89,10 @@ public static class DocumentsModule
         // implementation stays internal behind the Contracts interface.
         services.AddScoped<IFolderDocumentRemover, FolderDocumentRemover>();
 
+        // Public surface for the Tags module (the tag-delete cascade, ADR-009/#48);
+        // the implementation stays internal behind the Contracts interface.
+        services.AddScoped<IDocumentTagRemover, DocumentTagRemover>();
+
         // Feature services (vertical slices).
         services.AddScoped<UploadDocumentService>();
         services.AddScoped<DownloadDocumentContentService>();
