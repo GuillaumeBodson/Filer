@@ -20,5 +20,5 @@ public static class TagsErrorCodes
     /// No tag with the given id is owned by the caller — missing or cross-owner,
     /// indistinguishable by the uniform-404 rule (05-security.md) — 404.
     /// </summary>
-    public const string NotFound = "tag_not_found";
+    public const string TagNotFound = "tag_not_found";
 }

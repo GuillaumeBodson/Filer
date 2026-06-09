@@ -45,7 +45,7 @@ public sealed class RenameTagService(
         if (tag is null)
         {
             return Result.Failure<RenameTagResponse>(
-                Error.NotFound("The tag was not found.", TagsErrorCodes.NotFound));
+                Error.NotFound("The tag was not found.", TagsErrorCodes.TagNotFound));
         }
 
         // The validator guarantees a non-empty trimmed name; persist and compare

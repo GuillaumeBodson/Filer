@@ -92,7 +92,7 @@ public sealed class RenameTagServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Type.Should().Be(ErrorType.NotFound);
-        result.Error.Code.Should().Be(TagsErrorCodes.NotFound);
+        result.Error.Code.Should().Be(TagsErrorCodes.TagNotFound);
 
         _tags.Verify(
             t => t.UpdateAsync(It.IsAny<Tag>(), It.IsAny<CancellationToken>()), Times.Never);

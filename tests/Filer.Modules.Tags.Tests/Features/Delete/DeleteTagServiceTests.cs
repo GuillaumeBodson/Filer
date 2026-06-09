@@ -76,7 +76,7 @@ public sealed class DeleteTagServiceTests
 
         result.IsFailure.Should().BeTrue();
         result.Error!.Type.Should().Be(ErrorType.NotFound);
-        result.Error.Code.Should().Be(TagsErrorCodes.NotFound);
+        result.Error.Code.Should().Be(TagsErrorCodes.TagNotFound);
 
         _associations.VerifyNoOtherCalls();
         _tags.Verify(
