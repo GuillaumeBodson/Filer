@@ -129,6 +129,7 @@ ADR-007 (`09`).
 | PUT    | `/api/v1/documents/{id}/tags`          | Replace a document's tag set |
 | POST   | `/api/v1/documents/{id}/tags/{tagId}`  | Add a tag to a document      |
 | DELETE | `/api/v1/documents/{id}/tags/{tagId}`  | Remove a tag from a document |
+| POST   | `/api/v1/documents/tags/batch`         | Bulk add/remove tags (selected docs or folder) |
 
 Replace semantics: `PUT /documents/{id}/tags` manages only `Source=User`
 associations. `AiSuggested` rows are preserved on replace, unless their tag is
@@ -176,4 +177,8 @@ Maps to the modular-monolith modules (ADR-003):
 ## Open Questions
 
 * Refresh-token strategy details (rotation, lifetime) — to expand in `05-security`.
-* Bulk operations (multi-delete, multi-move
+* **Bulk operations.** Tag bulk operations — add/remove across selected documents
+  or folder subtrees — are specified under M8 (epic #109, ADR-010) via
+  `POST /documents/tags/batch`: synchronous, atomic, and capped, with an over-cap
+  reject seam reserved for a later async path (#112). Multi-delete and multi-move
+  remain open and are expected to follow the same batch-endpoint pattern.
