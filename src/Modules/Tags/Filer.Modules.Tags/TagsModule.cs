@@ -1,3 +1,4 @@
+using Filer.Modules.Tags.Contracts;
 using Filer.Modules.Tags.Features.Create;
 using Filer.Modules.Tags.Features.List;
 using Filer.Modules.Tags.Features.Rename;
@@ -34,6 +35,11 @@ public static class TagsModule
                 npgsql.MigrationsHistoryTable("__EFMigrationsHistory", TagsDbContext.Schema)));
 
         services.AddScoped<ITagStore, EfTagStore>();
+
+        // Public surface for other modules (the Documents document-tag slices,
+        // ADR-009): the implementation stays internal behind the Contracts
+        // interface, mirroring Folders' IFolderOwnershipChecker.
+        services.AddScoped<ITagOwnershipChecker, TagOwnershipChecker>();
 
         // Feature services (vertical slices).
         services.AddScoped<CreateTagService>();

@@ -586,3 +586,99 @@ of truth** — broker-for-dispatch, database-for-durability.
   with self-hostable Docker-first deployment (`07`); Kafka is a streaming log,
   oversized for a work queue. RabbitMQ is the fit for both the workload and the
   learning goal.
+
+---
+
+## ADR-009 — DocumentTag join: owned by the Documents module, app-layer tag ownership
+
+* **Date:** 2026-06-08
+* **Status:** Accepted (ratified with the document-tag slices, #49)
+
+### Context
+
+`PUT/POST/DELETE /api/v1/documents/{id}/tags*` associate tags with documents
+through the `DocumentTag` join (`02`, `03`). Two questions were open. First,
+**which module owns the join** — Documents or Tags — given project-per-module with
+one DbContext and one Postgres schema per module (`10`, ADR-003/004), and the rule
+that a module reaches another only through its `*.Contracts` (`10`, rule 1).
+Second, **the replace semantics** of `PUT`: how a user-supplied set interacts with
+the `AiSuggested` rows the analysis pipeline writes (`06`), which `03` flagged as
+an open question.
+
+The surrounding model constrains both. The join carries a composite PK
+`(DocumentId, TagId)` — one row per pair — and a `Source` of `User` or
+`AiSuggested` (`02`). A Tag lives in the `tags` schema and a Document in the
+`documents` schema; EF Core does not support a foreign key across two DbContexts /
+schemas. The product is document-centric and advisory: the user stays in control,
+and AI suggestions are applied but never silently discarded (`01`).
+
+### Decision
+
+**The Documents module owns the `DocumentTag` join** — the table lives in the
+`documents` schema, configured on `DocumentsDbContext`, and the three endpoints are
+Documents-module slices.
+
+* `DocumentId` is a real FK to `Documents` **within the same context**, cascade on
+  delete: deleting a document removes its associations.
+* `TagId` is a **plain Guid column** — no EF navigation, no cross-schema FK.
+  Tag ownership is validated in the app layer through a narrow Tags contract,
+  `ITagOwnershipChecker.OwnsAllTagsAsync` (owner-scoped; empty set is vacuously
+  true), mirroring `IFolderOwnershipChecker`. A document or tag the caller does not
+  own is a **uniform 404**, indistinguishable from missing (`05`).
+* `Source` is persisted **as text** (`HasConversion<string>`, `varchar(32)`),
+  exactly like `Document.Status` — readable in SQL and stable across enum
+  reordering. An index on `TagId` backs the by-tag reads (the list filter and the
+  tag-delete cascade), since the composite PK does not front `TagId`.
+* **Tag-side cascade on tag delete** flows the other direction through a narrow
+  `Documents.Contracts` interface — introduced and consumed by the tag-delete slice
+  (#48), the same shape as `IFolderDocumentRemover` (ADR-007): the data-owning
+  module exposes the deletion seam; the Tags module calls it.
+* **Replace semantics (`PUT`)** manage only `Source=User` rows. For a new set `S`
+  on document `D`: for each tag in `S` ensure a `(D, tag)` row exists as `User` —
+  insert if absent, **promote** an existing `AiSuggested` row to `User` (an update,
+  not a duplicate, because of the composite PK); delete existing `User` rows whose
+  tag is not in `S`; **leave `AiSuggested` rows not in `S` untouched**. `POST` is
+  the single-tag upsert (promote if it was `AiSuggested`, idempotent if already
+  `User`); `DELETE` removes the `(D, tag)` row regardless of `Source` — the only
+  way an `AiSuggested` association is removed.
+
+### Rationale
+
+* **Ownership follows the document-centric grain.** The join is part of a
+  document's metadata; placing it in the Documents schema keeps a document and its
+  tags in one transactional boundary (the cascade-on-document-delete is a local FK,
+  not a cross-module dance) and matches how the feature is navigated (`01`, `03`).
+* **App-layer tag ownership is the only correct option** given one-schema-per-module
+  with no cross-context FK. The narrow `ITagOwnershipChecker` is the established
+  cross-module pattern (`IFolderOwnershipChecker`) and keeps the uniform-404 rule
+  enforceable at one chokepoint (`05`).
+* **Replace/promote honours the AI philosophy.** Preserving `AiSuggested` rows on a
+  user replace means a suggestion is never silently dropped by an unrelated user
+  edit; promoting on re-add reflects that the user has now endorsed it; explicit
+  `DELETE` is the only discard — the user stays in control (`01`).
+* **Text `Source` and the `TagId` index** reuse the house conventions
+  (`Document.Status` storage; owner/folder indexes) rather than inventing new ones.
+
+### Trade-offs accepted
+
+* No database-level referential integrity between `DocumentTag.TagId` and a Tag
+  row: a deleted tag's associations are cleaned up by the application (#48), not by
+  a DB cascade. Accepted as the unavoidable cost of per-module schemas; the
+  cross-module contract makes the cleanup explicit and testable.
+* A `PUT` must read the current associations to compute the promote/preserve diff
+  (one extra read). Accepted at V1's personal scale; the diff is the slice's, not
+  the store's, so the persistence seam stays rule-free.
+
+### Alternatives considered
+
+* **Tags module owns the join.** Symmetric on paper, but cuts against the
+  document-centric grain — the endpoints are `/documents/{id}/tags*`, the cascade
+  that matters most is document-delete, and it would force the Documents module to
+  reach Tags for its own metadata. Rejected.
+* **A shared-kernel join table.** Would give a single table both modules see, but
+  violates module ownership (`10`): no entity is owned by two modules, and
+  SharedKernel is infrastructure-free. Rejected.
+* **Cross-schema FK on `TagId`.** Not supported across DbContexts; would also
+  couple the two schemas' migration order. Rejected.
+* **`PUT` wipes `AiSuggested` rows too.** Simpler, but silently discards
+  suggestions on any user edit — against the advisory philosophy (`01`). Rejected.

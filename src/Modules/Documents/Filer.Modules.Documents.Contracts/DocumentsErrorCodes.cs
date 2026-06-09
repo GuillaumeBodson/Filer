@@ -51,4 +51,16 @@ public static class DocumentsErrorCodes
     /// cross-owner folders too (404, never 403; 05-security.md).
     /// </summary>
     public const string FolderNotFound = "folder_not_found";
+
+    /// <summary>
+    /// At least one referenced tag is no tag the caller owns — deliberately covers
+    /// cross-owner and missing tags (404, never 403; 05-security.md, ADR-009).
+    /// </summary>
+    public const string TagNotFound = "tag_not_found";
+
+    /// <summary>
+    /// The replace body's <c>tagIds</c> was missing or contained a malformed value
+    /// (a non-empty list may legitimately be empty to clear the User tags) — 400.
+    /// </summary>
+    public const string TagIdsInvalid = "tag_ids_invalid";
 }

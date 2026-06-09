@@ -12,6 +12,13 @@ public sealed class EfTagStore(TagsDbContext db) : ITagStore
             .AsNoTracking()
             .AnyAsync(t => t.OwnerId == ownerId && t.Name == name, cancellationToken);
 
+    public Task<int> CountOwnedAsync(
+        Guid ownerId, IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken) =>
+        db.Tags
+            .AsNoTracking()
+            .Where(t => t.OwnerId == ownerId && tagIds.Contains(t.Id))
+            .CountAsync(cancellationToken);
+
     public async Task AddAsync(Tag tag, CancellationToken cancellationToken)
     {
         db.Tags.Add(tag);

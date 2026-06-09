@@ -56,6 +56,31 @@ public interface IDocumentStore
         Guid ownerId, IReadOnlyCollection<Guid> folderIds, DateTimeOffset deletedAt,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Every tag association of the document, in no particular order — the current
+    /// state the replace/add slices diff against (#49, ADR-009). Not owner-scoped
+    /// itself: the caller resolves the owned document first through
+    /// <see cref="FindActiveByIdAsync"/>, so by the time this runs the document is
+    /// already proven to be the caller's (05-security.md).
+    /// </summary>
+    Task<IReadOnlyList<DocumentTag>> ListTagsForDocumentAsync(
+        Guid documentId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Applies a computed set of association changes in one transaction (#49): rows
+    /// in <paramref name="toInsert"/> are added, rows in <paramref name="toPromote"/>
+    /// are existing pairs whose <c>Source</c> is updated, and rows in
+    /// <paramref name="toRemove"/> are deleted. The slice owns the
+    /// preserve-vs-promote decision and hands this method only the resulting diff —
+    /// already split by operation, so persistence carries no business rule
+    /// (13-code-quality-and-design.md).
+    /// </summary>
+    Task ApplyTagChangesAsync(
+        IReadOnlyCollection<DocumentTag> toInsert,
+        IReadOnlyCollection<DocumentTag> toPromote,
+        IReadOnlyCollection<DocumentTag> toRemove,
+        CancellationToken cancellationToken);
+
     /// <summary>Persists a new document immediately.</summary>
     Task AddAsync(Document document, CancellationToken cancellationToken);
 
