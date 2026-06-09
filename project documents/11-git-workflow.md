@@ -26,8 +26,9 @@ ceremony of team-oriented models like GitFlow.
 Short-lived feature branches off `main`, merged back fast. No long-running
 `develop` or `release` branches.
 
-* Branch naming: `<type>/<short-description>`, e.g. `feat/file-upload-endpoint`,
-  `fix/ownership-404`, `chore/bump-efcore`, `docs/api-spec-errors`.
+* Branch naming: `<type>/<issue#>-<short-description>` when the work implements a
+  tracked issue, e.g. `feat/40-folders-create`, `fix/96-ownership-stub`;
+  `<type>/<short-description>` only for untracked work (e.g. `chore/bump-efcore`).
 * `<type>` mirrors the Conventional Commit types below.
 * Keep branches small and short-lived (hours to a few days). Rebase on `main`
   rather than letting a branch drift for weeks.
@@ -63,6 +64,15 @@ Every change lands through a PR, even though there is one developer.
 * **Why bother solo:** the PR diff is the review surface, CI gates the merge, and
   the PR becomes the searchable record of *why* a change happened.
 * Use the PR template (`.github/pull_request_template.md`) as the checklist.
+* **Link the issue — not optional.** Every PR that implements a tracked issue
+  carries a closing keyword (`Closes #N`, `Fixes #N`) **in the PR description**.
+  Keywords in commit messages are not reliable with squash merge; the PR body is
+  what GitHub uses to auto-close. One PR can close several issues
+  (`Closes #45, closes #46`).
+* **Verify the link landed.** After merge, confirm the issue actually closed —
+  a missing keyword leaves it silently open (this happened with #96/PR #97 and
+  was only caught by the M4 milestone review). The milestone review checks for
+  open issues whose PRs already merged.
 * **Squash merge** so each feature is one clean commit on `main` instead of
   "wip / fix typo / actually fix" noise. The PR title becomes the squash commit
   message — keep it a valid Conventional Commit.
@@ -123,15 +133,17 @@ This makes it impossible to push broken code straight to `main`.
 ## Quick reference
 
 ```bash
-# Start work
-git switch -c feat/file-upload-endpoint
+# Start work (issue number in the branch name)
+git switch -c feat/77-file-upload-endpoint
 
 # Commit (conventional)
 git commit -m "feat(storage): add async upload endpoint"
 
-# Publish & open PR
-git push -u origin feat/file-upload-endpoint
-# open PR on GitHub, let CI run, squash-merge, delete branch
+# Publish & open PR — "Closes #77" goes in the PR body, not just commits
+git push -u origin feat/77-file-upload-endpoint
+gh pr create --title "feat(storage): add async upload endpoint" \
+  --body "... Closes #77"
+# let CI run, squash-merge, delete branch, VERIFY #77 closed
 
 # Tag a release
 git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0
