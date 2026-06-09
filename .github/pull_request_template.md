@@ -3,6 +3,12 @@
 ## What & why
 <!-- One or two lines. The *why* matters more than the *what*. -->
 
+## Linked issue
+<!-- Required for tracked work (11-git-workflow.md): a closing keyword HERE in the
+     PR body — "Closes #N" — so squash merge auto-closes the issue. Verify the
+     issue closed after merge. Write "untracked" if no issue exists. -->
+Closes #
+
 ## Changes
 -
 
