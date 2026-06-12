@@ -45,6 +45,11 @@ public static class BackgroundJobsModule
         services.AddScoped<IBackgroundJobQueue, EfBackgroundJobQueue>();
         services.AddScoped<IAnalysisJobStore, EfAnalysisJobStore>();
 
+        // Public read surface for the Documents analysis slices (#54/#55): latest
+        // job status + result, never the error text. The implementation stays
+        // internal behind the Contracts interface.
+        services.AddScoped<IAnalysisJobReader, EfAnalysisJobReader>();
+
         // Placeholder handler until the AI analysis milestone plugs in real
         // processing (06-ai-analysis-pipeline.md). TryAdd keeps that swap additive.
         services.TryAddScoped<IAnalysisJobHandler, NoOpAnalysisJobHandler>();

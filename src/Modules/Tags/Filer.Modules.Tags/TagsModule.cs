@@ -42,6 +42,11 @@ public static class TagsModule
         // interface, mirroring Folders' IFolderOwnershipChecker.
         services.AddScoped<ITagOwnershipChecker, TagOwnershipChecker>();
 
+        // Public surface for the Documents apply-suggestions slice (#55): resolve
+        // confirmed AI tag-suggestion names to the caller's tag ids. Same stance
+        // as the ownership checker — implementation internal, contract public.
+        services.AddScoped<ITagNameResolver, TagNameResolver>();
+
         // Feature services (vertical slices).
         services.AddScoped<CreateTagService>();
         services.AddScoped<ListTagsService>();
