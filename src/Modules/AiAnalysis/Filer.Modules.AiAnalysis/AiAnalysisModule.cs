@@ -1,4 +1,5 @@
 using Filer.Modules.AiAnalysis.Contracts;
+using Filer.Modules.BackgroundJobs.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,6 +20,20 @@ public static class AiAnalysisModule
             .Bind(configuration.GetSection(AiAnalysisOptions.SectionName))
             .ValidateDataAnnotations()
             .ValidateOnStart();
+
+        // Text-extraction tuning for the job handler (#53). The section is
+        // optional — every option has a safe default.
+        services.AddOptions<TextExtractionOptions>()
+            .Bind(configuration.GetSection(TextExtractionOptions.SectionName))
+            .Validate(
+                options => options.MaxChars > 0,
+                "AiAnalysis:TextExtraction:MaxChars must be positive.")
+            .ValidateOnStart();
+
+        // The real analysis job handler (#53): registered before the BackgroundJobs
+        // module so its TryAddScoped no-op fallback never wins (Program.cs ordering).
+        // Unconditional — it orchestrates whichever IAIAnalysisProvider is selected.
+        services.AddScoped<IAnalysisJobHandler, AnalysisJobHandler>();
 
         // Eager read for provider selection, mirroring AddStorageModule: registration
         // shape is decided while the builder is still composing. The section is

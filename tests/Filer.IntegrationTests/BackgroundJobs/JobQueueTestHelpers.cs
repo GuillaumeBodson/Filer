@@ -1,4 +1,5 @@
 using Filer.IntegrationTests.Infrastructure;
+using Filer.Modules.BackgroundJobs.Contracts;
 using Filer.Modules.BackgroundJobs.Worker;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -26,7 +27,7 @@ internal static class JobQueueTestHelpers
                 return;
             }
 
-            await store.MarkSucceededAsync(leftover.JobId, TestContext.Current.CancellationToken);
+            await store.MarkSucceededAsync(leftover.JobId, result: null, TestContext.Current.CancellationToken);
         }
     }
 }
