@@ -83,7 +83,9 @@ public interface IAIAnalysisProvider
 * The result is a provider-neutral DTO (suggested folder, suggested tags,
   duplicate signals, confidence scores) — never a vendor-specific shape.
 * Implementations are selected by configuration. Candidates: OpenAI, Azure
-  OpenAI, Ollama, local LLM (`00`/`08`).
+  OpenAI, Ollama, local LLM (`00`/`08`). A zero-footprint `Fake` provider
+  (deterministic canned suggestions, no model, no network) ships alongside them
+  for development and tests on machines that cannot host a local LLM.
 * Provider credentials live with the worker only and never reach clients (`05`).
 
 ---

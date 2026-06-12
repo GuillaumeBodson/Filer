@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Modules\AiAnalysis\Filer.Modules.AiAnalysis\Filer.Modules.AiAnalysis.csproj" />
     <ProjectReference Include="..\Modules\Auth\Filer.Modules.Auth\Filer.Modules.Auth.csproj" />
     <ProjectReference Include="..\Modules\BackgroundJobs\Filer.Modules.BackgroundJobs\Filer.Modules.BackgroundJobs.csproj" />
     <ProjectReference Include="..\Modules\Documents\Filer.Modules.Documents\Filer.Modules.Documents.csproj" />

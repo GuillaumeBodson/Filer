@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- xUnit v3 test projects are self-contained executables. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <!-- Unit tests for the AI Analysis module. One test project per module, mirroring
+       the project-per-module layout (10/12). Fast and isolated: the fake provider is
+       pure computation — no model, no network, no database. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\AiAnalysis\Filer.Modules.AiAnalysis\Filer.Modules.AiAnalysis.csproj" />
+  </ItemGroup>
+
+  <!-- IConfiguration / ILogger used to exercise module registration come from the
+       shared framework; declare it so the test assembly resolves them. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+
+</Project>

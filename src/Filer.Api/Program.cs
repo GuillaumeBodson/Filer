@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Filer.Api.Infrastructure;
+using Filer.Modules.AiAnalysis;
 using Filer.Modules.Auth;
 using Filer.Modules.BackgroundJobs;
 using Filer.Modules.BackgroundJobs.Persistence;
@@ -54,6 +55,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // Modules register themselves through their public entry point only
 // (10-solution-structure.md). The host adds no business logic.
+builder.Services.AddAiAnalysisModule(builder.Configuration);
 builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddBackgroundJobsModule(builder.Configuration);
 builder.Services.AddStorageModule(builder.Configuration);
