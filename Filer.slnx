@@ -5,6 +5,10 @@
     <Project Path="src/Filer.WebKernel/Filer.WebKernel.csproj" />
   </Folder>
   <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/AiAnalysis/">
+    <Project Path="src/Modules/AiAnalysis/Filer.Modules.AiAnalysis.Contracts/Filer.Modules.AiAnalysis.Contracts.csproj" />
+    <Project Path="src/Modules/AiAnalysis/Filer.Modules.AiAnalysis/Filer.Modules.AiAnalysis.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/Auth/">
     <Project Path="src/Modules/Auth/Filer.Modules.Auth.Contracts/Filer.Modules.Auth.Contracts.csproj" Id="14bac8cc-6963-49ea-96ba-51444cbe38c5" />
     <Project Path="src/Modules/Auth/Filer.Modules.Auth/Filer.Modules.Auth.csproj" Id="d544c4a8-d736-4d6d-9ec8-db11a480f604" />
@@ -31,6 +35,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Filer.SharedKernel.Tests/Filer.SharedKernel.Tests.csproj" />
+    <Project Path="tests/Filer.Modules.AiAnalysis.Tests/Filer.Modules.AiAnalysis.Tests.csproj" />
     <Project Path="tests/Filer.Modules.Auth.Tests/Filer.Modules.Auth.Tests.csproj" />
     <Project Path="tests/Filer.Modules.BackgroundJobs.Tests/Filer.Modules.BackgroundJobs.Tests.csproj" />
     <Project Path="tests/Filer.Modules.Documents.Tests/Filer.Modules.Documents.Tests.csproj" />

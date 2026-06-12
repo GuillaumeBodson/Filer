@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- AI Analysis module implementation. Private to the module; the host references
+       it only to register it (10-solution-structure.md). Concrete IAIAnalysisProvider
+       adapters live here, behind the Contracts interface (06). -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Filer.Modules.AiAnalysis.Contracts\Filer.Modules.AiAnalysis.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <!-- No endpoints yet — the framework reference supplies the shared Extensions
+       stack (options + validation, configuration binder, DI, logging) without
+       per-package version entries, matching the Storage module. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- Unit tests assert the fake provider's canned values without duplicating them. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Filer.Modules.AiAnalysis.Tests" />
+  </ItemGroup>
+
+</Project>
