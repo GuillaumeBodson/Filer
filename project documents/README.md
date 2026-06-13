@@ -15,7 +15,8 @@ running decision log — read it to understand *why* things are the way they are
 begins. `11` is the Git workflow. `12` is the testing strategy (required tests and
 coverage), and `13` is the code-quality and design standard (coding rules,
 OOP/SOLID, design patterns, and the Definition of Done) — read `12`/`13` before
-writing code.
+writing code. `14` is the roadmap of post-V1 features (intent and sequencing, not
+spec) — everything there is deferred until the V1 milestones ship.
 
 ---
 
@@ -37,6 +38,7 @@ writing code.
 | 11  | Git Workflow                | Branching, commits, PR, CI, branch protection        | Active |
 | 12  | Testing Strategy            | Test pyramid, required tests per slice, coverage gate | Active |
 | 13  | Code Quality & Design       | Coding standards, OOP/SOLID, patterns, Definition of Done | Active |
+| 14  | Roadmap                     | Post-V1 features: intent, rationale, sequencing      | Active |
 
 ---
 

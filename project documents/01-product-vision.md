@@ -102,7 +102,7 @@ Excluded from V1:
 * Public sharing
 * Enterprise workflows
 * Role hierarchies
-* OCR-heavy processing
+* OCR-heavy processing (sequenced for post-V1 — see RM-01 in `14`)
 * Real-time collaboration
 * Offline-first synchronization
 
@@ -124,12 +124,8 @@ AI features should assist the user rather than replace manual organization entir
 
 ## Long-Term Vision
 
-Potential future capabilities:
-
-* Semantic search
-* AI document summarization
-* Natural language querying
-* Multi-tenant SaaS
-* Desktop synchronization
-* Mobile companion apps
-* Automated document workflows
+Post-V1 capabilities — with their rationale and sequencing — are tracked in
+`14-roadmap.md`. These include OCR, document capture by photo, email ingestion,
+semantic search, AI summarization and chat over documents, natural-language
+querying, multi-tenant SaaS, and desktop/mobile companions. The roadmap is the
+single source of truth; nothing there is built until the V1 milestones ship.
