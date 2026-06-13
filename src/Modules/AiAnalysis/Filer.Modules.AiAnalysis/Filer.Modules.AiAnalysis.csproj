@@ -9,6 +9,18 @@
     <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
   </ItemGroup>
 
+  <!-- The job handler (#53) crosses module boundaries through Contracts only
+       (10-solution-structure.md, rule 1): the worker seam it implements, the
+       document/folder/tag context it reads, and the storage seam it extracts
+       text through. Never another module's implementation. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\BackgroundJobs\Filer.Modules.BackgroundJobs.Contracts\Filer.Modules.BackgroundJobs.Contracts.csproj" />
+    <ProjectReference Include="..\..\Documents\Filer.Modules.Documents.Contracts\Filer.Modules.Documents.Contracts.csproj" />
+    <ProjectReference Include="..\..\Folders\Filer.Modules.Folders.Contracts\Filer.Modules.Folders.Contracts.csproj" />
+    <ProjectReference Include="..\..\Storage\Filer.Modules.Storage.Contracts\Filer.Modules.Storage.Contracts.csproj" />
+    <ProjectReference Include="..\..\Tags\Filer.Modules.Tags.Contracts\Filer.Modules.Tags.Contracts.csproj" />
+  </ItemGroup>
+
   <!-- No endpoints yet — the framework reference supplies the shared Extensions
        stack (options + validation, configuration binder, DI, logging) without
        per-package version entries, matching the Storage module. -->

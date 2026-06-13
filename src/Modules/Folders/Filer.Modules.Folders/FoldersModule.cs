@@ -42,6 +42,10 @@ public static class FoldersModule
         // implementation stays internal behind the Contracts interface.
         services.AddScoped<IFolderOwnershipChecker, FolderOwnershipChecker>();
 
+        // Public surface for the AI analysis worker (#53): an owner's folders as
+        // suggestion context; internal behind the Contracts interface.
+        services.AddScoped<IOwnerFolderReader, OwnerFolderReader>();
+
         // Feature services (vertical slices).
         services.AddScoped<CreateFolderService>();
         services.AddScoped<ListFoldersService>();
