@@ -1,0 +1,11 @@
+# Analysis settings for Filer.ApiClient.
+#
+# The Kiota-generated client under Generated/ is wiped and rewritten by
+# `kiota generate --clean-output`, so its settings must live HERE (outside the
+# cleaned folder) rather than inside it. This excludes generated code from the
+# solution-wide warnings-as-errors; hand-written code in this project (e.g. the
+# AddFilerApiClient extension) keeps the strict rules from the repo-root .editorconfig.
+[Generated/**.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+dotnet_diagnostic.IDE0005.severity = none

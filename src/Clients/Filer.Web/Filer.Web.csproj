@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Filer.Ui\Filer.Ui.csproj" />
+    <ProjectReference Include="..\Filer.ApiClient\Filer.ApiClient.csproj" />
   </ItemGroup>
 
 </Project>

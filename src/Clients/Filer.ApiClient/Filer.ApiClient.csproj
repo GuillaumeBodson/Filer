@@ -1,10 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!--
-    Holds the Kiota-generated, typed Filer API client (ADR-011). Generated client
-    + DI registration land in #126. Platform-neutral (no WASM dependency) so the
-    future MAUI shell (RM-02) reuses it unchanged.
+    Holds the Kiota-generated, typed Filer API client (ADR-011) under Generated/,
+    plus the hand-written AddFilerApiClient DI extension. Platform-neutral (no WASM
+    dependency) so the future MAUI shell (RM-02) reuses it unchanged.
     TargetFramework / Nullable / analysis are inherited from Directory.Build.props.
+
+    The Generated/ folder is excluded from style/analysis enforcement via this
+    project's .editorconfig ([Generated/**.cs]); hand-written code stays strict.
+    Regeneration is documented in README.md; CI fails on drift (#129).
   -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Kiota.Bundle" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
 
 </Project>

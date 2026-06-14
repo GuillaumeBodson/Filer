@@ -89,3 +89,7 @@ secrets.json
 # OS noise
 .DS_Store
 Thumbs.db
+
+# Kiota generation log (timestamped each run; the checked-in client + kiota-lock.json
+# are the reproducible artefacts — see src/Clients/Filer.ApiClient/README.md)
+**/.kiota.log
