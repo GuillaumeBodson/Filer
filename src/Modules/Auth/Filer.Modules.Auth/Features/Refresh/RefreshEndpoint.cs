@@ -22,6 +22,7 @@ public static class RefreshEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("Refresh")
+        .Produces<RefreshResponse>(StatusCodes.Status200OK)
         .AllowAnonymous();
     }
 }

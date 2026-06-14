@@ -1,0 +1,9 @@
+@namespace Filer.Ui.Components
+
+@* Shown by AuthorizeRouteView when an unauthenticated user reaches a protected page
+   (05-security.md). The actual login page + redirect arrive with the auth UI in FE-M2;
+   this is the foundation's "you need to sign in" surface. *@
+<EmptyState Title="Sign in required"
+            Description="You need to sign in to view this page.">
+    <a class="signin-link" href="login">Go to sign in</a>
+</EmptyState>

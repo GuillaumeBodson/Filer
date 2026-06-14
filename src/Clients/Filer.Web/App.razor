@@ -1,13 +1,20 @@
 @*
-    Thin host router. Routable pages and the default layout live in the shared RCL
-    (Filer.Ui), discovered via AdditionalAssemblies so the same components serve the
-    future MAUI shell (RM-02).
+    Thin host router. Auth state cascades from the token store (#128); pages render
+    through AuthorizeRouteView so a [Authorize] page reached while signed out shows the
+    sign-in prompt instead of the page. Routable pages and the default layout live in
+    the shared RCL (Filer.Ui), discovered via AdditionalAssemblies for MAUI reuse (RM-02).
 *@
-<Router AppAssembly="@typeof(App).Assembly"
-        AdditionalAssemblies="new[] { typeof(Filer.Ui.Pages.Home).Assembly }"
-        NotFoundPage="typeof(Filer.Ui.Pages.NotFound)">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Filer.Ui.Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-</Router>
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly"
+            AdditionalAssemblies="new[] { typeof(Filer.Ui.Pages.Home).Assembly }"
+            NotFoundPage="typeof(Filer.Ui.Pages.NotFound)">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Filer.Ui.Layout.MainLayout)">
+                <NotAuthorized>
+                    <SignInPrompt />
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+    </Router>
+</CascadingAuthenticationState>
