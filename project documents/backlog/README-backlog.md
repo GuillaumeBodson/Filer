@@ -36,7 +36,7 @@ core endpoints; mobile deferred to RM-02). `create-frontend-issues.sh` creates:
 
 Sequencing baked into the tickets (ADR-012): FE-M1/FE-M2 run now against the
 frozen auth/documents/folders/tags endpoints; **FE-M3 is blocked** until the
-backend M5 analysis (#38/#39) and M6 search contracts freeze. The search UI is
+backend M5 analysis (#54/#55) and M6 search contracts freeze. The search UI is
 kept agnostic to full-text vs semantic backing so RM-04 (`14`) can slot in later.
 The MAUI mobile shell is **not** in this backlog — it belongs to RM-02.
 

@@ -304,7 +304,7 @@ gh issue create --repo "$REPO" \
   --body "$(cat <<'FILER_EOF'
 The advisory + discovery layer on top of the core app: AI analysis suggestions and full-text search UI. Additive to existing screens (ADR-012).
 
-> Blocked-by backend contracts: M5 analysis endpoints (#38/#39) and the M6 search endpoint must be frozen before building these screens.
+> Blocked-by backend contracts: M5 analysis endpoints (#54 get analysis, #55 apply) and the M6 search endpoint must be frozen before building these screens.
 
 **Acceptance criteria**
 - [ ] All FE-M3 issues closed
@@ -325,7 +325,7 @@ gh issue create --repo "$REPO" \
   --body "$(cat <<'FILER_EOF'
 On the document detail screen, show analysis status and suggestions and let the user apply folder/tag suggestions (accept all, some, or none); applied tags carry `Source=AiSuggested` (`06`/`02`).
 
-> Blocked-by: backend #38 (get analysis) and #39 (apply) contracts frozen.
+> Blocked-by: backend #54 (get analysis) and #55 (apply) contracts frozen.
 
 **Acceptance criteria**
 - [ ] Analysis status surfaced (queued/running/ready/failed); failure shown as analysis-unavailable, never blocking the document
