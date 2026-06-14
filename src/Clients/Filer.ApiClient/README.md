@@ -51,10 +51,10 @@ dotnet tool run kiota generate \
 
 Commit the resulting changes under `openapi/` and `Generated/`.
 
-## Drift gate (CI, wired in #129)
+## Drift gate (CI)
 
-CI runs `dotnet tool restore` then the **step 2** command above and fails if the working
-tree changed:
+The `build-test` job (`.github/workflows/ci.yml`) runs `dotnet tool restore` then the
+**step 2** command above and fails if the working tree changed:
 
 ```bash
 git diff --exit-code -- src/Clients/Filer.ApiClient/Generated
