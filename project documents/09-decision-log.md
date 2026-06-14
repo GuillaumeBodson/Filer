@@ -784,3 +784,144 @@ type.**
 * **No bulk endpoint — clients loop the single-document calls.** Zero new surface,
   but N round-trips and no atomicity for a routine operation; rejected as offloading
   avoidable work, the same reasoning as ADR-007.
+
+---
+
+## ADR-011 — API client: generate a typed Blazor client from OpenAPI with Kiota
+
+* **Date:** 2026-06-14
+* **Status:** Accepted (design; implementation when frontend work begins — see ADR-012)
+
+### Context
+
+The platform is API-first (ADR-003, `00`) and the frontend is Blazor WebAssembly
+consuming the REST API over HTTP (ADR-001). Before frontend work starts, the
+client↔API connection strategy must be settled: handwritten, generated from
+OpenAPI, or sharing types directly.
+
+Two facts shape the choice:
+
+1. **The API already publishes OpenAPI natively** via
+   `Microsoft.AspNetCore.OpenApi` (`AddOpenApi()` / `MapOpenApi()` in
+   `Program.cs`) — the contract document already exists, so generating a client is
+   nearly free.
+2. **The transport DTOs are not shareable as-is.** HTTP request/response DTOs live
+   inside each module's `Features/` (implementation), not in the `*.Contracts`
+   projects — those contracts are *module-to-module* seams, not a browser-facing
+   transport surface (`10`).
+
+### Decision
+
+**Generate a typed C# client from the published OpenAPI document using Kiota,
+consumed by the Blazor WASM app; regenerate as part of the build/workflow so the
+client always tracks the contract.** Do not handwrite the client, and do not share
+server DTO classes with the browser.
+
+* Client is derived from `/openapi/v1.json`, not authored by hand.
+* Generation is wired into the build (checked-in vs generated-on-build is left to
+  the implementing slice).
+* Whether to keep the generated client in the shared Razor Class Library (so web
+  and the future MAUI shell reuse it, ADR-001) is an implementation detail of the
+  first frontend slice.
+
+### Rationale
+
+* **Contract-derived = literally API-first.** A generated client breaks at build
+  time when the server contract drifts, turning silent client/server skew into a
+  compile error — the strongest possible enforcement of the API-first principle.
+* **Stack consistency.** Kiota is Microsoft's current OpenAPI client generator and
+  pairs with the native `Microsoft.AspNetCore.OpenApi` pipeline already adopted —
+  one ecosystem, actively supported, the documented .NET 10 path.
+* **Zero drift, near-zero toil** versus handwriting every endpoint and DTO by hand.
+* **Preserves module boundaries.** Sharing server DTOs would leak module internals
+  into the browser and bypass the discipline `Filer.Architecture.Tests` enforces.
+
+### Trade-offs accepted
+
+* Kiota's generated surface and ergonomics differ from NSwag's; a small learning
+  curve and less Blazor-specific community tooling.
+* The generated client is a build artifact to manage (regeneration step, review of
+  generated diffs).
+* Client quality depends on OpenAPI-doc quality — this imposes discipline on
+  `operationId`s, declared response types, and problem-details shapes server-side.
+
+### Alternatives considered
+
+* **NSwag.** Mature and battle-tested in Blazor, simple MSBuild integration; a
+  viable fallback. Rejected only for stack consistency — it adds a second OpenAPI
+  toolchain alongside the native Microsoft stack — not for any capability gap.
+* **Handwritten typed `HttpClient`.** Full control, no codegen dependency, but
+  silent drift and perpetual manual upkeep as the contract evolves; rejected.
+* **Share `*.Contracts`/DTO classes directly (C#-to-C#).** Tempting in a
+  single-language stack, but the transport DTOs aren't in `*.Contracts`, and
+  sharing them couples the client to server internals and violates the boundary
+  tests; rejected.
+* **Refit (handwritten typed interfaces).** Still manual contract maintenance, just
+  relocated; rejected for the same drift reason.
+
+---
+
+## ADR-012 — Frontend development: start in parallel after the core API, web-first
+
+* **Date:** 2026-06-14
+* **Status:** Accepted
+
+### Context
+
+The question is *when* to start frontend development, given that backend work is
+currently mid-V1. Because the platform is API-first (ADR-003), the frontend is
+gated by **contract stability**, not by V1 completion:
+
+* **M1–M4** (Auth, Documents, Folders, Tags) already ship the stable core CRUD
+  contract a UI renders against.
+* **M5** (AI analysis) and **M6** (search) are *additive* to existing screens — a
+  suggestions panel, a search box — not restructurings. M5 endpoint contracts
+  (#54/#55) are still in flux.
+* **M7** (observability/CI) has no frontend surface.
+
+### Decision
+
+**Start frontend now, in parallel with the remaining backend (M5/M6), web-first,
+against the frozen core endpoints only.**
+
+* Build the **web** client (Blazor WASM) plus the shared Razor Class Library
+  (ADR-001) and groundwork (JWT acquisition/storage/refresh, the Kiota-generated
+  client per ADR-011, app shell/navigation) — none of which depends on remaining
+  backend work.
+* Build the stable vertical slice first: login → upload → browse → folders → tags.
+* **Defer** the AI-suggestions UI and search UI until the M5/M6 contracts settle.
+* **Defer** the MAUI Blazor Hybrid mobile shell to RM-02 (photo capture, `14`),
+  reusing the same shared RCL.
+
+### Rationale
+
+* **API-first wants an early consumer.** A real client is the best validator of the
+  contract — async upload UX, job-status polling, error/problem-details shape,
+  pagination, and the ownership-404 rule (`05`) only get exercised when something
+  consumes them. Finding ergonomic problems during M5 is cheap; finding them after
+  V1 is "done" means reopening finished work.
+* **M5/M6 are incremental UI additions**, so waiting for full V1 buys the frontend
+  almost nothing.
+* **The groundwork is unblocked today** and is pure prep against the already-stable
+  auth/document/folder/tag surface.
+
+### Trade-offs accepted
+
+* Some client rework if a core contract still shifts — mitigated by consuming only
+  frozen endpoints first and treating M5/M6 UI as follow-on slices.
+* Context-switching cost for a single maintainer — accepted for the
+  contract-validation payoff.
+* Frontend coding conventions are not yet written. They are captured **just-in-time
+  in a future `15-frontend-architecture.md`** once the first slice exists, with
+  frontend sections added to `12`/`13` then — deliberately not pre-authored, per
+  the anti-anticipation rule in `13`.
+
+### Alternatives considered
+
+* **Wait until all of V1 (M5–M7) ships.** Loses the early-consumer feedback loop and
+  defers discovery of API-ergonomics issues until after they're "done"; rejected.
+* **Start mobile (MAUI) now.** Premature — mobile's distinctive value is RM-02
+  photo capture (post-V1), and it reuses the web RCL anyway; rejected.
+* **Write the full frontend best-practices doc up front.** Speculative, violates the
+  no-anticipation rule (`13`); rejected in favour of just-in-time capture once real
+  components exist.
