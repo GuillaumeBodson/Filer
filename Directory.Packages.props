@@ -18,6 +18,15 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
   </ItemGroup>
 
+  <!-- Frontend (Blazor clients, src/Clients). The shared RCL (Filer.Ui) and the
+       generated API client (Filer.ApiClient) stay WASM-free so the future MAUI
+       shell (RM-02) reuses them unchanged; only Filer.Web pulls the WASM host. -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.8" />
+  </ItemGroup>
+
   <!-- Test stack (12-testing-strategy.md). xUnit runner; FluentAssertions for
        readable failures; Moq at the designed seams; coverlet for coverage.
        FluentAssertions 8.x is used under the Xceed Community Licence, which is

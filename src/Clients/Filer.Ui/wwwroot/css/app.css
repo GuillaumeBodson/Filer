@@ -1,0 +1,41 @@
+/*
+  Base element styling shared by all clients, built entirely on the design tokens
+  in tokens.css. Component-specific styling lives in scoped *.razor.css files.
+*/
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-base);
+    color: var(--color-text);
+    background-color: var(--color-bg);
+}
+
+h1, h2, h3 {
+    line-height: 1.2;
+    color: var(--color-text);
+}
+
+a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Visible keyboard focus everywhere (accessibility). Programmatic focus
+   (e.g. FocusOnNavigate) uses :focus, not :focus-visible, so it stays ring-free. */
+:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+}
+
+.text-muted {
+    color: var(--color-text-muted);
+}

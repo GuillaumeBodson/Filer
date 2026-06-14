@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!--
+    Shared Razor Class Library (ADR-001): all reusable UI, layout and design tokens
+    live here so the Blazor WASM host (Filer.Web) and the future MAUI shell (RM-02)
+    share one component set. Deliberately platform-neutral - no WASM-only packages,
+    no <SupportedPlatform> constraint - so MAUI (android/ios/windows) can consume it.
+    TargetFramework / Nullable / analysis are inherited from Directory.Build.props.
+  -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Filer.ApiClient\Filer.ApiClient.csproj" />
+  </ItemGroup>
+
+</Project>

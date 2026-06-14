@@ -1,0 +1,21 @@
+.nav {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+}
+
+.nav-link {
+    color: var(--color-text-muted);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+}
+
+.nav-link:hover {
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+.nav-link.active {
+    color: var(--color-primary);
+    font-weight: 600;
+}

@@ -4,6 +4,11 @@
     <Project Path="src/Filer.SharedKernel/Filer.SharedKernel.csproj" Id="ac7f88c9-bf64-4bb3-ade0-5a7ebf104d43" />
     <Project Path="src/Filer.WebKernel/Filer.WebKernel.csproj" />
   </Folder>
+  <Folder Name="/src/Clients/">
+    <Project Path="src/Clients/Filer.ApiClient/Filer.ApiClient.csproj" />
+    <Project Path="src/Clients/Filer.Ui/Filer.Ui.csproj" />
+    <Project Path="src/Clients/Filer.Web/Filer.Web.csproj" />
+  </Folder>
   <Folder Name="/src/Modules/" />
   <Folder Name="/src/Modules/AiAnalysis/">
     <Project Path="src/Modules/AiAnalysis/Filer.Modules.AiAnalysis.Contracts/Filer.Modules.AiAnalysis.Contracts.csproj" />

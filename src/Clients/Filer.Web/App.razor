@@ -1,0 +1,13 @@
+@*
+    Thin host router. Routable pages and the default layout live in the shared RCL
+    (Filer.Ui), discovered via AdditionalAssemblies so the same components serve the
+    future MAUI shell (RM-02).
+*@
+<Router AppAssembly="@typeof(App).Assembly"
+        AdditionalAssemblies="new[] { typeof(Filer.Ui.Pages.Home).Assembly }"
+        NotFoundPage="typeof(Filer.Ui.Pages.NotFound)">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Filer.Ui.Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+</Router>
