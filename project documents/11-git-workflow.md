@@ -83,10 +83,15 @@ Every change lands through a PR, even though there is one developer.
 ## Continuous Integration
 
 `.github/workflows/ci.yml` runs on every push to `main` and every PR:
-`dotnet restore` → `dotnet build` (Release, warnings-as-errors) →
-`dotnet test`. A PostgreSQL 17 service mirrors `docker-compose.yml` so
-integration tests can run against a real database; `Filer.Architecture.Tests`
-enforce module boundaries in the same run.
+`dotnet tool restore` → **Kiota client drift gate** → `dotnet restore` →
+`dotnet build` (Release, warnings-as-errors) → `dotnet test`. A PostgreSQL 17
+service mirrors `docker-compose.yml` so integration tests can run against a real
+database; `Filer.Architecture.Tests` enforce module boundaries in the same run.
+The build/test pass also covers the frontend — the Blazor WASM host and shared
+RCL build under warnings-as-errors and the bUnit component tests run with the
+rest (`12`). The drift gate regenerates the typed API client from its committed
+OpenAPI snapshot and fails the build if it no longer matches the checked-in
+`Generated/` output (ADR-011; see `src/Clients/Filer.ApiClient/README.md`).
 
 The `build-test` check is the gate referenced by branch protection.
 

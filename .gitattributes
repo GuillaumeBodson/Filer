@@ -1,0 +1,6 @@
+# The Kiota-generated client is regenerated on different platforms — Windows for
+# local dev, Linux for the CI drift gate (#129). Pin its output to LF so git
+# compares byte-identical content regardless of the generator's platform newline;
+# otherwise the drift gate could fail on a pure line-ending difference. The files
+# are already stored as LF, so this introduces no renormalization.
+src/Clients/Filer.ApiClient/Generated/** text eol=lf
