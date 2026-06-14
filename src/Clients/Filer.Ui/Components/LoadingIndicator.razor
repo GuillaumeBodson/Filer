@@ -1,0 +1,13 @@
+@namespace Filer.Ui.Components
+
+@* Shared busy state. role=status + aria-live so assistive tech announces it; the
+   spinner is decorative (aria-hidden) and the text carries the meaning. *@
+<div class="loading" role="status" aria-live="polite">
+    <span class="spinner" aria-hidden="true"></span>
+    <span class="loading-text">@(Message ?? "Loading…")</span>
+</div>
+
+@code {
+    /// <summary>Optional status message; defaults to "Loading…".</summary>
+    [Parameter] public string? Message { get; set; }
+}

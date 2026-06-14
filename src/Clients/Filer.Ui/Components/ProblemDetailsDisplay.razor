@@ -1,0 +1,35 @@
+@namespace Filer.Ui.Components
+@using Filer.Ui.Models
+
+@* Uniform RFC 7807 renderer (03-api-specification.md): title, detail and any
+   field-level validation errors. Presentation only - no role/landmark - so callers
+   (ErrorState, forms) wrap it with the semantics that fit their context. *@
+<div class="problem">
+    <p class="problem-title">@DisplayTitle</p>
+    @if (!string.IsNullOrWhiteSpace(Problem.Detail))
+    {
+        <p class="problem-detail">@Problem.Detail</p>
+    }
+    @if (Problem.HasValidationErrors)
+    {
+        <ul class="problem-errors">
+            @foreach (var field in Problem.Errors)
+            {
+                @foreach (var message in field.Value)
+                {
+                    <li>@message</li>
+                }
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    /// <summary>The problem to render.</summary>
+    [Parameter, EditorRequired] public ProblemDetailsView Problem { get; set; } = default!;
+
+    private string DisplayTitle =>
+        !string.IsNullOrWhiteSpace(Problem.Title) ? Problem.Title!
+        : Problem.Status is int status ? $"Request failed ({status})"
+        : "Request failed";
+}

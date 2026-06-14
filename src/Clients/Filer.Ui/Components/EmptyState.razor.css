@@ -1,0 +1,20 @@
+.empty {
+    text-align: center;
+    padding: var(--space-5) var(--space-4);
+    color: var(--color-text-muted);
+}
+
+.empty-title {
+    margin: 0 0 var(--space-2);
+    font-size: 1.125rem;
+    color: var(--color-text);
+}
+
+.empty-description {
+    margin: 0 auto;
+    max-width: 36rem;
+}
+
+.empty-actions {
+    margin-top: var(--space-4);
+}
