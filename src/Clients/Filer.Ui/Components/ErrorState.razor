@@ -1,0 +1,36 @@
+@namespace Filer.Ui.Components
+@using Filer.Ui.Models
+
+@* The one place screens render a failed request. A 404 is not an error - it means the
+   resource is missing or not owned (ownership → 404, 05-security.md) - so it surfaces
+   as a calm "not found" rather than an alert. Everything else is an assertive alert
+   with the problem details and an optional retry. *@
+@if (Problem.IsNotFound)
+{
+    <EmptyState Title="@NotFoundTitle" Description="@NotFoundDescription" />
+}
+else
+{
+    <div class="error" role="alert">
+        <ProblemDetailsDisplay Problem="Problem" />
+        @if (OnRetry.HasDelegate)
+        {
+            <button type="button" class="error-retry" @onclick="OnRetry">Try again</button>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The failure to render.</summary>
+    [Parameter, EditorRequired] public ProblemDetailsView Problem { get; set; } = default!;
+
+    /// <summary>Optional retry handler; the retry button shows only when set.</summary>
+    [Parameter] public EventCallback OnRetry { get; set; }
+
+    /// <summary>Headline used for the 404 / not-found presentation.</summary>
+    [Parameter] public string NotFoundTitle { get; set; } = "Not found";
+
+    /// <summary>Supporting line for the 404 / not-found presentation.</summary>
+    [Parameter] public string NotFoundDescription { get; set; } =
+        "We couldn't find what you were looking for.";
+}

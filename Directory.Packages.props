@@ -48,5 +48,8 @@
          real Postgres via Testcontainers (12-testing-strategy.md). -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.8" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.12.0" />
+    <!-- Blazor component tests (12-testing-strategy.md). bUnit 2.x is test-framework
+         agnostic and pairs with the repo's xunit.v3. -->
+    <PackageVersion Include="bunit" Version="2.7.2" />
   </ItemGroup>
 </Project>

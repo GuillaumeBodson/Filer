@@ -49,6 +49,7 @@
     <Project Path="tests/Filer.Modules.Tags.Tests/Filer.Modules.Tags.Tests.csproj" />
     <Project Path="tests/Filer.IntegrationTests/Filer.IntegrationTests.csproj" />
     <Project Path="tests/Filer.Architecture.Tests/Filer.Architecture.Tests.csproj" />
+    <Project Path="tests/Filer.Ui.Tests/Filer.Ui.Tests.csproj" />
   </Folder>
   <Project Path="docker-compose.dcproj">
     <Build />

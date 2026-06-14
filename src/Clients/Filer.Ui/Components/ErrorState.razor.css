@@ -1,0 +1,27 @@
+.error {
+    border: 1px solid var(--color-danger);
+    border-left-width: 4px;
+    border-radius: var(--radius-md);
+    background: #fff5f5;
+    padding: var(--space-3);
+    color: var(--color-text);
+}
+
+/* Tint the problem title with the danger colour (child component → ::deep). */
+.error ::deep .problem-title {
+    color: var(--color-danger);
+}
+
+.error-retry {
+    margin-top: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.error-retry:hover {
+    border-color: var(--color-text-muted);
+}
