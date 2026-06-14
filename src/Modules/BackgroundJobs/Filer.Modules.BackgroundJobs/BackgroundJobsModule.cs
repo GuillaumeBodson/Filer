@@ -31,6 +31,15 @@ public static class BackgroundJobsModule
             .Validate(
                 options => options.PollInterval > TimeSpan.Zero,
                 "BackgroundJobs:PollInterval must be positive.")
+            .Validate(
+                options => options.MaxAttempts >= 1,
+                "BackgroundJobs:MaxAttempts must be at least 1.")
+            .Validate(
+                options => options.RetryBaseDelay > TimeSpan.Zero,
+                "BackgroundJobs:RetryBaseDelay must be positive.")
+            .Validate(
+                options => options.QueueDepthReportInterval > TimeSpan.Zero,
+                "BackgroundJobs:QueueDepthReportInterval must be positive.")
             .ValidateOnStart();
 
         // The module owns its data in the 'jobs' Postgres schema.
@@ -45,9 +54,15 @@ public static class BackgroundJobsModule
         services.AddScoped<IBackgroundJobQueue, EfBackgroundJobQueue>();
         services.AddScoped<IAnalysisJobStore, EfAnalysisJobStore>();
 
-        // Placeholder handler until the AI analysis milestone plugs in real
-        // processing (06-ai-analysis-pipeline.md). TryAdd keeps that swap additive.
+        // Fallback handler: the AI Analysis module registers the real one before
+        // this module runs (Program.cs ordering), so TryAdd keeps the swap additive
+        // and the no-op only wins in hosts without AI analysis (06).
         services.TryAddScoped<IAnalysisJobHandler, NoOpAnalysisJobHandler>();
+
+        // Observability (04-non-functional.md): meter-backed counters/histogram/
+        // gauge. AddMetrics is idempotent and supplies IMeterFactory in bare hosts.
+        services.AddMetrics();
+        services.AddSingleton<BackgroundJobsMetrics>();
 
         services.AddHostedService<AnalysisJobWorker>();
 

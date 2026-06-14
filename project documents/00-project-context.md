@@ -51,16 +51,11 @@ AI-assisted upload processing:
 
 ## Future Scope
 
-Potential future features:
-
-* Multi-user SaaS support.
-* Desktop application.
-* Mobile application.
-* OCR pipelines.
-* Semantic search.
-* AI chat over documents.
-* Sharing and collaboration.
-* Role-based permissions.
+Post-V1 features — intent, rationale, and sequencing — live in `14-roadmap.md`
+(the single source of truth). Highlights: OCR pipelines, document capture by
+photo, email ingestion, semantic search and AI chat over documents, plus the
+broader SaaS direction (multi-user, desktop/mobile clients, sharing,
+role-based permissions). All are deferred until the V1 milestones ship.
 
 ---
 

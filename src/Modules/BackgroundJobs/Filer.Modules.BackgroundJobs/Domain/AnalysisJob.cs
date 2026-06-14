@@ -30,4 +30,10 @@ public sealed class AnalysisJob : BaseEntity
     public DateTimeOffset? StartedAt { get; set; }
 
     public DateTimeOffset? CompletedAt { get; set; }
+
+    /// <summary>
+    /// When a retried job becomes claimable again — the exponential-backoff stamp
+    /// the claim query respects (06, Reliability). Null = due immediately.
+    /// </summary>
+    public DateTimeOffset? NextAttemptAt { get; set; }
 }
