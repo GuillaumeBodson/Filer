@@ -30,6 +30,10 @@
          endpoint). DI.Abstractions lets Filer.ApiClient expose AddFilerApiClient. -->
     <PackageVersion Include="Microsoft.Kiota.Bundle" Version="2.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.8" />
+    <!-- Auth plumbing (#128): IHttpClientFactory for the bearer/refresh handler chain
+         (Filer.ApiClient); AuthenticationStateProvider/AuthorizeRouteView (Filer.Ui). -->
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.8" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.8" />
   </ItemGroup>
 
   <!-- Test stack (12-testing-strategy.md). xUnit runner; FluentAssertions for

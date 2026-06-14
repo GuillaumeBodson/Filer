@@ -26,6 +26,7 @@ public static class RegisterEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("Register")
+        .Produces<RegisterResponse>(StatusCodes.Status201Created)
         .AllowAnonymous();
     }
 }

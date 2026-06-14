@@ -37,6 +37,7 @@ public static class LogoutEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("Logout")
+        .Produces(StatusCodes.Status204NoContent)
         .RequireAuthorization();
     }
 }

@@ -27,6 +27,7 @@ public static class MeEndpoint
             return Results.Ok(new MeResponse(id, email ?? string.Empty));
         })
         .WithName("Me")
+        .Produces<MeResponse>(StatusCodes.Status200OK)
         .RequireAuthorization();
     }
 }
