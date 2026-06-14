@@ -1,0 +1,40 @@
+/*
+  Design tokens — the single source of visual primitives for every Filer client
+  (web today, MAUI shell later, RM-02). Components and scoped styles reference these
+  custom properties; no component hard-codes colours, spacing or fonts.
+*/
+:root {
+    color-scheme: light;
+
+    /* Colour */
+    --color-bg: #f7f8fa;
+    --color-surface: #ffffff;
+    --color-text: #1c2230;
+    --color-text-muted: #5b6472;
+    --color-border: #e2e5eb;
+    --color-primary: #1b6ec2;
+    --color-primary-contrast: #ffffff;
+    --color-danger: #c0392b;
+    --color-focus-ring: #258cfb;
+
+    /* Typography */
+    --font-sans: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    --font-size-base: 1rem;
+    --line-height-base: 1.5;
+
+    /* Spacing scale */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 1rem;
+    --space-4: 1.5rem;
+    --space-5: 2rem;
+
+    /* Radius + elevation */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+
+    /* Layout */
+    --topbar-height: 3.5rem;
+    --content-max-width: 72rem;
+}
