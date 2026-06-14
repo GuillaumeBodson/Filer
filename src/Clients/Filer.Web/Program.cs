@@ -1,3 +1,4 @@
+using Filer.ApiClient;
 using Filer.Web;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -7,8 +8,12 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// The typed Filer API client (Kiota, ADR-011) is registered here in #126, and auth
-// plumbing (token store, bearer handler, 401 refresh) in #128. No hand-rolled
-// HttpClient: all server calls go through the generated client.
+// Typed Filer API client (Kiota, ADR-011). The base address is configuration-driven
+// (wwwroot/appsettings*.json) so each environment points at its own API. Auth plumbing
+// - token store, bearer handler, 401 refresh - replaces the anonymous provider in #128.
+var apiBaseAddress = builder.Configuration["FilerApi:BaseAddress"]
+    ?? throw new InvalidOperationException(
+        "Configuration 'FilerApi:BaseAddress' is required (wwwroot/appsettings.json).");
+builder.Services.AddFilerApiClient(new Uri(apiBaseAddress, UriKind.Absolute));
 
 await builder.Build().RunAsync();
