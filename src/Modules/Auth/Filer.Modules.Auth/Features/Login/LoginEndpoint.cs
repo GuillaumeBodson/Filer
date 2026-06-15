@@ -22,6 +22,7 @@ public static class LoginEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("Login")
+        .Produces<LoginResponse>(StatusCodes.Status200OK)
         .AllowAnonymous();
     }
 }

@@ -110,7 +110,7 @@ public sealed class BackgroundJobQueueTests(FilerApiFactory factory)
         await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
         {
             var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
-            await store.MarkSucceededAsync(runningJobId, TestContext.Current.CancellationToken);
+            await store.MarkSucceededAsync(runningJobId, result: null, TestContext.Current.CancellationToken);
 
             var db = scope.ServiceProvider.GetRequiredService<JobsDbContext>();
             AnalysisJob runningJob = await db.AnalysisJobs.AsNoTracking()

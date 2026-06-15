@@ -95,6 +95,10 @@ public static class DocumentsModule
         // the implementation stays internal behind the Contracts interface.
         services.AddScoped<IDocumentTagRemover, DocumentTagRemover>();
 
+        // Public surface for the AI analysis worker (#53): load a document's
+        // analysis context and mark it Ready; internal behind the Contracts interface.
+        services.AddScoped<IDocumentAnalysisGateway, DocumentAnalysisGateway>();
+
         // Feature services (vertical slices).
         services.AddScoped<UploadDocumentService>();
         services.AddScoped<DownloadDocumentContentService>();

@@ -38,7 +38,7 @@ For an uploaded document the pipeline produces:
   near-duplicates.
 
 Out of V1 scope (future): summarization, semantic search indexing, natural-language
-querying, AI chat over documents.
+querying, AI chat over documents — tracked in `14-roadmap.md` (RM-04).
 
 ---
 
@@ -155,8 +155,10 @@ Per `08` (background jobs must support these):
 * ~~Dedicated message broker for the queue at scale.~~ Decided: RabbitMQ for
   dispatch over the Postgres outbox (ADR-008), sequenced after the upload
   pipeline milestone.
-* Embedding generation feeding pgvector for semantic search (`02`).
-* Summarization and AI chat capabilities layered on the same provider
-  abstraction.
+* Embedding generation feeding pgvector for semantic search (`02`) — the
+  prerequisite for AI chat over documents (`14`, RM-04).
+* Summarization and AI chat capabilities layer on the same provider abstraction;
+  intent and sequencing in `14-roadmap.md` (RM-04). Text quality for these
+  depends on OCR (RM-01).
 
 ---

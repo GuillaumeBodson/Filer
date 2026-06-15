@@ -47,6 +47,10 @@ public static class TagsModule
         // as the ownership checker — implementation internal, contract public.
         services.AddScoped<ITagNameResolver, TagNameResolver>();
 
+        // Public surface for the AI analysis worker (#53): an owner's tag names as
+        // suggestion context; internal behind the Contracts interface.
+        services.AddScoped<IOwnerTagReader, OwnerTagReader>();
+
         // Feature services (vertical slices).
         services.AddScoped<CreateTagService>();
         services.AddScoped<ListTagsService>();

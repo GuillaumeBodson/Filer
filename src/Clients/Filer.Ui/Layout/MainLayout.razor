@@ -1,0 +1,15 @@
+@namespace Filer.Ui.Layout
+@inherits LayoutComponentBase
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<div class="page">
+    <header class="topbar">
+        <a class="brand" href="">Filer</a>
+        <NavMenu />
+    </header>
+
+    <main id="main-content" class="content" role="main" tabindex="-1">
+        @Body
+    </main>
+</div>

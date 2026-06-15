@@ -12,8 +12,9 @@ Each ticket carries acceptance criteria drawn from the docs — ownership→404
 
 | File | What it is |
 |------|------------|
-| `create-github-issues.sh` | Creates all labels, milestones, and 45 issues via the `gh` CLI. |
-| `issues.csv` | The same 45 tickets as a spreadsheet (Title, Milestone, Labels, Body). |
+| `create-github-issues.sh` | Creates all labels, milestones, and 45 **backend** issues via the `gh` CLI. |
+| `issues.csv` | The same 45 backend tickets as a spreadsheet (Title, Milestone, Labels, Body). |
+| `create-frontend-issues.sh` | Creates the `module:web` label, 3 frontend milestones, and 16 **frontend** issues. |
 | `README-backlog.md` | This file. |
 
 ## What gets created
@@ -22,19 +23,39 @@ Each ticket carries acceptance criteria drawn from the docs — ownership→404
 - **15 labels** — `epic`, `type:*` (feature/infra/test/chore), `module:*` (auth, documents, storage, jobs, folders, tags, ai, search, platform, ci).
 - **45 issues** — 7 epics + 38 slice/infra tickets. Counts per phase: M1 6, M2 7, M3 9, M4 11, M5 6, M6 2, M7 4.
 
+## Frontend backlog (`create-frontend-issues.sh`)
+
+The web frontend is planned separately, per ADR-001 (Blazor), ADR-011 (Kiota
+client generation), and ADR-012 (start in parallel, web-first, against the frozen
+core endpoints; mobile deferred to RM-02). `create-frontend-issues.sh` creates:
+
+- **3 milestones** — `FE-M1 Frontend foundation`, `FE-M2 Core document workflow
+  (web)`, `FE-M3 AI suggestions & search UI`.
+- **1 new label** — `module:web` (reuses the existing `epic`/`type:*` labels).
+- **16 issues** — 3 epics + 13 slices. Per milestone: FE-M1 6, FE-M2 7, FE-M3 3.
+
+Sequencing baked into the tickets (ADR-012): FE-M1/FE-M2 run now against the
+frozen auth/documents/folders/tags endpoints; **FE-M3 is blocked** until the
+backend M5 analysis (#54/#55) and M6 search contracts freeze. The search UI is
+kept agnostic to full-text vs semantic backing so RM-04 (`14`) can slot in later.
+The MAUI mobile shell is **not** in this backlog — it belongs to RM-02.
+
 ## Run it
 
 Prerequisites: [`gh`](https://cli.github.com/) installed and authenticated (`gh auth login`), run from inside the repo.
 
 ```bash
 # from the repo root (auto-detects the repo)
-bash "project documents/backlog/create-github-issues.sh"
+bash "project documents/backlog/create-github-issues.sh"      # 45 backend issues
+bash "project documents/backlog/create-frontend-issues.sh"    # 16 frontend issues
 
 # or target an explicit repo
 REPO=GuillaumeBodson/Filer bash "project documents/backlog/create-github-issues.sh"
 ```
 
-The script is safe to re-run: labels use `--force`, milestones are skipped if they already exist. **Issues are *not* deduplicated** — running twice creates duplicates. Run once.
+Both scripts are safe to re-run for labels/milestones (labels use `--force`,
+milestones are skipped if they already exist). **Issues are *not* deduplicated** —
+running a script twice creates duplicates. Run each once.
 
 ## Turn it into a kanban board (GitHub Projects)
 

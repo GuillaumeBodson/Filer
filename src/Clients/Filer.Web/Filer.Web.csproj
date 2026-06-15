@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <!--
+    Thin Blazor WebAssembly host (ADR-001/ADR-012). Carries only the WASM bootstrap
+    and host wiring; all reusable UI lives in Filer.Ui. The WASM-specific packages
+    stop here so the shared RCL and API client stay reusable by the MAUI shell (RM-02).
+    TargetFramework / Nullable / analysis are inherited from Directory.Build.props.
+  -->
+
+  <PropertyGroup>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Filer.Ui\Filer.Ui.csproj" />
+    <ProjectReference Include="..\Filer.ApiClient\Filer.ApiClient.csproj" />
+  </ItemGroup>
+
+</Project>

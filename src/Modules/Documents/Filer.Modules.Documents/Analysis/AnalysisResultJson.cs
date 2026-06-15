@@ -4,26 +4,18 @@ using Filer.Modules.AiAnalysis.Contracts;
 namespace Filer.Modules.Documents.Analysis;
 
 /// <summary>
-/// The single reader of <c>AnalysisJob.Result</c> JSON inside the Documents
-/// module, shared by the status (#54) and apply (#55) slices.
+/// The Documents-side reader of <c>AnalysisJob.Result</c> JSON, shared by the
+/// status (#54) and apply (#55) slices.
 ///
-/// CRITICAL cross-branch contract: the worker (#53) serializes
-/// <see cref="DocumentAnalysisResult"/> with exactly
-/// <c>new JsonSerializerOptions(JsonSerializerDefaults.Web)</c> — no extra
-/// converters, enums as numbers — so these options MUST stay identical to that
-/// writer. At integration this helper is swapped for the shared
-/// <c>AnalysisJobResultJson</c> helper #53 adds to AiAnalysis.Contracts.
+/// The serialization shape is owned by <see cref="AnalysisJobResultJson"/> in
+/// AiAnalysis.Contracts — the single contract the worker (#53) writes and every
+/// reader parses, so it can never drift. This wrapper only adds the slices'
+/// resilience: an absent or malformed payload becomes null ("analysis
+/// unavailable") rather than throwing, since a bad row must never take the
+/// document down (06-ai-analysis-pipeline.md, Failure Handling).
 /// </summary>
 internal static class AnalysisResultJson
 {
-    private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
-
-    /// <summary>
-    /// Deserializes a stored result, or returns null when the payload is absent or
-    /// unreadable — the slices treat that as "analysis unavailable" rather than
-    /// throwing, since a malformed row must never take the document down
-    /// (06-ai-analysis-pipeline.md, Failure Handling).
-    /// </summary>
     public static DocumentAnalysisResult? TryDeserialize(string? json)
     {
         if (string.IsNullOrWhiteSpace(json))
@@ -33,7 +25,7 @@ internal static class AnalysisResultJson
 
         try
         {
-            return JsonSerializer.Deserialize<DocumentAnalysisResult>(json, Options);
+            return AnalysisJobResultJson.Deserialize(json);
         }
         catch (JsonException)
         {

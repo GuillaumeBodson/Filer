@@ -1,0 +1,13 @@
+.problem-title {
+    margin: 0 0 var(--space-1);
+    font-weight: 600;
+}
+
+.problem-detail {
+    margin: 0 0 var(--space-2);
+}
+
+.problem-errors {
+    margin: 0;
+    padding-left: var(--space-4);
+}

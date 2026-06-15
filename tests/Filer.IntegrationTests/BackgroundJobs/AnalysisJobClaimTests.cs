@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Filer.IntegrationTests.Infrastructure;
 using Filer.Modules.BackgroundJobs.Contracts;
 using Filer.Modules.BackgroundJobs.Domain;
@@ -131,10 +132,11 @@ public sealed class AnalysisJobClaimTests(FilerApiFactory factory)
         Guid failedId = await EnqueueAsync(Guid.NewGuid());
         (await ClaimInOwnScopeAsync())!.JobId.Should().Be(failedId);
 
+        const string resultJson = """{"suggestedFolder":null,"suggestedTags":[{"name":"invoice","confidence":0.5}],"duplicateSignals":[]}""";
         await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
         {
             var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
-            await store.MarkSucceededAsync(succeededId, TestContext.Current.CancellationToken);
+            await store.MarkSucceededAsync(succeededId, resultJson, TestContext.Current.CancellationToken);
             await store.MarkFailedAsync(failedId, "ai.provider_unavailable: timeout", TestContext.Current.CancellationToken);
         }
 
@@ -143,10 +145,108 @@ public sealed class AnalysisJobClaimTests(FilerApiFactory factory)
         succeeded.CompletedAt.Should().NotBeNull();
         succeeded.Error.Should().BeNull();
 
+        // The serialized result landed in the JSONB column. Postgres normalises
+        // jsonb formatting, so compare parsed shapes, not raw strings.
+        succeeded.Result.Should().NotBeNull();
+        JsonNode.DeepEquals(JsonNode.Parse(succeeded.Result!), JsonNode.Parse(resultJson))
+            .Should().BeTrue("MarkSucceededAsync persists the handler's result as AnalysisJob.Result (06)");
+
         AnalysisJob failed = await GetJobAsync(failedId);
         failed.Status.Should().Be(AnalysisJobStatus.Failed);
         failed.CompletedAt.Should().NotBeNull();
         failed.Error.Should().Be("ai.provider_unavailable: timeout");
+    }
+
+    [Fact]
+    public async Task ScheduleRetryAsync_RequeuesWithBackoff_AndTheClaimSkipsItUntilDue()
+    {
+        await _factory.DrainQueueAsync();
+
+        Guid documentId = Guid.NewGuid();
+        Guid jobId = await EnqueueAsync(documentId);
+        (await ClaimInOwnScopeAsync())!.JobId.Should().Be(jobId);
+
+        // The worker requeues the failed attempt with a far-future backoff…
+        await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
+            await store.ScheduleRetryAsync(
+                jobId, "ai.provider_unavailable: timeout", TimeSpan.FromHours(1),
+                TestContext.Current.CancellationToken);
+        }
+
+        AnalysisJob row = await GetJobAsync(jobId);
+        row.Status.Should().Be(AnalysisJobStatus.Queued, "a retryable failure goes back to Queued (06)");
+        row.Error.Should().Be("ai.provider_unavailable: timeout");
+        row.StartedAt.Should().BeNull();
+        row.NextAttemptAt.Should().NotBeNull();
+        row.CompletedAt.Should().BeNull();
+
+        // …and the claim respects the backoff: the job is not due, so nothing is claimed.
+        ClaimedAnalysisJob? premature = await ClaimInOwnScopeAsync();
+        premature.Should().BeNull("a job backing off must not be reclaimed before NextAttemptAt");
+
+        // Leave no leftovers for the shared-database suite.
+        await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
+        {
+            var queue = scope.ServiceProvider.GetRequiredService<IBackgroundJobQueue>();
+            (await queue.CancelForDocumentAsync(documentId, TestContext.Current.CancellationToken))
+                .Value.Should().Be(1);
+        }
+    }
+
+    [Fact]
+    public async Task ScheduleRetryAsync_WithAnElapsedBackoff_MakesTheJobClaimableAgain()
+    {
+        await _factory.DrainQueueAsync();
+
+        Guid jobId = await EnqueueAsync(Guid.NewGuid());
+        (await ClaimInOwnScopeAsync())!.JobId.Should().Be(jobId);
+
+        await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
+            await store.ScheduleRetryAsync(
+                jobId, "transient", TimeSpan.Zero, TestContext.Current.CancellationToken);
+        }
+
+        // The backoff has elapsed: a fresh claim picks the retry up, attempt advancing,
+        // and clears the schedule stamp.
+        ClaimedAnalysisJob? retry = await ClaimInOwnScopeAsync();
+        retry.Should().NotBeNull();
+        retry.JobId.Should().Be(jobId);
+        retry.AttemptCount.Should().Be(2, "the retry is a new attempt (06)");
+
+        AnalysisJob row = await GetJobAsync(jobId);
+        row.Status.Should().Be(AnalysisJobStatus.Running);
+        row.NextAttemptAt.Should().BeNull("claiming clears the backoff stamp");
+
+        await using (AsyncServiceScope cleanup = _factory.Services.CreateAsyncScope())
+        {
+            var store = cleanup.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
+            await store.MarkSucceededAsync(jobId, result: null, TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task MarkCancelledAsync_CancelsARunningJob()
+    {
+        await _factory.DrainQueueAsync();
+
+        Guid jobId = await EnqueueAsync(Guid.NewGuid());
+        (await ClaimInOwnScopeAsync())!.JobId.Should().Be(jobId);
+
+        // The handler found the document gone; the worker cancels the job (06).
+        await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
+            await store.MarkCancelledAsync(jobId, TestContext.Current.CancellationToken);
+        }
+
+        AnalysisJob row = await GetJobAsync(jobId);
+        row.Status.Should().Be(AnalysisJobStatus.Cancelled);
+        row.CompletedAt.Should().NotBeNull();
+        row.Error.Should().BeNull();
     }
 
     private async Task<Guid> EnqueueAsync(Guid documentId)

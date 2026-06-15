@@ -1,0 +1,26 @@
+@namespace Filer.Ui.Components
+
+@* Neutral "nothing here" / "not found" presentation. Optional ChildContent hosts a
+   call to action (e.g. an upload button). *@
+<div class="empty" role="status">
+    <h2 class="empty-title">@Title</h2>
+    @if (!string.IsNullOrWhiteSpace(Description))
+    {
+        <p class="empty-description">@Description</p>
+    }
+    @if (ChildContent is not null)
+    {
+        <div class="empty-actions">@ChildContent</div>
+    }
+</div>
+
+@code {
+    /// <summary>Headline, e.g. "No documents yet".</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+
+    /// <summary>Optional supporting line.</summary>
+    [Parameter] public string? Description { get; set; }
+
+    /// <summary>Optional actions (buttons, links).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

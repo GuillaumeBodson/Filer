@@ -53,6 +53,28 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      # Restore the pinned local tools (Kiota) from .config/dotnet-tools.json so the
+      # drift gate below regenerates with the exact version the client was built with.
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      # Kiota drift gate (ADR-011 / #126): regenerate the typed client from the
+      # committed OpenAPI snapshot and fail if the result differs from what is checked
+      # in — i.e. a contract change landed without regenerating the client. Offline:
+      # reads src/Clients/Filer.ApiClient/openapi/v1.json, needs no running API or DB,
+      # so it runs early and fails fast before the build. See the ApiClient README.
+      - name: Kiota client drift gate
+        run: |
+          dotnet tool run kiota generate \
+            -l CSharp \
+            -d src/Clients/Filer.ApiClient/openapi/v1.json \
+            -c FilerApiClient \
+            -n Filer.ApiClient.Generated \
+            -o src/Clients/Filer.ApiClient/Generated \
+            --clean-output
+          git diff --exit-code -- src/Clients/Filer.ApiClient/Generated \
+            || { echo "::error::Generated Kiota client is out of date. Run 'dotnet tool restore' then the regenerate command in src/Clients/Filer.ApiClient/README.md and commit the result."; exit 1; }
+
       # Target the solution explicitly: the repo root also holds docker-compose.dcproj,
       # so a bare `dotnet restore` can't pick a single project/solution (MSB1011).
       - name: Restore

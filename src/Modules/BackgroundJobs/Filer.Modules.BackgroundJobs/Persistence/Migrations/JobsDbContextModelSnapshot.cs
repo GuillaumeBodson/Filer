@@ -44,6 +44,9 @@ namespace Filer.Modules.BackgroundJobs.Persistence.Migrations
                     b.Property<string>("Error")
                         .HasColumnType("text");
 
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Provider")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");

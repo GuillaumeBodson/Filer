@@ -168,10 +168,21 @@ Coverage is a signal, not a target to game. The rules:
 ## CI Wiring (extends `11`)
 
 The `build-test` job (`.github/workflows/ci.yml`) runs, in order:
-`restore` → `build` (Release, warnings-as-errors) → `test` with coverage
-collection → coverage report/threshold. The PostgreSQL 17 service already present
-in CI backs the integration tests; `Filer.Architecture.Tests` run in the same
-pass. `build-test` remains the single required status check for branch protection.
+`tool restore` → **Kiota drift gate** → `restore` → `build` (Release,
+warnings-as-errors) → `test` with coverage collection → coverage report/threshold.
+The PostgreSQL 17 service already present in CI backs the integration tests;
+`Filer.Architecture.Tests` run in the same pass. The frontend is covered in this
+same pass: building `Filer.slnx` compiles the Blazor WASM host (`Filer.Web`) and
+the shared RCL (`Filer.Ui`) under warnings-as-errors, and `dotnet test Filer.slnx`
+runs the bUnit component tests (`Filer.Ui.Tests`) with the rest. `build-test`
+remains the single required status check for branch protection.
+
+The **Kiota drift gate** runs early (it needs only the committed OpenAPI snapshot —
+no API, no Postgres) so it fails fast: it regenerates the typed client from
+`src/Clients/Filer.ApiClient/openapi/v1.json` and fails the job if the result
+differs from the checked-in `Generated/`. This enforces ADR-011 (#126): a contract
+change that lands without regenerating the client breaks the build. The regenerate
+command and recovery steps live in `src/Clients/Filer.ApiClient/README.md`.
 
 ---
 
