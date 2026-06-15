@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Filer.Modules.Documents.Contracts\Filer.Modules.Documents.Contracts.csproj" />
+    <ProjectReference Include="..\..\AiAnalysis\Filer.Modules.AiAnalysis.Contracts\Filer.Modules.AiAnalysis.Contracts.csproj" />
     <ProjectReference Include="..\..\BackgroundJobs\Filer.Modules.BackgroundJobs.Contracts\Filer.Modules.BackgroundJobs.Contracts.csproj" />
     <ProjectReference Include="..\..\Folders\Filer.Modules.Folders.Contracts\Filer.Modules.Folders.Contracts.csproj" />
     <ProjectReference Include="..\..\Storage\Filer.Modules.Storage.Contracts\Filer.Modules.Storage.Contracts.csproj" />

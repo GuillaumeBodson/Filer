@@ -63,4 +63,38 @@ public static class DocumentsErrorCodes
     /// (a non-empty list may legitimately be empty to clear the User tags) — 400.
     /// </summary>
     public const string TagIdsInvalid = "tag_ids_invalid";
+
+    /// <summary>
+    /// The apply body's <c>tags</c> was missing or contained a blank name (an empty
+    /// list is legitimate — the user may accept none of the suggestions) — 400.
+    /// </summary>
+    public const string AnalysisTagsInvalid = "analysis_tags_invalid";
+
+    /// <summary>
+    /// Nothing to apply: the document has no successfully completed analysis with
+    /// a readable result (06-ai-analysis-pipeline.md, Applying Suggestions) — 404.
+    /// </summary>
+    public const string AnalysisNotFound = "analysis_not_found";
+
+    /// <summary>
+    /// A confirmed tag name is not among the stored analysis suggestions — only
+    /// suggested tags can be applied through this endpoint — 400.
+    /// </summary>
+    public const string TagNotSuggested = "tag_not_suggested";
+
+    /// <summary>
+    /// A confirmed tag suggestion has no matching tag owned by the caller yet;
+    /// create the tag first, then re-apply (no cross-module tag creation) — 400.
+    /// </summary>
+    public const string SuggestedTagNotCreated = "suggested_tag_not_created";
+
+    /// <summary><c>applyFolder</c> was true but the analysis suggested no folder — 400.</summary>
+    public const string FolderNotSuggested = "folder_not_suggested";
+
+    /// <summary>
+    /// The folder suggestion proposes a NEW folder; applying it would require
+    /// cross-module folder creation, which V1 does not support — create the folder
+    /// and move the document explicitly instead — 400.
+    /// </summary>
+    public const string ProposedFolderNotSupported = "proposed_folder_not_supported";
 }

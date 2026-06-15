@@ -168,6 +168,27 @@ public sealed class EfDocumentStore(DocumentsDbContext db, IFolderOwnershipCheck
             .ExecuteDeleteAsync(cancellationToken);
     }
 
+    public async Task ApplyAnalysisAsync(
+        Document? movedDocument,
+        IReadOnlyCollection<DocumentTag> tagsToInsert,
+        CancellationToken cancellationToken)
+    {
+        // Reads on this seam are no-tracking, so attach explicitly. One
+        // SaveChanges = one transaction for the folder move and the new
+        // AiSuggested rows together (#55).
+        if (movedDocument is not null)
+        {
+            db.Documents.Update(movedDocument);
+        }
+
+        if (tagsToInsert.Count > 0)
+        {
+            db.DocumentTags.AddRange(tagsToInsert);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task AddAsync(Document document, CancellationToken cancellationToken)
     {
         db.Documents.Add(document);

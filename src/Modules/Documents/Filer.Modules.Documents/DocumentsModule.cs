@@ -1,7 +1,9 @@
 using Filer.Modules.Documents.Contracts;
 using Filer.Modules.Documents.Features.AddTag;
+using Filer.Modules.Documents.Features.ApplyDocumentAnalysis;
 using Filer.Modules.Documents.Features.Delete;
 using Filer.Modules.Documents.Features.DownloadContent;
+using Filer.Modules.Documents.Features.GetDocumentAnalysis;
 using Filer.Modules.Documents.Features.GetMetadata;
 using Filer.Modules.Documents.Features.ListDocuments;
 using Filer.Modules.Documents.Features.RemoveTag;
@@ -107,6 +109,8 @@ public static class DocumentsModule
         services.AddScoped<ReplaceDocumentTagsService>();
         services.AddScoped<AddDocumentTagService>();
         services.AddScoped<RemoveDocumentTagService>();
+        services.AddScoped<GetDocumentAnalysisService>();
+        services.AddScoped<ApplyDocumentAnalysisService>();
 
         return services;
     }
@@ -124,6 +128,8 @@ public static class DocumentsModule
         group.MapReplaceDocumentTags();
         group.MapAddDocumentTag();
         group.MapRemoveDocumentTag();
+        group.MapGetDocumentAnalysis();
+        group.MapApplyDocumentAnalysis();
 
         return routes;
     }

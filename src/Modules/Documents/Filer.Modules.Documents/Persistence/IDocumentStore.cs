@@ -92,6 +92,19 @@ public interface IDocumentStore
     /// </summary>
     Task RemoveDocumentTagsForTagAsync(Guid ownerId, Guid tagId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Persists the apply-suggestions outcome in one transaction (#55): the
+    /// optional folder move (<paramref name="movedDocument"/>, null when the
+    /// folder was not confirmed) and the new <c>AiSuggested</c> association rows
+    /// commit together or not at all — one SaveChanges, like
+    /// <see cref="ApplyTagChangesAsync"/>. The slice owns every decision; this
+    /// method only writes the handed diff (13-code-quality-and-design.md).
+    /// </summary>
+    Task ApplyAnalysisAsync(
+        Document? movedDocument,
+        IReadOnlyCollection<DocumentTag> tagsToInsert,
+        CancellationToken cancellationToken);
+
     /// <summary>Persists a new document immediately.</summary>
     Task AddAsync(Document document, CancellationToken cancellationToken);
 
