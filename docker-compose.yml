@@ -42,6 +42,20 @@ services:
     volumes:
       - filer-storage:/data/storage
 
+  # Local, no-egress AI runtime for the Ollama analysis provider (#52, 06-ai-analysis-pipeline.md).
+  # Behind the "ai" profile so a plain `docker compose up` never pulls the (large) image;
+  # start it with `docker compose --profile ai up`. Pull a model once it is running, e.g.
+  # `docker compose exec ollama ollama pull llama3.2:3b`, and set AiAnalysis__Provider=Ollama.
+  ollama:
+    image: ollama/ollama
+    container_name: filer-ollama
+    profiles: ["ai"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - filer-ollama:/root/.ollama
+
 volumes:
   filer-pgdata:
   filer-storage:
+  filer-ollama:
