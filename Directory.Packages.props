@@ -8,6 +8,10 @@
   <ItemGroup>
     <!-- ASP.NET Core / host -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+    <!-- Pin the transitive OpenAPI.NET dependency to a patched 2.x version: the
+         ASP.NET Core 10 OpenAPI package still resolves Microsoft.OpenApi 2.0.0
+         by default, which now fails restore under NuGet audit-as-errors in CI. -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
     <!-- Identity + authentication -->
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.9" />
