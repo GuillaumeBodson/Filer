@@ -2,6 +2,7 @@ using Filer.Modules.AiAnalysis.Contracts;
 using Filer.Modules.BackgroundJobs.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Filer.Modules.AiAnalysis;
 
@@ -48,11 +49,51 @@ public static class AiAnalysisModule
             case AiAnalysisOptions.FakeProviderName:
                 services.AddSingleton<IAIAnalysisProvider, FakeAnalysisProvider>();
                 break;
+            case AiAnalysisOptions.OllamaProviderName:
+                AddOllamaProvider(services);
+                break;
             default:
                 throw new InvalidOperationException(
-                    $"Unknown AI analysis provider '{options.Provider}'. Supported providers: '{AiAnalysisOptions.FakeProviderName}'.");
+                    $"Unknown AI analysis provider '{options.Provider}'. Supported providers: " +
+                    $"'{AiAnalysisOptions.FakeProviderName}', '{AiAnalysisOptions.OllamaProviderName}'.");
         }
 
         return services;
+    }
+
+    /// <summary>
+    /// Wires the no-egress Ollama adapter as a typed HttpClient (06): base address and
+    /// timeout come from <see cref="OllamaOptions"/>, never literals (13, Options
+    /// pattern). The options are validated here — only on the Ollama path — so a
+    /// misconfigured local provider fails fast rather than at first inference. The
+    /// typed-client factory reads validated options from DI so validation runs before
+    /// the base address is constructed.
+    /// </summary>
+    private static void AddOllamaProvider(IServiceCollection services)
+    {
+        services.AddOptions<AiAnalysisOptions>()
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(options.Ollama.BaseUrl)
+                           && Uri.TryCreate(options.Ollama.BaseUrl, UriKind.Absolute, out _),
+                "AiAnalysis:Ollama:BaseUrl must be a non-empty absolute URL.")
+            .Validate(
+                options => !string.IsNullOrWhiteSpace(options.Ollama.Model),
+                "AiAnalysis:Ollama:Model must not be empty.")
+            .Validate(
+                options => options.Ollama.TimeoutSeconds > 0,
+                "AiAnalysis:Ollama:TimeoutSeconds must be positive.")
+            .Validate(
+                options => options.Ollama.MaxPromptChars > 0,
+                "AiAnalysis:Ollama:MaxPromptChars must be positive.")
+            .ValidateOnStart();
+
+        services.AddHttpClient<IAIAnalysisProvider, OllamaAnalysisProvider>((serviceProvider, client) =>
+        {
+            // Resolving the options runs the Validate rules above, so an invalid
+            // BaseUrl/Model/timeout fails as a validation error before the URI is built.
+            OllamaOptions current = serviceProvider.GetRequiredService<IOptions<AiAnalysisOptions>>().Value.Ollama;
+            client.BaseAddress = new Uri(current.BaseUrl, UriKind.Absolute);
+            client.Timeout = TimeSpan.FromSeconds(current.TimeoutSeconds);
+        });
     }
 }

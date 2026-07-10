@@ -147,6 +147,11 @@ Per `08` (background jobs must support these):
   processing** (e.g. Ollama) so content does not leave the deployment (`05`).
 * The active provider is environment configuration; switching providers requires
   no domain changes.
+* The shipped no-egress option is the **Ollama adapter** (`OllamaAnalysisProvider`),
+  a typed-HttpClient implementation that calls a self-hosted Ollama runtime so
+  document content never leaves the deployment (`05`). Its runtime ships as the
+  `ollama` Docker Compose service behind the `ai` profile, so a plain
+  `docker compose up` never pulls it; select it with `AiAnalysis__Provider=Ollama`.
 
 ---
 
