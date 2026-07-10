@@ -8,6 +8,13 @@
   <ItemGroup>
     <!-- ASP.NET Core / host -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
+    <!-- Transitive pin (CentralPackageTransitivePinningEnabled): Microsoft.AspNetCore.OpenApi
+         pulls Microsoft.OpenApi 2.0.0, which carries a high-severity advisory
+         (GHSA-v5pm-xwqc-g5wc: circular-schema-reference stack overflow, affects
+         2.0.0-preview.11..2.7.4). Pin to the patched 2.7.5 so NuGet audit (NU1903,
+         warnings-as-errors) passes. Remove once the direct package references a patched
+         Microsoft.OpenApi. -->
+    <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
     <!-- Identity + authentication -->
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.9" />
