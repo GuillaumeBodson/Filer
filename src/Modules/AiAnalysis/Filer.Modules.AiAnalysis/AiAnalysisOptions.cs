@@ -55,10 +55,12 @@ public sealed class OllamaOptions
     public string Model { get; init; } = "llama3.2:3b";
 
     /// <summary>
-    /// Per-request timeout in seconds. Local inference on small models is slow;
-    /// the default is generous and a breach throws so the worker can retry (06).
+    /// Per-request timeout in seconds. Local inference is slow, and the first call
+    /// after startup also pays a cold-load cost while the model is read into memory —
+    /// which can exceed a couple of minutes on a modest host. The default is
+    /// deliberately generous to absorb that; a breach throws so the worker retries (06).
     /// </summary>
-    public int TimeoutSeconds { get; init; } = 120;
+    public int TimeoutSeconds { get; init; } = 300;
 
     /// <summary>
     /// Upper bound on the document text placed in the prompt — a prompt-size guard,
