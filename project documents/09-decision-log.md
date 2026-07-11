@@ -925,3 +925,136 @@ against the frozen core endpoints only.**
 * **Write the full frontend best-practices doc up front.** Speculative, violates the
   no-anticipation rule (`13`); rejected in favour of just-in-time capture once real
   components exist.
+
+---
+
+## ADR-013 — Observability: OpenTelemetry, with trace context persisted on the job row for cross-process continuity
+
+* **Date:** 2026-07-11
+* **Status:** Accepted (correlation foundation precedes #75; full observability build is M7)
+
+### Context
+
+`04-non-functional.md` (Observability) requires structured logging with
+correlation ids, metrics (including analysis queue depth and job success/failure),
+distributed **tracing spanning request → queued job → worker execution**, and
+liveness/readiness health endpoints — noting the *tooling* (e.g. OpenTelemetry) is
+an implementation detail as long as the data is emitted interoperably. ADR-005
+resolved the logging half: correlate via the framework's W3C trace context
+(`Activity`/`TraceId`), no bespoke correlation id, on the stated premise that
+`traceparent` "flows across HTTP and, later, messaging boundaries … without any
+hand-written plumbing into the future worker tier."
+
+Two things were left open, and one premise turns out to be incomplete:
+
+1. **The emit layer and its viewer were never chosen.** Logging exists; traces,
+   metric export, and health endpoints do not. A local way to *see* the emitted
+   data is also missing (the recent Ollama timeout was only diagnosable via `psql`
+   against `AnalysisJobs`).
+2. **ADR-005's "propagates for free" does not hold across our own hand-off.** Trace
+   context flows automatically only over a *live synchronous call* (HTTP), where
+   .NET rides it in `traceparent` headers and `Activity.Current`. But the
+   upload→analysis hand-off is deliberately **asynchronous through a persisted
+   outbox** (`06`, ADR-008): the request inserts an `AnalysisJob` row and ends —
+   `Activity.Current` is cleared — and a background loop later *claims* that row
+   with no ambient context from the originating request. The worker therefore
+   starts a **new, unrelated trace**. The request→job→worker correlation `04`
+   mandates is, today, already broken; it is a present gap, not a hypothetical.
+3. **RabbitMQ (ADR-008) does not close it either.** That message is a bare "job
+   {id} is ready" wake-up carrying no context, the consumer re-reads the row, and
+   the retained **sweeper fallback** finds jobs with no message at all. The message
+   cannot be the reliable carrier.
+
+### Decision
+
+Adopt **OpenTelemetry** as the emit layer for traces, metrics, and logs
+(fulfilling `04`, extending ADR-005's logging decision rather than replacing it),
+and **persist the originating W3C trace context on the `AnalysisJob` row** as the
+durable correlation mechanism across the async hand-off.
+
+* **Durable correlation on the row.** Enqueue stamps the request's `traceparent`
+  onto a new nullable **`CorrelationContext`** column on `AnalysisJob` (`02`). When
+  the worker claims the job it reads that value and starts its processing span
+  **linked** to the originating trace, so request → queued job → worker execution
+  is one connected trace. This rides the **row**, which is the source of truth in
+  every dispatch path (ADR-008): it works for polling today, for the RabbitMQ
+  message tomorrow, and for the sweeper fallback — none of which is true of a
+  message-carried id. The column name is deliberately broader than "traceparent"
+  so it can also carry W3C `baggage` later without a further migration.
+* **Message-header propagation is additive, not authoritative.** When #75 lands,
+  the publisher also injects `traceparent` into message headers (the OTel messaging
+  convention) as a latency optimisation, but the row remains the source of truth.
+* **Instrumentation.** ASP.NET Core and `HttpClient` instrumentation (so provider
+  calls such as Ollama appear as timed spans), plus the existing
+  `Filer.BackgroundJobs` `Meter` (#53) exported over OTLP. Per-service resource
+  attributes (`service.name` = api / worker) so signals stay attributable once the
+  worker is a separate process (`04` scalability).
+* **Health endpoints.** Liveness and readiness (readiness checks DB and storage;
+  it gains RabbitMQ and provider-reachability checks as those arrive).
+* **Local viewer.** The **standalone Aspire dashboard** container as the OTLP sink
+  for local dev — a viewer of the emitted data, added to `docker-compose` behind a
+  profile like the `ollama` service. The full Aspire AppHost/orchestration model is
+  **not** adopted (see Alternatives).
+* **Sequencing.** The correlation foundation (OTel wiring + HttpClient/ASP.NET
+  tracing + the `CorrelationContext` column + worker span linkage + the dashboard)
+  lands **before or with #75**, so RabbitMQ is instrumented from day one rather
+  than retrofitted. The remaining breadth (full metric coverage, health,
+  dashboards, CI wiring) is **M7**.
+
+### Rationale
+
+* **Not speculative — a `04` requirement with a present gap.** This does not
+  violate the anti-anticipation rule (`13`): observability is a stated V1
+  non-functional requirement, and the trace-continuity fix repairs a correlation
+  that is *already broken*, discovered concretely during the #52 Ollama bring-up.
+* **The row is the only universal carrier.** Because ADR-008 keeps the table as the
+  outbox and retains a message-less sweeper, the sole element present across every
+  dispatch path is the row. Persisting context there makes ADR-005's promise
+  actually hold, and makes the mechanism broker-independent — the migration to
+  RabbitMQ adds nothing to the correlation design.
+* **Debuggability falls out for free.** A failed job then carries the context tying
+  it to its upload and to every worker log line — one trace lookup instead of a
+  `psql` join, the exact friction that motivated this decision.
+* **Seams already paid for.** The change is confined to the host (OTel registration,
+  health), the `AnalysisJob` entity/enqueue/claim (`BackgroundJobs`), and one new
+  compose service — no module boundary moves.
+* **OTel keeps deployment cloud-agnostic.** OTLP export targets any backend
+  (Aspire dashboard now, Grafana/App Insights/etc. at the SaaS phase) without code
+  change, honouring `04`'s infrastructure-agnostic principle.
+
+### Trade-offs accepted
+
+* A new nullable column and a small enqueue/claim change to `AnalysisJob` — cheap,
+  additive, and the durable-outbox shape already invites carrying such metadata.
+* Two propagation mechanisms once #75 lands (row-authoritative + additive message
+  header); accepted because the row path must exist for the sweeper regardless, and
+  the header is a thin optimisation.
+* A new local-dev container (Aspire dashboard); accepted, gated behind a compose
+  profile so a plain `docker compose up` never starts it (as with `ollama`).
+* Observability breadth is staged across the foundation slice and M7 rather than
+  landing at once; accepted to keep #75 unblocked and M5/M6 focused.
+
+### Alternatives considered
+
+* **Rely on ADR-005's "propagates for free" as written.** The default this ADR
+  corrects — it silently assumes a synchronous hop and leaves request→job→worker
+  uncorrelated across the outbox; rejected because `04` requires that span and the
+  gap is real today.
+* **Carry the trace context only in the RabbitMQ message header.** The conventional
+  OTel messaging approach, but it fails the sweeper fallback (no message) and is
+  unavailable until #75; rejected as the *authoritative* mechanism, kept as an
+  additive one.
+* **Bespoke correlation id persisted on the row.** Works, but re-introduces exactly
+  the custom id ADR-005 rejected as redundant with the trace id; rejected for
+  consistency — persist the standard `traceparent`, not a parallel identifier.
+* **Adopt full .NET Aspire (AppHost + orchestration).** Gives the dashboard plus
+  service orchestration, but it is a hosting/orchestration framework that would
+  reshape the composition root and local run model and pulls toward its own
+  conventions — at odds with the Docker-first, cloud-agnostic deployment principle
+  (`04`) and the "no unjustified complexity" rule (`13`). The dashboard alone
+  delivers the local-viewer value at near-zero architectural cost; rejected in
+  favour of the standalone dashboard.
+* **Defer all observability to M7 as originally planned.** Simplest, but forces
+  retrofitting trace propagation into RabbitMQ (#75) after the fact and leaves the
+  known request→job→worker gap open through M5/M6; rejected in favour of landing the
+  minimal correlation foundation before #75.
