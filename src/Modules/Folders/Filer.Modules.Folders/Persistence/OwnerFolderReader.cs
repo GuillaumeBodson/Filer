@@ -17,6 +17,6 @@ internal sealed class OwnerFolderReader(IFolderStore folders) : IOwnerFolderRead
     {
         IReadOnlyList<Folder> active = await folders.ListActiveAsync(ownerId, cancellationToken);
 
-        return [.. active.Select(folder => new OwnerFolder(folder.Id, folder.Name))];
+        return [.. active.Select(folder => new OwnerFolder(folder.Id, folder.Name, folder.ParentId))];
     }
 }

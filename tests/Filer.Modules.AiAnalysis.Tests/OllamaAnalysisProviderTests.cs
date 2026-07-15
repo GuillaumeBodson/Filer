@@ -100,6 +100,29 @@ public sealed class OllamaAnalysisProviderTests
     }
 
     [Fact]
+    public async Task AnalyzeAsync_renders_the_folder_tree_with_document_counts_in_the_prompt()
+    {
+        // #118: structural context — the prompt carries the owner's tree (children
+        // indented under their parent) and per-folder document counts, so the model
+        // suggests into the existing organisation.
+        var work = new ExistingFolder(Guid.NewGuid(), "Work", ParentId: null, DocumentCount: 2);
+        var invoices = new ExistingFolder(Guid.NewGuid(), "Invoices", work.Id, DocumentCount: 1);
+        var archive = new ExistingFolder(Guid.NewGuid(), "Archive", ParentId: null, DocumentCount: 0);
+        StubHandler handler = RespondingWith(Reply("Work", 0.5, []));
+        OllamaAnalysisProvider provider = Provider(handler);
+
+        await provider.AnalyzeAsync(
+            Request(folders: [archive, invoices, work]), TestContext.Current.CancellationToken);
+
+        handler.LastPrompt.Should().Contain(
+            "\n- Archive (0 documents)",
+            "top-level folders render as list roots with their counts");
+        handler.LastPrompt.Should().Contain(
+            "\n- Work (2 documents)\n  - Invoices (1 document)",
+            "a child renders indented under its parent, wherever it sits in the flat input");
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_truncates_the_document_text_to_max_prompt_chars()
     {
         StubHandler handler = RespondingWith(Reply("Work", 0.5, []));

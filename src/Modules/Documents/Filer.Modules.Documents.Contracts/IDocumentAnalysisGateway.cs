@@ -6,11 +6,12 @@ namespace Filer.Modules.Documents.Contracts;
 /// an analysis request, and marks the document Ready when analysis succeeds. A
 /// narrow contract owned by the module that owns the data, mirroring
 /// <c>IFolderDocumentRemover</c> and <c>IDocumentTagRemover</c>
-/// (10-solution-structure.md). Unlike the user-facing seams this one is not
-/// owner-scoped: the background worker acts on a job's document id with no
+/// (10-solution-structure.md). Unlike the user-facing seams the document lookup is
+/// not owner-scoped: the background worker acts on a job's document id with no
 /// caller principal (05-security.md does not apply — nothing here reaches a
 /// client); the snapshot's <see cref="AnalysisDocumentSnapshot.OwnerId"/> is how
-/// the worker scopes its *other* context reads (folders, tags) to the right user.
+/// the worker scopes its context reads — folders, tags, and this gateway's own
+/// <see cref="CountActiveByFolderAsync"/> — to the right user.
 /// </summary>
 public interface IDocumentAnalysisGateway
 {
@@ -27,6 +28,16 @@ public interface IDocumentAnalysisGateway
     /// document stays Ready, and a document deleted in the meantime is left alone.
     /// </summary>
     Task MarkReadyAsync(Guid documentId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// How many non-deleted documents the owner has in each folder, keyed by folder
+    /// id; folders without documents are simply absent. Structural context for the
+    /// analysis request (#118) — owner-scoped by construction and soft-deleted rows
+    /// excluded, so another owner's organisation can never enter a prompt (the
+    /// uniform-404 invariant applied to context-gathering, 05-security.md).
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, int>> CountActiveByFolderAsync(
+        Guid ownerId, CancellationToken cancellationToken);
 }
 
 /// <summary>

@@ -11,12 +11,14 @@ namespace Filer.Modules.Folders.Contracts;
 public interface IOwnerFolderReader
 {
     /// <summary>
-    /// Every non-deleted folder the owner has, as (Id, Name), ordered by name then
-    /// id so the context handed to a provider is deterministic
-    /// (12-testing-strategy.md).
+    /// Every non-deleted folder the owner has, as (Id, Name, ParentId), ordered by
+    /// name then id so the context handed to a provider is deterministic
+    /// (12-testing-strategy.md). <c>ParentId</c> carries the hierarchy
+    /// (02-data-model.md — Folder self-references) so consumers can hand providers
+    /// the owner's tree, not a flat name list (#118).
     /// </summary>
     Task<IReadOnlyList<OwnerFolder>> ListActiveAsync(Guid ownerId, CancellationToken cancellationToken);
 }
 
 /// <summary>The minimal folder slice exposed across the module boundary.</summary>
-public sealed record OwnerFolder(Guid Id, string Name);
+public sealed record OwnerFolder(Guid Id, string Name, Guid? ParentId = null);

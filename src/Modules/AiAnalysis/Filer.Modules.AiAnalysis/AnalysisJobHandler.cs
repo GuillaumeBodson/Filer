@@ -58,8 +58,13 @@ public sealed class AnalysisJobHandler(
         string text = await ExtractTextAsync(document, cancellationToken);
 
         // The owner's existing organisation, so providers can prefer it over
-        // inventing names (06, Provider Abstraction).
+        // inventing names (06, Provider Abstraction). Folder hierarchy and per-folder
+        // document counts make that context structural (#118); every read is scoped
+        // to the document's owner, so no other user's organisation can enter the
+        // prompt (05-security.md).
         IReadOnlyList<OwnerFolder> ownerFolders = await folders.ListActiveAsync(document.OwnerId, cancellationToken);
+        IReadOnlyDictionary<Guid, int> documentCounts =
+            await documents.CountActiveByFolderAsync(document.OwnerId, cancellationToken);
         IReadOnlyList<string> ownerTags = await tags.ListNamesAsync(document.OwnerId, cancellationToken);
 
         var request = new DocumentAnalysisRequest(
@@ -67,7 +72,8 @@ public sealed class AnalysisJobHandler(
             document.FileName,
             document.ContentType,
             text,
-            [.. ownerFolders.Select(folder => new ExistingFolder(folder.Id, folder.Name))],
+            [.. ownerFolders.Select(folder => new ExistingFolder(
+                folder.Id, folder.Name, folder.ParentId, documentCounts.GetValueOrDefault(folder.Id)))],
             ownerTags);
 
         // Provider failures throw and propagate: the worker translates them into
