@@ -97,6 +97,28 @@ public sealed class FakeAnalysisProviderTests
     }
 
     [Fact]
+    public async Task AnalyzeAsync_ignores_the_structural_folder_fields_and_stays_deterministic()
+    {
+        // #118 adds ParentId/DocumentCount for tree-aware providers; the fake must
+        // keep producing the same canned suggestions regardless of their values.
+        Guid workId = Guid.NewGuid();
+        Guid archiveId = Guid.NewGuid();
+        DocumentAnalysisResult flat = await _provider.AnalyzeAsync(
+            Request(folders: [new ExistingFolder(workId, "Work"), new ExistingFolder(archiveId, "Archive")]),
+            TestContext.Current.CancellationToken);
+        DocumentAnalysisResult structural = await _provider.AnalyzeAsync(
+            Request(folders:
+            [
+                new ExistingFolder(workId, "Work", ParentId: null, DocumentCount: 12),
+                new ExistingFolder(archiveId, "Archive", ParentId: workId, DocumentCount: 7),
+            ]),
+            TestContext.Current.CancellationToken);
+
+        structural.Should().BeEquivalentTo(flat,
+            "the fake ignores ParentId and DocumentCount, so enriching the context changes nothing (#118)");
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_throws_when_already_cancelled()
     {
         using var cts = new CancellationTokenSource();

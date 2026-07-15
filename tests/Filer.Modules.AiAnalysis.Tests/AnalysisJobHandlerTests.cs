@@ -47,6 +47,9 @@ public sealed class AnalysisJobHandlerTests
         _folders
             .Setup(f => f.ListActiveAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
+        _documents
+            .Setup(d => d.CountActiveByFolderAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, int>());
         _tags
             .Setup(t => t.ListNamesAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
@@ -110,14 +113,21 @@ public sealed class AnalysisJobHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_PassesTheOwnersFoldersAndTagsToTheProvider()
+    public async Task HandleAsync_PassesTheOwnersFolderTreeWithCountsAndTagsToTheProvider()
     {
         GivenDocument("notes.txt", "text/plain");
         GivenBlobContent("hello");
-        Guid folderId = Guid.NewGuid();
+        Guid parentFolderId = Guid.NewGuid();
+        Guid childFolderId = Guid.NewGuid();
         _folders
             .Setup(f => f.ListActiveAsync(_ownerId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([new OwnerFolder(folderId, "Invoices")]);
+            .ReturnsAsync([
+                new OwnerFolder(childFolderId, "2026", parentFolderId),
+                new OwnerFolder(parentFolderId, "Invoices", ParentId: null),
+            ]);
+        _documents
+            .Setup(d => d.CountActiveByFolderAsync(_ownerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, int> { [childFolderId] = 3 });
         _tags
             .Setup(t => t.ListNamesAsync(_ownerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(["finance", "2026"]);
@@ -134,9 +144,28 @@ public sealed class AnalysisJobHandlerTests
         captured.DocumentId.Should().Be(_documentId);
         captured.FileName.Should().Be("notes.txt");
         captured.ContentType.Should().Be("text/plain");
-        captured.ExistingFolders.Should().ContainSingle()
-            .Which.Should().Be(new ExistingFolder(folderId, "Invoices"));
+        captured.ExistingFolders.Should().Equal(
+            new ExistingFolder(childFolderId, "2026", parentFolderId, DocumentCount: 3),
+            new ExistingFolder(parentFolderId, "Invoices", ParentId: null, DocumentCount: 0));
         captured.ExistingTags.Should().Equal("finance", "2026");
+    }
+
+    [Fact]
+    public async Task HandleAsync_ScopesEveryContextReadToTheDocumentsOwner()
+    {
+        // The 404 invariant applied to context-gathering (05, #118): folders and
+        // counts are read through owner-scoped seams keyed by the document's owner,
+        // so another owner's organisation can never enter the prompt.
+        GivenDocument("notes.txt", "text/plain");
+        GivenBlobContent("hello");
+
+        await CreateSut().HandleAsync(_job, CancellationToken.None);
+
+        _folders.Verify(f => f.ListActiveAsync(_ownerId, It.IsAny<CancellationToken>()), Times.Once);
+        _folders.VerifyNoOtherCalls();
+        _documents.Verify(d => d.CountActiveByFolderAsync(_ownerId, It.IsAny<CancellationToken>()), Times.Once);
+        _tags.Verify(t => t.ListNamesAsync(_ownerId, It.IsAny<CancellationToken>()), Times.Once);
+        _tags.VerifyNoOtherCalls();
     }
 
     [Theory]

@@ -22,6 +22,15 @@ internal sealed class DocumentAnalysisGateway(DocumentsDbContext db, IClock cloc
             .Select(d => new AnalysisDocumentSnapshot(d.Id, d.OwnerId, d.FileName, d.ContentType, d.StorageKey))
             .FirstOrDefaultAsync(cancellationToken);
 
+    public async Task<IReadOnlyDictionary<Guid, int>> CountActiveByFolderAsync(
+        Guid ownerId, CancellationToken cancellationToken) =>
+        await db.Documents
+            .AsNoTracking()
+            .Where(d => d.OwnerId == ownerId && d.DeletedAt == null && d.FolderId != null)
+            .GroupBy(d => d.FolderId!.Value)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToDictionaryAsync(group => group.Key, group => group.Count, cancellationToken);
+
     public async Task MarkReadyAsync(Guid documentId, CancellationToken cancellationToken)
     {
         DateTimeOffset now = clock.UtcNow;

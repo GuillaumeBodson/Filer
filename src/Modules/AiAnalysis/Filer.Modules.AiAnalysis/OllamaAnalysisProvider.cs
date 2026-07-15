@@ -99,15 +99,18 @@ public sealed class OllamaAnalysisProvider(
     /// <summary>
     /// Builds the instruction prompt from the request: file name, content type, the
     /// owner's existing folders/tags (so the model prefers them), and the document
-    /// text truncated to <see cref="OllamaOptions.MaxPromptChars"/>. Works from the
-    /// file name alone when <see cref="DocumentAnalysisRequest.Text"/> is empty
-    /// (non-text documents — #53 only extracts text/plain and markdown).
+    /// text truncated to <see cref="OllamaOptions.MaxPromptChars"/>. Folders render
+    /// as the owner's tree with per-folder document counts (#118), so the model
+    /// suggests into the existing organisation instead of inventing parallel
+    /// folders. Works from the file name alone when
+    /// <see cref="DocumentAnalysisRequest.Text"/> is empty (non-text documents —
+    /// #53 only extracts text/plain and markdown).
     /// </summary>
     private string BuildPrompt(DocumentAnalysisRequest request)
     {
         string existingFolders = request.ExistingFolders.Count == 0
             ? "(none)"
-            : string.Join(", ", request.ExistingFolders.Select(folder => folder.Name));
+            : RenderFolderTree(request.ExistingFolders);
         string existingTags = request.ExistingTags.Count == 0
             ? "(none)"
             : string.Join(", ", request.ExistingTags);
@@ -116,6 +119,7 @@ public sealed class OllamaAnalysisProvider(
         var prompt = new StringBuilder();
         prompt.Append("You organise a personal document library. Suggest one folder and relevant tags for the document below. ");
         prompt.Append("STRONGLY PREFER reusing one of the existing folders and existing tags; only invent a new name when none fit. ");
+        prompt.Append("The existing folders form a tree; document counts show where the user actually files things. ");
         prompt.Append("Give each suggestion a confidence between 0 and 1. Reply only with the requested JSON.\n\n");
         prompt.Append("File name: ").Append(request.FileName).Append('\n');
         prompt.Append("Content type: ").Append(request.ContentType).Append('\n');
@@ -124,6 +128,48 @@ public sealed class OllamaAnalysisProvider(
         prompt.Append("Document text: ").Append(text.Length == 0 ? "(no extracted text)" : text);
 
         return prompt.ToString();
+    }
+
+    /// <summary>
+    /// Renders the owner's folders as an indented tree with document counts, e.g.
+    /// <c>- Work (3 documents)</c> with children two spaces deeper. Input arrives
+    /// name-then-id ordered (IOwnerFolderReader), and grouping preserves that
+    /// order, so the rendering is deterministic. A folder whose parent is not in
+    /// the list is rendered as a root — defensive only; active folders always come
+    /// with their active ancestors (soft-delete cascades, ADR-007).
+    /// </summary>
+    private static string RenderFolderTree(IReadOnlyList<ExistingFolder> folders)
+    {
+        ILookup<Guid, ExistingFolder> byParent = folders
+            .Where(folder => folder.ParentId is not null)
+            .ToLookup(folder => folder.ParentId!.Value);
+        HashSet<Guid> knownIds = [.. folders.Select(folder => folder.Id)];
+
+        var tree = new StringBuilder();
+        foreach (ExistingFolder root in folders.Where(
+                     folder => folder.ParentId is null || !knownIds.Contains(folder.ParentId.Value)))
+        {
+            AppendFolder(tree, byParent, root, depth: 0);
+        }
+
+        return tree.ToString();
+    }
+
+    private static void AppendFolder(
+        StringBuilder tree, ILookup<Guid, ExistingFolder> byParent, ExistingFolder folder, int depth)
+    {
+        tree.Append('\n')
+            .Append(' ', depth * 2)
+            .Append("- ")
+            .Append(folder.Name)
+            .Append(" (")
+            .Append(folder.DocumentCount)
+            .Append(folder.DocumentCount == 1 ? " document)" : " documents)");
+
+        foreach (ExistingFolder child in byParent[folder.Id])
+        {
+            AppendFolder(tree, byParent, child, depth + 1);
+        }
     }
 
     private static string Truncate(string value, int maxLength) =>
