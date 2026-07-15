@@ -50,26 +50,34 @@ public static class AiAnalysisModule
                 services.AddSingleton<IAIAnalysisProvider, FakeAnalysisProvider>();
                 break;
             case AiAnalysisOptions.OllamaProviderName:
-                AddOllamaProvider(services);
+                AddOllamaProvider<OllamaAnalysisProvider>(services);
+                break;
+            case AiAnalysisOptions.OllamaAgenticProviderName:
+                // Experimental two-pass variant (#119), strictly opt-in — the
+                // no-egress default stays the plain adapter above.
+                AddOllamaProvider<OllamaAgenticAnalysisProvider>(services);
                 break;
             default:
                 throw new InvalidOperationException(
                     $"Unknown AI analysis provider '{options.Provider}'. Supported providers: " +
-                    $"'{AiAnalysisOptions.FakeProviderName}', '{AiAnalysisOptions.OllamaProviderName}'.");
+                    $"'{AiAnalysisOptions.FakeProviderName}', '{AiAnalysisOptions.OllamaProviderName}', " +
+                    $"'{AiAnalysisOptions.OllamaAgenticProviderName}'.");
         }
 
         return services;
     }
 
     /// <summary>
-    /// Wires the no-egress Ollama adapter as a typed HttpClient (06): base address and
-    /// timeout come from <see cref="OllamaOptions"/>, never literals (13, Options
-    /// pattern). The options are validated here — only on the Ollama path — so a
-    /// misconfigured local provider fails fast rather than at first inference. The
-    /// typed-client factory reads validated options from DI so validation runs before
-    /// the base address is constructed.
+    /// Wires an Ollama-backed adapter (the plain one, or the opt-in agentic variant,
+    /// #119 — both share the same runtime and tuning) as a typed HttpClient (06):
+    /// base address and timeout come from <see cref="OllamaOptions"/>, never literals
+    /// (13, Options pattern). The options are validated here — only on the Ollama
+    /// paths — so a misconfigured local provider fails fast rather than at first
+    /// inference. The typed-client factory reads validated options from DI so
+    /// validation runs before the base address is constructed.
     /// </summary>
-    private static void AddOllamaProvider(IServiceCollection services)
+    private static void AddOllamaProvider<TProvider>(IServiceCollection services)
+        where TProvider : class, IAIAnalysisProvider
     {
         services.AddOptions<AiAnalysisOptions>()
             .Validate(
@@ -87,7 +95,7 @@ public static class AiAnalysisModule
                 "AiAnalysis:Ollama:MaxPromptChars must be positive.")
             .ValidateOnStart();
 
-        services.AddHttpClient<IAIAnalysisProvider, OllamaAnalysisProvider>((serviceProvider, client) =>
+        services.AddHttpClient<IAIAnalysisProvider, TProvider>((serviceProvider, client) =>
         {
             // Resolving the options runs the Validate rules above, so an invalid
             // BaseUrl/Model/timeout fails as a validation error before the URI is built.

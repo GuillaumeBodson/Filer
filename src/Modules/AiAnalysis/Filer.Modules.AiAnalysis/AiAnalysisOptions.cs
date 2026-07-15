@@ -28,6 +28,15 @@ public sealed class AiAnalysisOptions
     /// </summary>
     public const string OllamaProviderName = "Ollama";
 
+    /// <summary>
+    /// Name of the experimental two-pass Ollama variant (#119): ranks folder
+    /// candidates, samples their contents through an owner-scoped lookup, then
+    /// confirms. Strictly opt-in — the no-egress default for real use stays the
+    /// plain <see cref="OllamaProviderName"/> adapter (06, Privacy &amp; Provider
+    /// Selection); see the 09-decision-log.md note.
+    /// </summary>
+    public const string OllamaAgenticProviderName = "OllamaAgentic";
+
     /// <summary>Selects the <c>IAIAnalysisProvider</c> implementation.</summary>
     [Required]
     public string Provider { get; init; } = FakeProviderName;
