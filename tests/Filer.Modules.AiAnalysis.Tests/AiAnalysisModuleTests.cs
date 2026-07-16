@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Moq;
 using Xunit;
 
 namespace Filer.Modules.AiAnalysis.Tests;
@@ -58,6 +59,23 @@ public sealed class AiAnalysisModuleTests
     }
 
     [Fact]
+    public void AddAiAnalysisModule_resolves_the_agentic_provider_only_when_opted_in()
+    {
+        // #119: the experimental two-pass variant is config-selected and never the
+        // default — the plain adapter and the fake stay exactly as they were.
+        using ServiceProvider services = Build(
+            new Dictionary<string, string?>
+            {
+                ["AiAnalysis:Provider"] = AiAnalysisOptions.OllamaAgenticProviderName,
+            },
+            // The agentic provider samples folder contents through the Documents
+            // module's port; the host registers it, so the test stubs it.
+            extra => extra.AddSingleton(Mock.Of<Filer.Modules.Documents.Contracts.IFolderContentLookup>()));
+
+        services.GetRequiredService<IAIAnalysisProvider>().Should().BeOfType<OllamaAgenticAnalysisProvider>();
+    }
+
+    [Fact]
     public void AddAiAnalysisModule_fails_validation_for_invalid_ollama_options()
     {
         using ServiceProvider services = Build(new Dictionary<string, string?>
@@ -73,7 +91,8 @@ public sealed class AiAnalysisModuleTests
             "a misconfigured local provider must fail validation, not at first inference");
     }
 
-    private static ServiceProvider Build(Dictionary<string, string?> settings)
+    private static ServiceProvider Build(
+        Dictionary<string, string?> settings, Action<ServiceCollection>? extraRegistrations = null)
     {
         IConfiguration configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(settings)
@@ -81,6 +100,7 @@ public sealed class AiAnalysisModuleTests
 
         ServiceCollection services = new();
         services.AddLogging();
+        extraRegistrations?.Invoke(services);
         services.AddAiAnalysisModule(configuration);
 
         return services.BuildServiceProvider();

@@ -21,13 +21,20 @@ namespace Filer.Modules.AiAnalysis.Contracts;
 /// <see cref="FolderSuggestion.ExistingFolderId"/> so applying needs no name lookup.
 /// </param>
 /// <param name="ExistingTags">The owner's tag names, matched or extended by suggestions.</param>
+/// <param name="OwnerId">
+/// The document's owner. Lets a provider make further owner-scoped context reads
+/// mid-analysis (e.g. sampling a candidate folder's contents, #119) without ever
+/// being able to reach another owner's data. Defaulted, additive — providers that
+/// never look anything up ignore it.
+/// </param>
 public sealed record DocumentAnalysisRequest(
     Guid DocumentId,
     string FileName,
     string ContentType,
     string Text,
     IReadOnlyList<ExistingFolder> ExistingFolders,
-    IReadOnlyList<string> ExistingTags);
+    IReadOnlyList<string> ExistingTags,
+    Guid OwnerId = default);
 
 /// <summary>An owner folder offered to the provider as suggestion context.</summary>
 /// <param name="Id">The folder's id, echoed back when a provider picks it.</param>

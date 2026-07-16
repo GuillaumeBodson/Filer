@@ -74,7 +74,8 @@ public sealed class AnalysisJobHandler(
             text,
             [.. ownerFolders.Select(folder => new ExistingFolder(
                 folder.Id, folder.Name, folder.ParentId, documentCounts.GetValueOrDefault(folder.Id)))],
-            ownerTags);
+            ownerTags,
+            document.OwnerId);
 
         // Provider failures throw and propagate: the worker translates them into
         // retry/backoff (IAIAnalysisProvider remarks; 06, Reliability).

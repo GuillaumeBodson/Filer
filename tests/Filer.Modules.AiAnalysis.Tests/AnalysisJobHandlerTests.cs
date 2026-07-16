@@ -142,6 +142,7 @@ public sealed class AnalysisJobHandlerTests
 
         captured.Should().NotBeNull();
         captured.DocumentId.Should().Be(_documentId);
+        captured.OwnerId.Should().Be(_ownerId, "providers key their own owner-scoped lookups on it (#119)");
         captured.FileName.Should().Be("notes.txt");
         captured.ContentType.Should().Be("text/plain");
         captured.ExistingFolders.Should().Equal(

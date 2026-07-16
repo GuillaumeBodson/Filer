@@ -1058,3 +1058,31 @@ durable correlation mechanism across the async hand-off.
   retrofitting trace propagation into RabbitMQ (#75) after the fact and leaves the
   known request→job→worker gap open through M5/M6; rejected in favour of landing the
   minimal correlation foundation before #75.
+
+---
+
+## Note - Agentic provider pulls owner-scoped data mid-analysis (#119)
+
+* **Date:** 2026-07-16
+* **Status:** Noted (no ADR - additive, contained experiment)
+
+The experimental, opt-in `OllamaAgenticAnalysisProvider` (#119) is the first
+provider to read owner-scoped data *during* an analysis run: it ranks folder
+candidates from the request's tree, then samples each existing candidate's
+contents through the new `IFolderContentLookup` port (Documents.Contracts)
+before confirming. Points worth recording without a full ADR:
+
+* **The shared contract did not change.** `IAIAnalysisProvider` stays a single
+  `AnalyzeAsync` call; the loop lives entirely inside one adapter, selected via
+  `AiAnalysis:Provider = OllamaAgentic`, never the default, and deletable
+  without touching the shipped pipeline (`06`, Provider Abstraction).
+* **Mid-analysis reads follow the 404 invariant.** The lookup is owner-scoped
+  by construction (keyed by the request's additive `OwnerId`); a cross-owner or
+  soft-deleted folder reads as *empty*, indistinguishable from an empty folder
+  (`05`).
+* **MCP was considered and rejected** for exposing the lookup as a tool the
+  model calls itself: the provider runs in-process against a single owner's
+  context, so a protocol boundary adds surface (tool descriptions, transport,
+  authz mapping) with no consumer - a plain port is enough. Revisit only if a
+  remote/multi-tool agent becomes a real requirement.
+* Business value is unproven; the experiment does not gate M5 closure.

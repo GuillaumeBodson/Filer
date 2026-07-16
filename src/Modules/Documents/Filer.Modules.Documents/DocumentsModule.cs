@@ -99,6 +99,10 @@ public static class DocumentsModule
         // analysis context and mark it Ready; internal behind the Contracts interface.
         services.AddScoped<IDocumentAnalysisGateway, DocumentAnalysisGateway>();
 
+        // Public surface for providers that sample a candidate folder's contents
+        // mid-analysis (#119); internal behind the Contracts interface.
+        services.AddScoped<IFolderContentLookup, FolderContentLookup>();
+
         // Feature services (vertical slices).
         services.AddScoped<UploadDocumentService>();
         services.AddScoped<DownloadDocumentContentService>();
