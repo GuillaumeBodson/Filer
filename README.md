@@ -7,9 +7,9 @@ is fixed by `10-solution-structure.md` and the ADRs in `09-decision-log.md`.
 ## Current state
 
 Milestones M1 (foundation), M2 (authentication), M3 (upload pipeline),
-M4 (folders & tags) and M5 (AI analysis pipeline) are complete. Seven modules
-are wired into the host, each exposing only its `*.Contracts` project (enforced
-by the compiler and `Filer.Architecture.Tests`):
+M4 (folders & tags), M5 (AI analysis pipeline) and FE-M1 (frontend foundation)
+are complete. Seven modules are wired into the host, each exposing only its
+`*.Contracts` project (enforced by the compiler and `Filer.Architecture.Tests`):
 
 ```
 Filer.Api (host)
@@ -30,6 +30,13 @@ Modules talk to each other through Contracts only (e.g. Documents depends on
 `Storage.Contracts`, `BackgroundJobs.Contracts`, `Folders.Contracts` and
 `Tags.Contracts`). Job dispatch will move to RabbitMQ with PostgreSQL as the
 durable outbox (ADR-008, not yet implemented).
+
+The frontend foundation lives under `src/Clients/`: `Filer.Web` (Blazor
+WebAssembly host), `Filer.Ui` (shared Razor Class Library — layout, routing,
+shared UI states) and `Filer.ApiClient` (Kiota-generated typed client with
+bearer-token/401-refresh plumbing — regeneration guide in
+[`src/Clients/Filer.ApiClient/README.md`](src/Clients/Filer.ApiClient/README.md)).
+Feature pages (login, document browsing) arrive with FE-M2/FE-M3.
 
 ## Endpoints
 
@@ -92,7 +99,19 @@ dotnet run --project src/Filer.Api
 
 The API reads the `Postgres` connection string, the dev JWT signing key, and the
 dev storage root from `appsettings.Development.json`. It applies pending
-migrations on startup.
+migrations on startup. Note the `http` launch profile serves
+`http://localhost:5232`; 8080 is the Docker mapping.
+
+### Web client (dev)
+
+```bash
+dotnet run --project src/Clients/Filer.Web
+```
+
+Serves the Blazor WASM app; the API base address comes from
+`src/Clients/Filer.Web/wwwroot/appsettings.json` (default
+`http://localhost:5232/`, the API's `http` profile). Cross-origin dev requires
+the CORS policy tracked in #148.
 
 ### Smoke test
 
@@ -129,8 +148,9 @@ Test projects live under `tests/` (xunit v3): per-module unit tests (including
 `Filer.SharedKernel.Tests`, `Filer.IntegrationTests` (Testcontainers — requires
 Docker; covers auth flows, the job queue and analysis worker, upload validation,
 and the ownership-404 contract on documents, folders, tags, document-tags and
-the analysis endpoints), and `Filer.Architecture.Tests` (module dependency
-boundaries). Strategy and required coverage: `12-testing-strategy.md`.
+the analysis endpoints), `Filer.Architecture.Tests` (module dependency
+boundaries), and `Filer.Ui.Tests` (frontend auth plumbing + bUnit component
+tests). Strategy and required coverage: `12-testing-strategy.md`.
 
 ## Database migrations
 
@@ -182,3 +202,5 @@ mount outside Development (07-storage-and-deployment.md).
    architecture gate.
 3. Bulk operations (M8) — bulk tag add/remove, sync + capped (ADR-010).
 4. RabbitMQ job dispatch with Postgres outbox (ADR-008, deferred from M5).
+5. Frontend: auth UI + document browsing (FE-M2), upload + AI suggestions
+   review (FE-M3).

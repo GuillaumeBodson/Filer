@@ -37,7 +37,7 @@ Full rationale lives in ADR-004 (`09-decision-log.md`).
 
 ```
 /
-├── Filer.sln
+├── Filer.slnx
 ├── Directory.Build.props          # shared MSBuild settings (nullable, warnings)
 ├── Directory.Packages.props       # central NuGet package versions
 ├── docker-compose.yml             # api + postgres (+ worker) for local/dev
@@ -52,14 +52,20 @@ Full rationale lives in ADR-004 (`09-decision-log.md`).
 └── tests/
     ├── Filer.Architecture.Tests/  # boundary-rule enforcement
     ├── Filer.IntegrationTests/    # API + real Postgres (Testcontainers)
-    └── Filer.Modules.*.Tests/     # per-module unit tests
+    ├── Filer.Modules.*.Tests/     # per-module unit tests
+    ├── Filer.SharedKernel.Tests/  # Result/Error primitives
+    └── Filer.Ui.Tests/            # frontend unit + bUnit component tests
 ```
 
-The backend is the focus of this document. The front-end projects
-(`Filer.Web` Blazor WebAssembly, `Filer.Ui` shared Razor Class Library,
-`Filer.App` MAUI Blazor Hybrid) live under `src/Clients/` and consume the REST
-API like any other client (ADR-001); their internal structure is out of scope
-here.
+The backend is the focus of this document. The front-end projects live under
+`src/Clients/`: `Filer.Web` (Blazor WebAssembly host), `Filer.Ui` (shared Razor
+Class Library) and `Filer.ApiClient` (Kiota-generated typed client, ADR-011).
+`Filer.App` (MAUI Blazor Hybrid) is planned for later (RM-02) and does not exist
+yet. Clients consume the REST API **only through `Filer.ApiClient`** — they never
+reference a module, a `*.Contracts` project, `Filer.WebKernel` or the kernels
+(ADR-001). Today this client-side boundary is compiler-enforced only:
+`Filer.Architecture.Tests` loads `Filer.Api`'s transitive closure, which does not
+include the client assemblies (see Boundary Enforcement below).
 
 ---
 
@@ -303,6 +309,12 @@ fork of NetArchTest) asserts the dependency rules as executable tests, run in CI
 A boundary that is only documented erodes; encoding it as a failing test keeps
 project-per-module honest as the codebase grows.
 
+The `src/Clients/*` projects are **outside** the architecture-test scope: the
+tests load assemblies from `Filer.Api`'s dependency closure, which the clients
+are not part of. Their "REST API only" rule is currently enforced by the
+compiler alone (no client project references a server project). Extending
+`Filer.Architecture.Tests` to cover client assemblies is an open item below.
+
 ---
 
 ## Build Order Mapping
@@ -325,3 +337,6 @@ any document feature is added.
 * ~~Exact architecture-test tooling and the CI gate that runs it.~~ Resolved:
   `NetArchTest.eNhancedEdition`, asserted by `Filer.Architecture.Tests` and run
   in the existing `build-test` job via `dotnet test Filer.slnx` (`11-git-workflow.md`).
+* Whether `Filer.Architecture.Tests` should also load the `src/Clients/*`
+  assemblies and assert the client boundary (no references to modules,
+  Contracts, kernels), or whether compiler enforcement stays sufficient.
