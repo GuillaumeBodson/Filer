@@ -40,9 +40,17 @@ public sealed class AnalysisJobHandler(
     IOwnerTagReader tags,
     IFileStorageProvider storage,
     IAIAnalysisProvider provider,
+    IOptions<AiAnalysisOptions> analysisOptions,
     IOptions<TextExtractionOptions> textExtractionOptions,
     ILogger<AnalysisJobHandler> logger) : IAnalysisJobHandler
 {
+    /// <summary>
+    /// The configured provider selector (<c>AiAnalysis:Provider</c>) — the same value
+    /// that decided which <see cref="IAIAnalysisProvider"/> is registered, so the
+    /// stamp on the job row names the adapter that actually ran (#163).
+    /// </summary>
+    public string ProviderName => analysisOptions.Value.Provider;
+
     public async Task<Result<string?>> HandleAsync(ClaimedAnalysisJob job, CancellationToken cancellationToken)
     {
         AnalysisDocumentSnapshot? document = await documents.FindForAnalysisAsync(job.DocumentId, cancellationToken);

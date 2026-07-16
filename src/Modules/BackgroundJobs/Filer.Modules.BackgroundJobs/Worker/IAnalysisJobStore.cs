@@ -13,11 +13,12 @@ public interface IAnalysisJobStore
 {
     /// <summary>
     /// Atomically claims the oldest due queued job: flips it to Running, stamps
-    /// StartedAt, increments AttemptCount and clears NextAttemptAt. Jobs whose
-    /// NextAttemptAt lies in the future (retry backoff) are skipped. Returns null
-    /// when no job is due.
+    /// StartedAt and <paramref name="providerName"/> (the provider that will run
+    /// the attempt — <c>AnalysisJob.Provider</c>, 02-data-model.md), increments
+    /// AttemptCount and clears NextAttemptAt. Jobs whose NextAttemptAt lies in the
+    /// future (retry backoff) are skipped. Returns null when no job is due.
     /// </summary>
-    Task<ClaimedAnalysisJob?> ClaimNextAsync(CancellationToken cancellationToken);
+    Task<ClaimedAnalysisJob?> ClaimNextAsync(string providerName, CancellationToken cancellationToken);
 
     /// <summary>
     /// Marks a claimed job Succeeded, writes the serialized analysis result to

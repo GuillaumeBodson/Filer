@@ -63,6 +63,7 @@ public sealed class AnalysisJobHandlerTests
         _tags.Object,
         _storage.Object,
         _provider.Object,
+        Options.Create(new AiAnalysisOptions { Provider = AiAnalysisOptions.OllamaProviderName }),
         Options.Create(new TextExtractionOptions { MaxChars = maxChars }),
         NullLogger<AnalysisJobHandler>.Instance);
 
@@ -75,6 +76,12 @@ public sealed class AnalysisJobHandlerTests
         _storage
             .Setup(s => s.OpenReadAsync(StorageKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => new MemoryStream(Encoding.UTF8.GetBytes(content)));
+
+    [Fact]
+    public void ProviderName_ReturnsTheConfiguredProviderSelector() =>
+        CreateSut().ProviderName.Should().Be(
+            AiAnalysisOptions.OllamaProviderName,
+            "the claim stamps AnalysisJob.Provider with the adapter the configuration selected (#163)");
 
     [Fact]
     public async Task HandleAsync_OnSuccess_ReturnsTheSerializedResultAndMarksTheDocumentReady()

@@ -136,7 +136,7 @@ Tracks asynchronous AI processing of a document (see upload flow in `01`).
 | Id             | uuid (PK)     |                                                |
 | DocumentId     | uuid (FK→Document) |                                           |
 | Status         | text/enum     | `Queued`, `Running`, `Succeeded`, `Failed`, `Cancelled` |
-| Provider       | text          | Which `IAIAnalysisProvider` ran it             |
+| Provider       | text          | Which `IAIAnalysisProvider` ran it; stamped at claim on every attempt, NULL until the first run starts |
 | AttemptCount   | int           | For retry/backoff                              |
 | NextAttemptAt  | timestamptz NULL | Earliest next attempt after a retryable failure; the claim query skips rows scheduled in the future |
 | Error          | text NULL     | Last failure detail (worker-internal; never exposed to clients) |

@@ -24,6 +24,9 @@ internal sealed class FakeAnalysisJobStore : IAnalysisJobStore
 
     public int ClaimCount { get; private set; }
 
+    /// <summary>Provider name received by each claim, in call order.</summary>
+    public List<string> ClaimProviderNames { get; } = [];
+
     public int CountQueuedCalls { get; private set; }
 
     /// <summary>Completes on the first claim — a deterministic "the loop is running" signal, no sleeps (12).</summary>
@@ -33,10 +36,11 @@ internal sealed class FakeAnalysisJobStore : IAnalysisJobStore
 
     public void Enqueue(ClaimedAnalysisJob job) => _pending.Enqueue(job);
 
-    public Task<ClaimedAnalysisJob?> ClaimNextAsync(CancellationToken cancellationToken)
+    public Task<ClaimedAnalysisJob?> ClaimNextAsync(string providerName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ClaimCount++;
+        ClaimProviderNames.Add(providerName);
         _firstClaim.TrySetResult();
         return Task.FromResult(_pending.Count > 0 ? _pending.Dequeue() : null);
     }
