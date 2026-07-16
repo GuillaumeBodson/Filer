@@ -136,7 +136,7 @@ public sealed class AnalysisJobClaimTests(FilerApiFactory factory)
         Guid failedId = await EnqueueAsync(Guid.NewGuid());
         (await ClaimInOwnScopeAsync())!.JobId.Should().Be(failedId);
 
-        const string resultJson = """{"suggestedFolder":null,"suggestedTags":[{"name":"invoice","confidence":0.5}],"duplicateSignals":[]}""";
+        const string resultJson = """{"suggestedFolder":null,"suggestedTags":[{"name":"invoice","confidence":0.5}]}""";
         await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
         {
             var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();

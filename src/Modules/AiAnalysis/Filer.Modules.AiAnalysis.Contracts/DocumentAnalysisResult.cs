@@ -7,13 +7,19 @@ namespace Filer.Modules.AiAnalysis.Contracts;
 /// returns it, and the apply slice applies only what the user confirms. It is the
 /// single contract between those slices — do not invent parallel shapes.
 /// </summary>
+/// <remarks>
+/// Duplicate detection is deliberately absent (#164): exact content-hash
+/// duplicates are rejected at upload time with 409 (03-api-specification.md), so
+/// an analysis run can never see one, and semantic near-duplicates are future
+/// feature work (06). Reintroducing a field here later is additive — the
+/// persisted JSONB contract (<see cref="AnalysisJobResultJson"/>) tolerates
+/// absent fields.
+/// </remarks>
 /// <param name="SuggestedFolder">The recommended folder, or null when the provider has none.</param>
 /// <param name="SuggestedTags">Zero or more recommended tags.</param>
-/// <param name="DuplicateSignals">Possible duplicates of the analysed document.</param>
 public sealed record DocumentAnalysisResult(
     FolderSuggestion? SuggestedFolder,
-    IReadOnlyList<TagSuggestion> SuggestedTags,
-    IReadOnlyList<DuplicateSignal> DuplicateSignals);
+    IReadOnlyList<TagSuggestion> SuggestedTags);
 
 /// <summary>
 /// A recommended folder: an existing one (echoed by id) or a proposed new one
@@ -29,19 +35,3 @@ public sealed record FolderSuggestion(Guid? ExistingFolderId, string Name, doubl
 /// <param name="Name">Tag name — an existing tag when it matches, otherwise a proposed one.</param>
 /// <param name="Confidence">Provider confidence in the range [0, 1].</param>
 public sealed record TagSuggestion(string Name, double Confidence);
-
-/// <summary>A possible duplicate of the analysed document (06, Capabilities).</summary>
-/// <param name="DocumentId">The other document this one appears to duplicate.</param>
-/// <param name="Kind">How the duplicate was detected.</param>
-/// <param name="Confidence">Detection confidence in the range [0, 1]; exact hash matches use 1.</param>
-public sealed record DuplicateSignal(Guid DocumentId, DuplicateKind Kind, double Confidence);
-
-/// <summary>Detection mechanism behind a <see cref="DuplicateSignal"/>.</summary>
-public enum DuplicateKind
-{
-    /// <summary>Byte-identical content (matching <c>ContentHash</c>, 02-data-model.md).</summary>
-    ExactContent,
-
-    /// <summary>Semantically similar content (reserved for the pgvector evolution, 06).</summary>
-    SemanticNearDuplicate,
-}

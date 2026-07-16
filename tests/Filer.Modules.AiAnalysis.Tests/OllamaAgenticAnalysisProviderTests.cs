@@ -54,7 +54,6 @@ public sealed class OllamaAgenticAnalysisProviderTests
             "the confirmed candidate resolves to the existing folder's id and canonical name");
         result.SuggestedTags.Should().Equal([new TagSuggestion("invoice", 0.9)],
             "tag suggestions come from the ranking pass");
-        result.DuplicateSignals.Should().BeEmpty();
 
         handler.Prompts.Should().HaveCount(2, "an inspectable candidate triggers the confirmation pass");
         handler.Prompts[1].Should().Contain("Invoices").And.Contain("facture-edf.pdf").And.Contain("aws-invoice.pdf");

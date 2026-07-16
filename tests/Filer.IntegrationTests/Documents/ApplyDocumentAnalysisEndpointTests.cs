@@ -55,8 +55,7 @@ public sealed class ApplyDocumentAnalysisEndpointTests(FilerApiFactory factory)
         await _factory.CompleteLatestAnalysisJobAsync(documentId, $$"""
             {
               "suggestedFolder": { "existingFolderId": "{{folderId}}", "name": "Invoices", "confidence": 0.92 },
-              "suggestedTags": [ { "name": "{{tagName}}", "confidence": 0.81 } ],
-              "duplicateSignals": []
+              "suggestedTags": [ { "name": "{{tagName}}", "confidence": 0.81 } ]
             }
             """);
 
@@ -88,8 +87,7 @@ public sealed class ApplyDocumentAnalysisEndpointTests(FilerApiFactory factory)
         await _factory.CompleteLatestAnalysisJobAsync(documentId, """
             {
               "suggestedFolder": null,
-              "suggestedTags": [ { "name": "anything", "confidence": 0.5 } ],
-              "duplicateSignals": []
+              "suggestedTags": [ { "name": "anything", "confidence": 0.5 } ]
             }
             """);
 
@@ -110,7 +108,7 @@ public sealed class ApplyDocumentAnalysisEndpointTests(FilerApiFactory factory)
         Guid documentId = await UploadDocumentAsync(client);
 
         await _factory.CompleteLatestAnalysisJobAsync(documentId, """
-            { "suggestedFolder": null, "suggestedTags": [], "duplicateSignals": [] }
+            { "suggestedFolder": null, "suggestedTags": [] }
             """);
 
         HttpResponseMessage response = await client.PostAsJsonAsync(
@@ -143,7 +141,7 @@ public sealed class ApplyDocumentAnalysisEndpointTests(FilerApiFactory factory)
         HttpClient owner = await AuthenticatedClientAsync();
         Guid documentId = await UploadDocumentAsync(owner);
         await _factory.CompleteLatestAnalysisJobAsync(documentId, """
-            { "suggestedFolder": null, "suggestedTags": [], "duplicateSignals": [] }
+            { "suggestedFolder": null, "suggestedTags": [] }
             """);
 
         HttpClient intruder = await AuthenticatedClientAsync();

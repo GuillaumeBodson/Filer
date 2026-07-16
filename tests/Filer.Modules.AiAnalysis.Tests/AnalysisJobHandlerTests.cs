@@ -37,8 +37,7 @@ public sealed class AnalysisJobHandlerTests
 
     private static readonly DocumentAnalysisResult CannedResult = new(
         new FolderSuggestion(ExistingFolderId: null, "Unsorted", 0.3),
-        [new TagSuggestion("invoice", 0.5)],
-        []);
+        [new TagSuggestion("invoice", 0.5)]);
 
     public AnalysisJobHandlerTests()
     {

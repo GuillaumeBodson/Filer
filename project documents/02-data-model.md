@@ -140,7 +140,7 @@ Tracks asynchronous AI processing of a document (see upload flow in `01`).
 | AttemptCount   | int           | For retry/backoff                              |
 | NextAttemptAt  | timestamptz NULL | Earliest next attempt after a retryable failure; the claim query skips rows scheduled in the future |
 | Error          | text NULL     | Last failure detail (worker-internal; never exposed to clients) |
-| Result         | jsonb NULL    | Suggested folders/tags, duplicate findings     |
+| Result         | jsonb NULL    | Suggested folders/tags                         |
 | CreatedAt      | timestamptz   |                                                |
 | UpdatedAt      | timestamptz   |                                                |
 | StartedAt      | timestamptz NULL |                                             |
@@ -149,9 +149,10 @@ Tracks asynchronous AI processing of a document (see upload flow in `01`).
 The `Result` JSONB holds AI suggestions; suggestions are applied to the document
 only after user confirmation (per product philosophy in `01`). Its shape is a
 durable contract owned by a single serializer (`AnalysisJobResultJson` in the
-AiAnalysis Contracts project): camelCase property names, enums persisted as
-numbers. The worker writes it and the Documents module reads it through that one
-class — no parallel serializers.
+AiAnalysis Contracts project): camelCase property names, absent fields tolerated
+on read (rows persisted before a field was dropped — e.g. `duplicateSignals`,
+#164 — stay readable). The worker writes it and the Documents module reads it
+through that one class — no parallel serializers.
 
 ---
 
