@@ -44,6 +44,7 @@ ADR-003 (modular monolith + vertical slices), ADR-004 (plain feature services).
 | Unit | `Filer.Modules.*.Tests` | One feature service / domain rule in isolation; collaborators mocked through their interfaces | Milliseconds | Yes — the broad base |
 | Integration | `Filer.IntegrationTests` | A slice end to end through the real HTTP pipeline + real Postgres (Testcontainers); auth, validation, ownership, persistence | Seconds | A focused middle |
 | Architecture | `Filer.Architecture.Tests` | Module boundary and dependency rules as executable assertions (`10`) | Milliseconds | A small, complete guard |
+| Component (frontend) | `Filer.Ui.Tests` | Client auth plumbing as plain unit tests; Razor components rendered with bUnit (markup, parameters, UI states) | Milliseconds | Small — grows with the frontend |
 
 There is intentionally no broad end-to-end UI layer in V1; the API is the
 contract and is covered at the integration layer. Push test weight **down** the
@@ -133,7 +134,8 @@ test obligations:
 * **Frameworks**: xUnit as the runner; an assertion library
   (e.g. FluentAssertions or `Shouldly`) for readable failures; `NSubstitute` or
   `Moq` for mocks; `Testcontainers` for Postgres; `WebApplicationFactory` for
-  integration host bootstrapping. Versions are pinned centrally in
+  integration host bootstrapping; `bUnit` for rendering Razor components in
+  `Filer.Ui.Tests`. Versions are pinned centrally in
   `Directory.Packages.props` (`10`).
 * **Test data**: build objects with explicit, intention-revealing factories/builders
   rather than sharing mutable fixtures across tests.
