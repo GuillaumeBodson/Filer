@@ -13,6 +13,7 @@ no server DTOs shared into clients.
 | `Generated/` | Kiota output (`FilerApiClient` + request builders + models). **Do not edit by hand.** |
 | `Generated/kiota-lock.json` | Records the spec hash, Kiota version and generation options — used to detect drift. |
 | `.editorconfig` | Excludes `Generated/**` from the solution-wide warnings-as-errors (kept outside `Generated/` so `--clean-output` can't delete it). |
+| `Auth/` | Hand-written auth plumbing: `BearerTokenHandler` (attach bearer, 401 → refresh once → retry), `TokenRefresher`, `ITokenStore`/`TokenPair` (persistence seam — the host provides the implementation). |
 | `FilerApiClientServiceCollectionExtensions.cs` | `AddFilerApiClient(baseAddress)` — hand-written DI registration (stays strict). |
 
 ## Generation is checked in
@@ -79,5 +80,8 @@ public sealed class Example(FilerApiClient api)
 }
 ```
 
-Authentication is currently anonymous; the bearer-token provider, token store and 401
-refresh are added in **#128**.
+`AddFilerApiClient` registers two named clients (#128): `FilerApi` — the Kiota client's
+transport, with `BearerTokenHandler` attaching the access token and doing the
+401 → refresh-once → retry dance — and `FilerApiAuth`, a handler-free client used only
+by `TokenRefresher`, so the refresh call never carries a bearer token and can't recurse.
+The host supplies the `ITokenStore` implementation (browser localStorage in `Filer.Web`).

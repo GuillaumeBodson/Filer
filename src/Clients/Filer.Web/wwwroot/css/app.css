@@ -21,7 +21,8 @@
     }
 
         .loading-progress circle:last-child {
-            stroke: #1b6ec2;
+            /* tokens.css is linked before this file in index.html, so tokens are usable at boot. */
+            stroke: var(--color-primary);
             stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
             transition: stroke-dasharray 0.05s ease-in-out;
         }
@@ -56,14 +57,4 @@
         position: absolute;
         right: 0.75rem;
         top: 0.5rem;
-    }
-
-.blazor-error-boundary {
-    background: #b32121;
-    padding: 1rem 1rem 1rem 1rem;
-    color: white;
-}
-
-    .blazor-error-boundary::after {
-        content: "An error has occurred.";
     }
