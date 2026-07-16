@@ -6,10 +6,10 @@ is fixed by `10-solution-structure.md` and the ADRs in `09-decision-log.md`.
 
 ## Current state
 
-Milestones M1 (foundation), M2 (authentication), M3 (upload pipeline) and
-M4 (folders & tags) are complete. Six modules are wired into the host, each
-exposing only its `*.Contracts` project (enforced by the compiler and
-`Filer.Architecture.Tests`):
+Milestones M1 (foundation), M2 (authentication), M3 (upload pipeline),
+M4 (folders & tags) and M5 (AI analysis pipeline) are complete. Seven modules
+are wired into the host, each exposing only its `*.Contracts` project (enforced
+by the compiler and `Filer.Architecture.Tests`):
 
 ```
 Filer.Api (host)
@@ -18,7 +18,9 @@ Filer.Api (host)
  ├─▶ Filer.Modules.Folders         folder hierarchy, cycle-safe moves (ADR-007)
  ├─▶ Filer.Modules.Tags            per-owner tags, cascade delete (ADR-009)
  ├─▶ Filer.Modules.Storage         IFileStorageProvider (local filesystem in V1)
- └─▶ Filer.Modules.BackgroundJobs  IBackgroundJobQueue, DB-backed queue + worker
+ ├─▶ Filer.Modules.BackgroundJobs  IBackgroundJobQueue, DB-backed queue + worker
+ └─▶ Filer.Modules.AiAnalysis      IAIAnalysisProvider: Fake (default), Ollama
+                                   (no-egress), OllamaAgentic (opt-in experiment)
 
 Cross-cutting: Filer.SharedKernel (Result/Error primitives)
                Filer.WebKernel    (route + error-mapping conventions — ADR-006)
@@ -47,6 +49,8 @@ durable outbox (ADR-008, not yet implemented).
 | PUT    | `/api/v1/documents/{id}/tags` | Yes | Replace the document's user tag set    |
 | POST   | `/api/v1/documents/{id}/tags/{tagId}` | Yes | Attach a tag (idempotent)       |
 | DELETE | `/api/v1/documents/{id}/tags/{tagId}` | Yes | Detach a tag                    |
+| GET    | `/api/v1/documents/{id}/analysis` | Yes | AI analysis job status + suggestions |
+| POST   | `/api/v1/documents/{id}/analysis/apply` | Yes | Apply confirmed AI suggestions |
 | POST   | `/api/v1/folders`        | Yes  | Create a folder                            |
 | GET    | `/api/v1/folders`        | Yes  | List folders (`?view=flat\|tree`)          |
 | GET    | `/api/v1/folders/{id}`   | Yes  | Folder details                             |
@@ -120,12 +124,13 @@ curl -X POST http://localhost:8080/api/v1/documents \
 dotnet test
 ```
 
-Test projects live under `tests/` (xunit v3): per-module unit tests,
+Test projects live under `tests/` (xunit v3): per-module unit tests (including
+`Filer.Modules.AiAnalysis.Tests` for the providers and job handler),
 `Filer.SharedKernel.Tests`, `Filer.IntegrationTests` (Testcontainers — requires
-Docker; covers auth flows, the job queue, upload validation, and the
-ownership-404 contract on documents, folders, tags and document-tags), and
-`Filer.Architecture.Tests` (module dependency boundaries). Strategy and required
-coverage: `12-testing-strategy.md`.
+Docker; covers auth flows, the job queue and analysis worker, upload validation,
+and the ownership-404 contract on documents, folders, tags, document-tags and
+the analysis endpoints), and `Filer.Architecture.Tests` (module dependency
+boundaries). Strategy and required coverage: `12-testing-strategy.md`.
 
 ## Database migrations
 
@@ -151,6 +156,12 @@ contexts: `DocumentsDbContext`, `JobsDbContext`, `FoldersDbContext`,
 - `Jwt:Issuer`, `Jwt:Audience`, `Jwt:AccessTokenMinutes`, `Jwt:SigningKey`.
 - `Storage:Provider` (V1: `Local`), `Storage:RootPath` — blob storage root.
 - `Documents:MaxUploadBytes`, `Documents:AllowedContentTypes` — upload limits.
+- `AiAnalysis:Provider` (`Fake` default / `Ollama` / `OllamaAgentic`),
+  `AiAnalysis:Ollama:*` (base URL, model, timeout, prompt cap),
+  `AiAnalysis:TextExtraction:MaxChars` — AI provider selection and tuning. The
+  Ollama runtime ships as a Compose service behind the `ai` profile:
+  `docker compose --profile ai up`.
+- `BackgroundJobs:*` — worker poll interval, retry attempts/backoff.
 
 The signing key in `appsettings.Development.json` is **dev-only**. In real
 environments supply `Jwt__SigningKey` (≥32 chars) via environment variable or a
@@ -166,9 +177,8 @@ mount outside Development (07-storage-and-deployment.md).
 
 ## Next steps (build order — 08-ai-development-guidelines.md)
 
-1. **AI analysis pipeline (M5)** — `IAIAnalysisProvider`, worker job processing,
-   suggestion review; RabbitMQ job dispatch with Postgres outbox (ADR-008).
-2. Search (M6) — full-text endpoint (tsvector / GIN).
-3. Observability & CI (M7) — metrics, correlation ids, coverage + architecture
-   gate.
-4. Bulk operations (M8) — bulk tag add/remove, sync + capped (ADR-010).
+1. **Search (M6)** — full-text endpoint (tsvector / GIN).
+2. Observability & CI (M7) — metrics, correlation ids (ADR-013), coverage +
+   architecture gate.
+3. Bulk operations (M8) — bulk tag add/remove, sync + capped (ADR-010).
+4. RabbitMQ job dispatch with Postgres outbox (ADR-008, deferred from M5).

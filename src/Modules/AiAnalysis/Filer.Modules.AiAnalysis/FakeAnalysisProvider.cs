@@ -7,8 +7,8 @@ namespace Filer.Modules.AiAnalysis;
 /// Zero-footprint <see cref="IAIAnalysisProvider"/>: deterministic canned
 /// suggestions derived from the request alone — no model, no network, no disk.
 /// Lets every downstream slice (worker, status, apply) run end to end on machines
-/// that cannot host a local LLM; real inference arrives with the Ollama adapter
-/// (#52). Determinism matters: re-running a job must produce a consistent result
+/// that cannot host a local LLM; the Ollama adapter (#52) provides real inference.
+/// Determinism matters: re-running a job must produce a consistent result
 /// (06-ai-analysis-pipeline.md, Reliability — idempotency).
 /// </summary>
 public sealed class FakeAnalysisProvider(ILogger<FakeAnalysisProvider> logger) : IAIAnalysisProvider
@@ -27,7 +27,7 @@ public sealed class FakeAnalysisProvider(ILogger<FakeAnalysisProvider> logger) :
         FolderSuggestion folder = SuggestFolder(request);
         IReadOnlyList<TagSuggestion> tags = SuggestTags(request);
 
-        logger.FakeSuggestionsProduced(request.DocumentId, folder.Name, tags.Count);
+        logger.FakeSuggestionsProduced(request.DocumentId, folder.ExistingFolderId is not null, tags.Count);
 
         return Task.FromResult(new DocumentAnalysisResult(folder, tags, []));
     }
@@ -69,9 +69,10 @@ public sealed class FakeAnalysisProvider(ILogger<FakeAnalysisProvider> logger) :
 /// </summary>
 internal static partial class FakeAnalysisProviderLog
 {
+    // Ids, booleans and counts only — never a folder or tag name (05-security.md).
     [LoggerMessage(
         Level = LogLevel.Information,
         Message = "Fake analysis provider produced canned suggestions for document {DocumentId} " +
-                  "(folder '{FolderName}', {TagCount} tag(s)); real inference arrives with the Ollama adapter.")]
-    public static partial void FakeSuggestionsProduced(this ILogger logger, Guid documentId, string folderName, int tagCount);
+                  "(matched existing folder: {MatchedExistingFolder}, {TagCount} tag(s)).")]
+    public static partial void FakeSuggestionsProduced(this ILogger logger, Guid documentId, bool matchedExistingFolder, int tagCount);
 }

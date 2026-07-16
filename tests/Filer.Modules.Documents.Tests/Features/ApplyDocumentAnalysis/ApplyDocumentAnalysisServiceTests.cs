@@ -168,6 +168,22 @@ public sealed class ApplyDocumentAnalysisServiceTests
     }
 
     [Fact]
+    public async Task HandleAsync_WhenSucceededResultUnreadable_ReturnsAnalysisNotFound()
+    {
+        // A Succeeded job whose stored Result is malformed carries nothing to
+        // apply — same outcome as no result; the status slice surfaces the
+        // inconsistency (mirrors the Get slice's degradation test).
+        ArrangeOwnedDocument();
+        _jobs.Setup(j => j.FindLatestForDocumentAsync(DocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AnalysisJobSnapshot(JobId, AnalysisJobState.Succeeded, "not json at all", null));
+
+        var result = await CreateSut().HandleAsync(DocumentId, Request(), CancellationToken.None);
+
+        result.Error!.Type.Should().Be(ErrorType.NotFound);
+        result.Error.Code.Should().Be(DocumentsErrorCodes.AnalysisNotFound);
+    }
+
+    [Fact]
     public async Task HandleAsync_WhenTagNotAmongSuggestions_ReturnsValidation()
     {
         ArrangeOwnedDocument();

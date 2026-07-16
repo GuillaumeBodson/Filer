@@ -12,8 +12,9 @@ namespace Filer.Modules.AiAnalysis.Contracts;
 /// throw (provider timeout, rate limit, malformed provider response) and the calling
 /// worker translates them into the job's retry/backoff handling
 /// (13-code-quality-and-design.md, "Result vs exceptions"; 06, Reliability).
-/// Implementations must honour <paramref name="cancellationToken"/> mid-flight —
-/// deleting a document cancels its in-flight analysis (06).
+/// Implementations must honour the cancellation token mid-flight — the worker
+/// cancels on host shutdown; a document deleted before or during the run is
+/// handled by the job's DocumentGone path, not by cancelling the provider (06).
 /// </remarks>
 public interface IAIAnalysisProvider
 {

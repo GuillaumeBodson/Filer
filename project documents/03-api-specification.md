@@ -81,6 +81,12 @@ Common statuses: 400 validation, 401 unauthenticated, 404 not found / not owned,
 
 List filters: `?folderId=`, `?tagId=`, `?q=` (full-text), plus pagination.
 
+Apply semantics (V1, see `06`): the request confirms a subset of the *stored*
+suggestions; a tag name the user has not created yet is rejected with `400`
+(`suggested_tag_not_created`), and a suggestion proposing a *new* folder cannot
+be applied (`400 proposed_folder_not_supported`) — only suggestions resolving to
+an existing folder can. No completed analysis → `404 analysis_not_found`.
+
 ### Upload behavior
 
 Follows the async flow in `01`/`08`:

@@ -57,7 +57,7 @@ public static class BackgroundJobsModule
         // Public read surface for the Documents analysis slices (#54/#55): latest
         // job status + result, never the error text. The implementation stays
         // internal behind the Contracts interface.
-        services.AddScoped<IAnalysisJobReader, EfAnalysisJobReader>();
+        services.AddScoped<IAnalysisJobReader, AnalysisJobReader>();
 
         // Fallback handler: the AI Analysis module registers the real one before
         // this module runs (Program.cs ordering), so TryAdd keeps the swap additive

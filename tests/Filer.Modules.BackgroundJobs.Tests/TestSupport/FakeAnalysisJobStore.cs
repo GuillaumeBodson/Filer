@@ -26,12 +26,18 @@ internal sealed class FakeAnalysisJobStore : IAnalysisJobStore
 
     public int CountQueuedCalls { get; private set; }
 
+    /// <summary>Completes on the first claim — a deterministic "the loop is running" signal, no sleeps (12).</summary>
+    public Task FirstClaim => _firstClaim.Task;
+
+    private readonly TaskCompletionSource _firstClaim = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     public void Enqueue(ClaimedAnalysisJob job) => _pending.Enqueue(job);
 
     public Task<ClaimedAnalysisJob?> ClaimNextAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         ClaimCount++;
+        _firstClaim.TrySetResult();
         return Task.FromResult(_pending.Count > 0 ? _pending.Dequeue() : null);
     }
 

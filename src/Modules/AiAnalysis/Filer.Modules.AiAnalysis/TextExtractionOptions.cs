@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Filer.Modules.AiAnalysis;
 
 /// <summary>
@@ -16,5 +18,6 @@ public sealed class TextExtractionOptions
     /// documents are truncated (06-ai-analysis-pipeline.md: suggestions are
     /// advisory, a prefix is enough signal).
     /// </summary>
+    [Range(1, int.MaxValue)]
     public int MaxChars { get; init; } = 8_000;
 }

@@ -15,7 +15,7 @@ namespace Filer.Modules.AiAnalysis.Tests;
 public sealed class AnalysisJobHandlerRegistrationTests
 {
     [Fact]
-    public void AddAiAnalysisModule_registers_the_real_analysis_job_handler()
+    public void AddAiAnalysisModule_Always_RegistersRealAnalysisJobHandler()
     {
         IConfiguration configuration = new ConfigurationBuilder().Build();
         ServiceCollection services = new();
