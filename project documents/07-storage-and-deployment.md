@@ -86,6 +86,13 @@ locally:
   provider, behind the Compose `ai` profile so a plain `docker compose up`
   never pulls it (`06`, Privacy & Provider Selection).
 
+The web client (`Filer.Web`, Blazor WebAssembly) is static assets; in dev it is
+served by `dotnet run --project src/Clients/Filer.Web` (cross-origin calls to
+the API need the CORS policy tracked in #148). It is **not** part of the Compose
+topology yet — production hosting (served by the api container vs. a static
+host/CDN) is decided when the first deployable frontend milestone ships (open
+item).
+
 For V1 the background worker runs as a hosted service inside the api container.
 The boundary is kept clean so it can be split into a separate **worker** service
 later without code restructuring.

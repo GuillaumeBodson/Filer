@@ -18,7 +18,7 @@ public sealed class BearerTokenHandlerTests
     {
         handler.InnerHandler = inner;
         using var invoker = new HttpMessageInvoker(handler);
-        return await invoker.SendAsync(request, CancellationToken.None);
+        return await invoker.SendAsync(request, TestContext.Current.CancellationToken);
     }
 
     [Fact]

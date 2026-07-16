@@ -31,10 +31,16 @@ Tout le *quoi* vit dans `project documents/`. En cas de conflit avec ce fichier,
 ```bash
 # Postgres en Docker, API depuis l'IDE/CLI
 docker compose up -d postgres
-dotnet run --project src/Filer.Api          # http://localhost:8080, migrations au démarrage
+dotnet run --project src/Filer.Api          # http://localhost:5232 (profil http), migrations au démarrage
 
-# Tout en Docker
+# Tout en Docker (API sur http://localhost:8080)
 docker compose up --build
+
+# Client web (Blazor WASM) — base API : src/Clients/Filer.Web/wwwroot/appsettings.json
+dotnet run --project src/Clients/Filer.Web
+
+# Régénérer le client API typé (Kiota) : voir src/Clients/Filer.ApiClient/README.md
+# (snapshot OpenAPI commité + drift gate CI)
 
 # Tests (les projets de test vivent sous tests/ — cf. 10-solution-structure.md)
 dotnet test

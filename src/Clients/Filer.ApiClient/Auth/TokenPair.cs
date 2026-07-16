@@ -9,12 +9,4 @@ public sealed record TokenPair(
     string AccessToken,
     DateTimeOffset? AccessTokenExpiresAt,
     string RefreshToken,
-    DateTimeOffset? RefreshTokenExpiresAt)
-{
-    /// <summary>
-    /// Whether the access token is expired (or within <paramref name="skew"/> of it),
-    /// so callers can refresh pre-emptively instead of waiting for a 401.
-    /// </summary>
-    public bool IsAccessTokenExpired(DateTimeOffset now, TimeSpan skew) =>
-        AccessTokenExpiresAt is { } expiresAt && now >= expiresAt - skew;
-}
+    DateTimeOffset? RefreshTokenExpiresAt);
