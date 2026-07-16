@@ -88,8 +88,7 @@ public sealed class AnalysisJobHandler(
         logger.AnalysisCompleted(
             job.DocumentId,
             analysis.SuggestedFolder is not null,
-            analysis.SuggestedTags.Count,
-            analysis.DuplicateSignals.Count);
+            analysis.SuggestedTags.Count);
 
         return Result.Success<string?>(result);
     }
@@ -159,7 +158,7 @@ internal static partial class AnalysisJobHandlerLog
     [LoggerMessage(
         Level = LogLevel.Information,
         Message = "Analysis completed for document {DocumentId} " +
-                  "(folder suggested: {HasFolderSuggestion}, {TagCount} tag(s), {DuplicateCount} duplicate signal(s)).")]
+                  "(folder suggested: {HasFolderSuggestion}, {TagCount} tag(s)).")]
     public static partial void AnalysisCompleted(
-        this ILogger logger, Guid documentId, bool hasFolderSuggestion, int tagCount, int duplicateCount);
+        this ILogger logger, Guid documentId, bool hasFolderSuggestion, int tagCount);
 }

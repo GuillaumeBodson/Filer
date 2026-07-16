@@ -21,9 +21,7 @@ namespace Filer.Modules.AiAnalysis;
 /// JSON <c>format</c> schema constraining the reply to the suggestion shape, then
 /// maps it: a folder name that matches an existing folder (case-insensitively) is
 /// echoed by id, an unknown name becomes a proposed folder, confidences are clamped
-/// to [0,1], and tags are de-duplicated case-insensitively. Duplicate detection is
-/// not the LLM's job in V1, so <see cref="DocumentAnalysisResult.DuplicateSignals"/>
-/// is always empty.</para>
+/// to [0,1], and tags are de-duplicated case-insensitively.</para>
 /// <para>This is an infrastructure seam, so failures throw (non-2xx, timeout,
 /// unparseable reply) and the worker owns retry/backoff
 /// (13-code-quality-and-design.md; <see cref="IAIAnalysisProvider"/> remarks).
@@ -182,8 +180,7 @@ public sealed class OllamaAnalysisProvider(
         FolderSuggestion? folder = MapFolder(suggestion.Folder, request.ExistingFolders);
         IReadOnlyList<TagSuggestion> tags = MapTags(suggestion.Tags);
 
-        // Duplicate detection needs real content comparison, not the LLM (06, V1).
-        return new DocumentAnalysisResult(folder, tags, []);
+        return new DocumentAnalysisResult(folder, tags);
     }
 
     private static OllamaSuggestion ParseSuggestion(string? content)

@@ -41,7 +41,6 @@ public sealed class OllamaAnalysisProviderTests
         result.SuggestedTags.Should().Equal(
             new TagSuggestion("invoice", 0.8),
             new TagSuggestion("2026", 0.6));
-        result.DuplicateSignals.Should().BeEmpty("duplicate detection is not the LLM's job in V1");
     }
 
     [Fact]

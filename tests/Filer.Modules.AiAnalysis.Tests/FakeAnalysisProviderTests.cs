@@ -73,16 +73,6 @@ public sealed class FakeAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_Always_ReportsNoDuplicateSignals()
-    {
-        DocumentAnalysisResult result = await _provider.AnalyzeAsync(
-            Request(), TestContext.Current.CancellationToken);
-
-        result.DuplicateSignals.Should().BeEmpty(
-            "duplicate detection needs real content comparison; the fake never fabricates findings");
-    }
-
-    [Fact]
     public async Task AnalyzeAsync_ForSameRequest_IsDeterministic()
     {
         DocumentAnalysisRequest request = Request(

@@ -34,13 +34,17 @@ For an uploaded document the pipeline produces:
 
 * **Folder suggestion** — a recommended folder (existing or proposed new name).
 * **Tag suggestions** — zero or more recommended tags.
-* **Duplicate findings** — *reserved, not produced in V1.* Exact content-hash
-  duplicates are rejected at upload time with `409` (`03`), so no analysis ever
-  sees one; every shipped provider returns an empty `DuplicateSignals` list. The
-  DTO slot exists for semantic near-duplicates later.
 
-Out of V1 scope (future): summarization, semantic search indexing, natural-language
-querying, AI chat over documents — tracked in `14-roadmap.md` (RM-04).
+Duplicate findings are **not** an analysis capability (#164): exact content-hash
+duplicates are rejected at upload time with `409` (`03`), so no analysis ever
+sees one, and semantic near-duplicate detection is future feature work. The
+result DTO carries no duplicate field; reintroducing one later is additive —
+the persisted JSONB contract (`AnalysisJobResultJson`) tolerates absent fields,
+and old rows that still carry `duplicateSignals` keep deserializing.
+
+Out of V1 scope (future): summarization, semantic search indexing, semantic
+near-duplicate detection, natural-language querying, AI chat over documents —
+tracked in `14-roadmap.md` (RM-04).
 
 ---
 
@@ -83,7 +87,7 @@ public interface IAIAnalysisProvider
 * The request carries the content (or a reference the provider can read) plus
   context such as existing folders and tags for better suggestions.
 * The result is a provider-neutral DTO (suggested folder, suggested tags,
-  duplicate signals, confidence scores) — never a vendor-specific shape.
+  confidence scores) — never a vendor-specific shape.
 * Implementations are selected by configuration. The shipped real adapter is
   **Ollama** (no-egress, self-hosted — see Privacy & Provider Selection below);
   cloud adapters (OpenAI, Azure OpenAI) remain possible future implementations

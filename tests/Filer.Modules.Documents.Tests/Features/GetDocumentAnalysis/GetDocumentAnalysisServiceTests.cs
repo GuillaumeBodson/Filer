@@ -146,11 +146,9 @@ public sealed class GetDocumentAnalysisServiceTests
     public async Task HandleAsync_WhenJobSucceeded_ReturnsSuggestionsProjectedToDtos()
     {
         Guid folderId = Guid.NewGuid();
-        Guid duplicateId = Guid.NewGuid();
         var stored = new DocumentAnalysisResult(
             new FolderSuggestion(folderId, "Invoices", 0.92),
-            [new TagSuggestion("invoices", 0.81), new TagSuggestion("2026", 0.6)],
-            [new DuplicateSignal(duplicateId, DuplicateKind.ExactContent, 1)]);
+            [new TagSuggestion("invoices", 0.81), new TagSuggestion("2026", 0.6)]);
 
         ArrangeOwnedDocument();
         ArrangeLatestJob(new AnalysisJobSnapshot(
@@ -169,8 +167,6 @@ public sealed class GetDocumentAnalysisServiceTests
         suggestions.SuggestedTags.Should().Equal(
             new AnalysisTagSuggestionResponse("invoices", 0.81),
             new AnalysisTagSuggestionResponse("2026", 0.6));
-        suggestions.DuplicateSignals.Should().Equal(
-            new AnalysisDuplicateSignalResponse(duplicateId, "ExactContent", 1));
     }
 
     [Fact]

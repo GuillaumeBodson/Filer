@@ -65,14 +65,15 @@ public sealed class GetDocumentAnalysisEndpointTests(FilerApiFactory factory)
         HttpClient client = await AuthenticatedClientAsync();
         Guid documentId = await UploadDocumentAsync(client);
 
-        // The wire shape the worker (#53) writes: Web defaults — camelCase, enums
-        // as numbers — restated here independently so drift fails a test.
-        Guid duplicateId = Guid.NewGuid();
-        Guid jobId = await _factory.CompleteLatestAnalysisJobAsync(documentId, $$"""
+        // The wire shape the worker (#53) writes: Web defaults — camelCase —
+        // restated here independently so drift fails a test. The payload keeps the
+        // legacy duplicateSignals field (dropped in #164): rows persisted before
+        // the removal must still be readable.
+        Guid jobId = await _factory.CompleteLatestAnalysisJobAsync(documentId, """
             {
               "suggestedFolder": { "existingFolderId": null, "name": "Invoices", "confidence": 0.92 },
               "suggestedTags": [ { "name": "invoices", "confidence": 0.81 } ],
-              "duplicateSignals": [ { "documentId": "{{duplicateId}}", "kind": 0, "confidence": 1 } ]
+              "duplicateSignals": []
             }
             """);
 
@@ -80,7 +81,11 @@ public sealed class GetDocumentAnalysisEndpointTests(FilerApiFactory factory)
             $"{DocumentsRoute}/{documentId}/analysis", Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        AnalysisDto result = (await response.Content.ReadFromJsonAsync<AnalysisDto>(Ct))!;
+        string body = await response.Content.ReadAsStringAsync(Ct);
+        body.Should().NotContain(
+            "duplicateSignals", "the removed field must not resurface on the response (#164)");
+
+        AnalysisDto result = System.Text.Json.JsonSerializer.Deserialize<AnalysisDto>(body, WebJsonOptions)!;
         result.Status.Should().Be("Succeeded");
         result.JobId.Should().Be(jobId);
         result.Suggestions.Should().NotBeNull();
@@ -88,8 +93,6 @@ public sealed class GetDocumentAnalysisEndpointTests(FilerApiFactory factory)
         result.Suggestions.SuggestedFolder.ExistingFolderId.Should().BeNull();
         result.Suggestions.SuggestedTags.Should().ContainSingle()
             .Which.Name.Should().Be("invoices");
-        result.Suggestions.DuplicateSignals.Should().ContainSingle()
-            .Which.Kind.Should().Be("ExactContent");
     }
 
     [Fact]
@@ -167,12 +170,9 @@ public sealed class GetDocumentAnalysisEndpointTests(FilerApiFactory factory)
 
     private sealed record SuggestionsDto(
         FolderSuggestionDto? SuggestedFolder,
-        IReadOnlyList<TagSuggestionDto> SuggestedTags,
-        IReadOnlyList<DuplicateSignalDto> DuplicateSignals);
+        IReadOnlyList<TagSuggestionDto> SuggestedTags);
 
     private sealed record FolderSuggestionDto(Guid? ExistingFolderId, string Name, double Confidence);
 
     private sealed record TagSuggestionDto(string Name, double Confidence);
-
-    private sealed record DuplicateSignalDto(Guid DocumentId, string Kind, double Confidence);
 }

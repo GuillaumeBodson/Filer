@@ -54,8 +54,7 @@ public sealed record DocumentAnalysisResponse(
 /// </summary>
 public sealed record DocumentAnalysisSuggestionsResponse(
     AnalysisFolderSuggestionResponse? SuggestedFolder,
-    IReadOnlyList<AnalysisTagSuggestionResponse> SuggestedTags,
-    IReadOnlyList<AnalysisDuplicateSignalResponse> DuplicateSignals)
+    IReadOnlyList<AnalysisTagSuggestionResponse> SuggestedTags)
 {
     /// <summary>
     /// The slice's single Contracts → DTO projection (13-code-quality-and-design.md:
@@ -71,10 +70,6 @@ public sealed record DocumentAnalysisSuggestionsResponse(
                     result.SuggestedFolder.Confidence),
             result.SuggestedTags
                 .Select(tag => new AnalysisTagSuggestionResponse(tag.Name, tag.Confidence))
-                .ToList(),
-            result.DuplicateSignals
-                .Select(signal => new AnalysisDuplicateSignalResponse(
-                    signal.DocumentId, signal.Kind.ToString(), signal.Confidence))
                 .ToList());
 }
 
@@ -83,6 +78,3 @@ public sealed record AnalysisFolderSuggestionResponse(Guid? ExistingFolderId, st
 
 /// <summary>A recommended tag, confirmable by name via the apply endpoint.</summary>
 public sealed record AnalysisTagSuggestionResponse(string Name, double Confidence);
-
-/// <summary>A possible duplicate; <c>Kind</c> is the detection mechanism as a string.</summary>
-public sealed record AnalysisDuplicateSignalResponse(Guid DocumentId, string Kind, double Confidence);

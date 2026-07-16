@@ -149,8 +149,7 @@ public sealed class OllamaAgenticAnalysisProvider(
         long elapsedMs = (long)Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
         logger.AgenticAnalysisCompleted(request.DocumentId, elapsedMs, folder is not null, tags.Count);
 
-        // Duplicate detection needs real content comparison, not the LLM (06, V1).
-        return new DocumentAnalysisResult(folder, tags, []);
+        return new DocumentAnalysisResult(folder, tags);
     }
 
     /// <summary>One structurally-constrained chat round trip; throws on any infrastructure failure.</summary>

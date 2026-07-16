@@ -58,8 +58,7 @@ public sealed class ApplyDocumentAnalysisServiceTests
     /// <summary>The canonical stored result: an existing folder and two tag suggestions.</summary>
     private static DocumentAnalysisResult StoredResult(Guid? existingFolderId = null) => new(
         new FolderSuggestion(existingFolderId ?? SuggestedFolderId, "Invoices", 0.9),
-        [new TagSuggestion("invoices", 0.8), new TagSuggestion("2026", 0.6)],
-        []);
+        [new TagSuggestion("invoices", 0.8), new TagSuggestion("2026", 0.6)]);
 
     private Document ArrangeOwnedDocument()
     {
@@ -200,7 +199,7 @@ public sealed class ApplyDocumentAnalysisServiceTests
     public async Task HandleAsync_WhenFolderConfirmedButNoneSuggested_ReturnsValidation()
     {
         ArrangeOwnedDocument();
-        ArrangeSucceededJob(new DocumentAnalysisResult(null, [new TagSuggestion("invoices", 0.8)], []));
+        ArrangeSucceededJob(new DocumentAnalysisResult(null, [new TagSuggestion("invoices", 0.8)]));
 
         var result = await CreateSut().HandleAsync(
             DocumentId, Request(applyFolder: true), CancellationToken.None);
@@ -215,7 +214,7 @@ public sealed class ApplyDocumentAnalysisServiceTests
         // folder creation, so the apply is rejected explicitly rather than half-done.
         ArrangeOwnedDocument();
         ArrangeSucceededJob(new DocumentAnalysisResult(
-            new FolderSuggestion(null, "Brand New", 0.7), [], []));
+            new FolderSuggestion(null, "Brand New", 0.7), []));
 
         var result = await CreateSut().HandleAsync(
             DocumentId, Request(applyFolder: true), CancellationToken.None);

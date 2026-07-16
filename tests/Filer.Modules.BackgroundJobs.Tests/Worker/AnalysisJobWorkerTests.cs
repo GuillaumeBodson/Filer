@@ -62,7 +62,7 @@ public sealed class AnalysisJobWorkerTests
     [Fact]
     public async Task ProcessNextAsync_WhenHandlerSucceeds_MarksJobSucceededWithTheResultPayload()
     {
-        const string resultJson = """{"suggestedFolder":null,"suggestedTags":[],"duplicateSignals":[]}""";
+        const string resultJson = """{"suggestedFolder":null,"suggestedTags":[]}""";
         ClaimedAnalysisJob job = NewJob();
         _store.Enqueue(job);
         _handler

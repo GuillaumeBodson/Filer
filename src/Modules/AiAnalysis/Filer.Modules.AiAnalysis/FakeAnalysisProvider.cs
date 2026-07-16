@@ -29,7 +29,7 @@ public sealed class FakeAnalysisProvider(ILogger<FakeAnalysisProvider> logger) :
 
         logger.FakeSuggestionsProduced(request.DocumentId, folder.ExistingFolderId is not null, tags.Count);
 
-        return Task.FromResult(new DocumentAnalysisResult(folder, tags, []));
+        return Task.FromResult(new DocumentAnalysisResult(folder, tags));
     }
 
     /// <summary>Prefers the user's own organisation: first existing folder by name, else a proposed one.</summary>
