@@ -342,14 +342,14 @@ public sealed class AnalysisJobWorkerTests
     [Fact]
     public async Task ExecuteAsync_StopsWhenCancelled()
     {
-        // Tight poll interval so the loop spins; cancellation must end it promptly.
         AnalysisJobWorker sut = CreateSut(new BackgroundJobsOptions
         {
             PollInterval = TimeSpan.FromMilliseconds(10),
         });
 
         await sut.StartAsync(CancellationToken.None);
-        await Task.Delay(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
+        // Deterministic signal that the loop is live — no wall-clock sleep (12).
+        await _store.FirstClaim.WaitAsync(TestContext.Current.CancellationToken);
         await sut.StopAsync(CancellationToken.None);
 
         // The worker polled while running and stopped when asked — no hang, no throw.

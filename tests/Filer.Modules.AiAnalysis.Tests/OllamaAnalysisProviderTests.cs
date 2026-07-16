@@ -21,7 +21,7 @@ public sealed class OllamaAnalysisProviderTests
     private const string BaseUrl = "http://localhost:11434";
 
     [Fact]
-    public async Task AnalyzeAsync_maps_a_well_formed_reply_resolving_an_existing_folder()
+    public async Task AnalyzeAsync_WithWellFormedReply_ResolvesExistingFolder()
     {
         var work = new ExistingFolder(Guid.NewGuid(), "Work");
         var archive = new ExistingFolder(Guid.NewGuid(), "Archive");
@@ -45,7 +45,7 @@ public sealed class OllamaAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_proposes_an_unknown_folder_and_clamps_confidences()
+    public async Task AnalyzeAsync_WithUnknownFolderReply_ProposesNewFolderAndClampsConfidences()
     {
         StubHandler handler = RespondingWith(Reply(
             folderName: "Receipts",
@@ -64,7 +64,7 @@ public sealed class OllamaAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_works_from_the_file_name_alone_when_text_is_empty()
+    public async Task AnalyzeAsync_WhenTextEmpty_WorksFromFileNameAlone()
     {
         StubHandler handler = RespondingWith(Reply("Unsorted", 0.4, []));
         OllamaAnalysisProvider provider = Provider(handler);
@@ -77,7 +77,7 @@ public sealed class OllamaAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_posts_to_api_chat_with_stream_false_a_format_schema_and_the_model()
+    public async Task AnalyzeAsync_Always_PostsToApiChatWithStreamFalseFormatSchemaAndModel()
     {
         StubHandler handler = RespondingWith(Reply("Work", 0.5, []));
         OllamaAnalysisProvider provider = Provider(handler);
@@ -100,7 +100,7 @@ public sealed class OllamaAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_renders_the_folder_tree_with_document_counts_in_the_prompt()
+    public async Task AnalyzeAsync_WithFolderTree_RendersTreeWithDocumentCountsInPrompt()
     {
         // #118: structural context — the prompt carries the owner's tree (children
         // indented under their parent) and per-folder document counts, so the model
@@ -123,7 +123,7 @@ public sealed class OllamaAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_truncates_the_document_text_to_max_prompt_chars()
+    public async Task AnalyzeAsync_WithLongText_TruncatesToMaxPromptChars()
     {
         StubHandler handler = RespondingWith(Reply("Work", 0.5, []));
         const int maxPromptChars = 50;
@@ -140,7 +140,7 @@ public sealed class OllamaAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_throws_on_a_non_success_status()
+    public async Task AnalyzeAsync_OnNonSuccessStatus_Throws()
     {
         StubHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
         OllamaAnalysisProvider provider = Provider(handler);
@@ -152,7 +152,7 @@ public sealed class OllamaAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_throws_on_an_unparseable_body()
+    public async Task AnalyzeAsync_OnUnparseableBody_Throws()
     {
         StubHandler handler = new(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -166,7 +166,7 @@ public sealed class OllamaAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_throws_OperationCanceledException_when_cancelled()
+    public async Task AnalyzeAsync_WhenCancelled_ThrowsOperationCanceledException()
     {
         StubHandler handler = RespondingWith(Reply("Work", 0.5, []));
         OllamaAnalysisProvider provider = Provider(handler);

@@ -33,7 +33,7 @@ public sealed class OllamaAgenticAnalysisProviderTests
             .ReturnsAsync([]);
 
     [Fact]
-    public async Task AnalyzeAsync_happy_path_ranks_samples_and_confirms_an_existing_folder()
+    public async Task AnalyzeAsync_WithInspectableCandidate_RanksSamplesAndConfirmsExistingFolder()
     {
         var work = new ExistingFolder(Guid.NewGuid(), "Work");
         var invoices = new ExistingFolder(Guid.NewGuid(), "Invoices");
@@ -67,7 +67,7 @@ public sealed class OllamaAgenticAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_skips_the_confirmation_pass_when_no_candidate_matches_an_existing_folder()
+    public async Task AnalyzeAsync_WhenNoCandidateMatchesExistingFolder_SkipsConfirmationPass()
     {
         SequenceHandler handler = new(CandidateReply(("Receipts", 1.4)));
 
@@ -83,7 +83,7 @@ public sealed class OllamaAgenticAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_suggests_no_folder_when_the_ranking_pass_returns_no_candidates()
+    public async Task AnalyzeAsync_WhenRankingReturnsNoCandidates_SuggestsNoFolder()
     {
         SequenceHandler handler = new(CandidateReply());
 
@@ -95,7 +95,7 @@ public sealed class OllamaAgenticAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_inspects_at_most_the_top_three_existing_candidates()
+    public async Task AnalyzeAsync_WithManyCandidates_InspectsAtMostTopThree()
     {
         ExistingFolder[] folders = [.. Enumerable.Range(1, 4)
             .Select(i => new ExistingFolder(Guid.NewGuid(), $"Folder{i}"))];
@@ -116,7 +116,7 @@ public sealed class OllamaAgenticAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_honours_cancellation_before_the_first_pass()
+    public async Task AnalyzeAsync_WhenCancelledBeforeFirstPass_Throws()
     {
         SequenceHandler handler = new(CandidateReply(("Work", 0.5)));
         using var cts = new CancellationTokenSource();
@@ -129,7 +129,7 @@ public sealed class OllamaAgenticAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_honours_cancellation_between_the_two_passes()
+    public async Task AnalyzeAsync_WhenCancelledBetweenPasses_ThrowsWithoutSecondCall()
     {
         var work = new ExistingFolder(Guid.NewGuid(), "Work");
         using var cts = new CancellationTokenSource();
@@ -155,7 +155,7 @@ public sealed class OllamaAgenticAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_throws_on_a_non_success_status()
+    public async Task AnalyzeAsync_OnNonSuccessStatus_Throws()
     {
         var handler = new SequenceHandler();
         handler.EnqueueRaw(new HttpResponseMessage(HttpStatusCode.InternalServerError));
@@ -167,7 +167,7 @@ public sealed class OllamaAgenticAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_throws_on_an_unparseable_confirmation_body()
+    public async Task AnalyzeAsync_OnUnparseableConfirmationBody_Throws()
     {
         var handler = new SequenceHandler(CandidateReply(("Work", 0.9)));
         handler.EnqueueRaw(new HttpResponseMessage(HttpStatusCode.OK)

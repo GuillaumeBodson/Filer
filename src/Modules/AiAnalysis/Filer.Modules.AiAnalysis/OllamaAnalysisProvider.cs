@@ -59,7 +59,7 @@ public sealed class OllamaAnalysisProvider(
             Stream: false,
             ResponseSchema);
 
-        OllamaChatResponse reply;
+        DocumentAnalysisResult result;
         try
         {
             using HttpResponseMessage response = await httpClient.PostAsJsonAsync(
@@ -72,9 +72,10 @@ public sealed class OllamaAnalysisProvider(
                     $"Ollama chat request failed with status code {(int)response.StatusCode}.");
             }
 
-            reply = await response.Content.ReadFromJsonAsync<OllamaChatResponse>(
-                        SerializerOptions, cancellationToken)
-                    ?? throw new InvalidOperationException("Ollama returned an empty chat response.");
+            OllamaChatResponse reply = await response.Content.ReadFromJsonAsync<OllamaChatResponse>(
+                                           SerializerOptions, cancellationToken)
+                                       ?? throw new InvalidOperationException("Ollama returned an empty chat response.");
+            result = MapReply(reply, request);
         }
         catch (Exception ex) when (ex is not OperationCanceledException and not HttpRequestException)
         {
@@ -83,8 +84,6 @@ public sealed class OllamaAnalysisProvider(
             logger.OllamaReplyUnusable(request.DocumentId);
             throw;
         }
-
-        DocumentAnalysisResult result = MapReply(reply, request);
 
         long elapsedMs = (long)Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
         logger.AnalysisCompleted(

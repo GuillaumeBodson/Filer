@@ -34,8 +34,10 @@ For an uploaded document the pipeline produces:
 
 * **Folder suggestion** — a recommended folder (existing or proposed new name).
 * **Tag suggestions** — zero or more recommended tags.
-* **Duplicate findings** — surfacing content-hash matches and, later, semantic
-  near-duplicates.
+* **Duplicate findings** — *reserved, not produced in V1.* Exact content-hash
+  duplicates are rejected at upload time with `409` (`03`), so no analysis ever
+  sees one; every shipped provider returns an empty `DuplicateSignals` list. The
+  DTO slot exists for semantic near-duplicates later.
 
 Out of V1 scope (future): summarization, semantic search indexing, natural-language
 querying, AI chat over documents — tracked in `14-roadmap.md` (RM-04).
@@ -82,9 +84,11 @@ public interface IAIAnalysisProvider
   context such as existing folders and tags for better suggestions.
 * The result is a provider-neutral DTO (suggested folder, suggested tags,
   duplicate signals, confidence scores) — never a vendor-specific shape.
-* Implementations are selected by configuration. Candidates: OpenAI, Azure
-  OpenAI, Ollama, local LLM (`00`/`08`). A zero-footprint `Fake` provider
-  (deterministic canned suggestions, no model, no network) ships alongside them
+* Implementations are selected by configuration. The shipped real adapter is
+  **Ollama** (no-egress, self-hosted — see Privacy & Provider Selection below);
+  cloud adapters (OpenAI, Azure OpenAI) remain possible future implementations
+  behind the same interface (`00`/`08`). A zero-footprint `Fake` provider
+  (deterministic canned suggestions, no model, no network) ships alongside it
   for development and tests on machines that cannot host a local LLM.
 * Provider credentials live with the worker only and never reach clients (`05`).
 
@@ -129,6 +133,12 @@ Per `08` (background jobs must support these):
 * Applying tags records `Source = AiSuggested` on the `DocumentTag` rows (`02`),
   preserving the distinction between user- and AI-originated organization.
 * A user may accept all, some, or none of the suggestions.
+* V1 constraints of the apply endpoint: a suggested tag can only be applied if
+  the user has already created a tag with that name (`400
+  suggested_tag_not_created` otherwise), and a *proposed new* folder cannot be
+  applied — only a suggestion resolving to an existing folder can (`400
+  proposed_folder_not_supported`). Creating the tag/folder first, then
+  re-applying, is the V1 workflow.
 
 ---
 
@@ -152,6 +162,12 @@ Per `08` (background jobs must support these):
   document content never leaves the deployment (`05`). Its runtime ships as the
   `ollama` Docker Compose service behind the `ai` profile, so a plain
   `docker compose up` never pulls it; select it with `AiAnalysis__Provider=Ollama`.
+* An experimental **agentic variant** (`AiAnalysis__Provider=OllamaAgentic`,
+  #119) runs the same Ollama runtime in two passes — rank candidate folders,
+  sample their contents through an owner-scoped read, confirm — and is strictly
+  opt-in; the plain adapter stays the recommended no-egress option. Rationale and
+  boundaries: `09-decision-log.md`, note "Agentic provider pulls owner-scoped
+  data mid-analysis".
 
 ---
 

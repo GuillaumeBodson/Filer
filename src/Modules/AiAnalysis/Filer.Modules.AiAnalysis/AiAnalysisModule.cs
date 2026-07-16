@@ -26,9 +26,7 @@ public static class AiAnalysisModule
         // optional — every option has a safe default.
         services.AddOptions<TextExtractionOptions>()
             .Bind(configuration.GetSection(TextExtractionOptions.SectionName))
-            .Validate(
-                options => options.MaxChars > 0,
-                "AiAnalysis:TextExtraction:MaxChars must be positive.")
+            .ValidateDataAnnotations()
             .ValidateOnStart();
 
         // The real analysis job handler (#53): registered before the BackgroundJobs

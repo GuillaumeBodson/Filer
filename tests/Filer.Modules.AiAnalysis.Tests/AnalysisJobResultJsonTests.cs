@@ -28,7 +28,7 @@ public sealed class AnalysisJobResultJsonTests
     }
 
     [Fact]
-    public void Serialize_then_Deserialize_round_trips_the_full_shape()
+    public void SerializeThenDeserialize_FullShape_RoundTrips()
     {
         DocumentAnalysisResult original = FullResult();
 
@@ -39,7 +39,7 @@ public sealed class AnalysisJobResultJsonTests
     }
 
     [Fact]
-    public void Serialize_round_trips_a_result_with_no_folder_and_empty_lists()
+    public void SerializeThenDeserialize_NoFolderAndEmptyLists_RoundTrips()
     {
         var original = new DocumentAnalysisResult(SuggestedFolder: null, [], []);
 
@@ -50,7 +50,7 @@ public sealed class AnalysisJobResultJsonTests
     }
 
     [Fact]
-    public void Serialize_uses_web_defaults_camelCase_names_and_numeric_enums()
+    public void Serialize_Always_UsesWebDefaultsCamelCaseAndNumericEnums()
     {
         // The wire shape is a contract shared with every reader of the JSONB
         // column — pin its conventions so a converter or naming change cannot
@@ -74,7 +74,7 @@ public sealed class AnalysisJobResultJsonTests
     }
 
     [Fact]
-    public void Deserialize_of_the_json_null_literal_returns_null()
+    public void Deserialize_JsonNullLiteral_ReturnsNull()
     {
         AnalysisJobResultJson.Deserialize("null").Should().BeNull();
     }

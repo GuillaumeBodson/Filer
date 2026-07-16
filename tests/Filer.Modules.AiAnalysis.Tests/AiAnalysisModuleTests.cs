@@ -16,7 +16,7 @@ namespace Filer.Modules.AiAnalysis.Tests;
 public sealed class AiAnalysisModuleTests
 {
     [Fact]
-    public void AddAiAnalysisModule_defaults_to_the_fake_provider_when_the_section_is_absent()
+    public void AddAiAnalysisModule_WhenSectionAbsent_DefaultsToFakeProvider()
     {
         using ServiceProvider services = Build([]);
 
@@ -24,7 +24,7 @@ public sealed class AiAnalysisModuleTests
     }
 
     [Fact]
-    public void AddAiAnalysisModule_registers_the_fake_provider_when_configured()
+    public void AddAiAnalysisModule_WhenFakeConfigured_RegistersFakeProvider()
     {
         using ServiceProvider services = Build(new Dictionary<string, string?>
         {
@@ -35,7 +35,7 @@ public sealed class AiAnalysisModuleTests
     }
 
     [Fact]
-    public void AddAiAnalysisModule_throws_for_an_unknown_provider()
+    public void AddAiAnalysisModule_WhenProviderUnknown_Throws()
     {
         Action act = () => Build(new Dictionary<string, string?>
         {
@@ -47,7 +47,7 @@ public sealed class AiAnalysisModuleTests
     }
 
     [Fact]
-    public void AddAiAnalysisModule_resolves_the_ollama_provider_when_configured()
+    public void AddAiAnalysisModule_WhenOllamaConfigured_ResolvesOllamaProvider()
     {
         using ServiceProvider services = Build(new Dictionary<string, string?>
         {
@@ -59,7 +59,7 @@ public sealed class AiAnalysisModuleTests
     }
 
     [Fact]
-    public void AddAiAnalysisModule_resolves_the_agentic_provider_only_when_opted_in()
+    public void AddAiAnalysisModule_WhenAgenticOptedIn_ResolvesAgenticProvider()
     {
         // #119: the experimental two-pass variant is config-selected and never the
         // default — the plain adapter and the fake stay exactly as they were.
@@ -76,7 +76,7 @@ public sealed class AiAnalysisModuleTests
     }
 
     [Fact]
-    public void AddAiAnalysisModule_fails_validation_for_invalid_ollama_options()
+    public void AddAiAnalysisModule_WhenOllamaOptionsInvalid_FailsValidation()
     {
         using ServiceProvider services = Build(new Dictionary<string, string?>
         {

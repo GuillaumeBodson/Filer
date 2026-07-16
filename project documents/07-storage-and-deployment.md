@@ -82,6 +82,9 @@ locally:
 * **db** — PostgreSQL with a persistent volume.
 * **storage volume** — host/Docker volume mounted into the api container for
   file blobs.
+* **ollama** *(optional)* — self-hosted LLM runtime for the no-egress AI
+  provider, behind the Compose `ai` profile so a plain `docker compose up`
+  never pulls it (`06`, Privacy & Provider Selection).
 
 For V1 the background worker runs as a hosted service inside the api container.
 The boundary is kept clean so it can be split into a separate **worker** service

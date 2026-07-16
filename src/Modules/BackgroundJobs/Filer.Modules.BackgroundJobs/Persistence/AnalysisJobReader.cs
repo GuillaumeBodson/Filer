@@ -11,7 +11,7 @@ namespace Filer.Modules.BackgroundJobs.Persistence;
 /// deterministically. Projects to the Contracts snapshot — the Domain entity and
 /// its <c>Error</c> column never cross the boundary (05-security.md).
 /// </summary>
-internal sealed class EfAnalysisJobReader(JobsDbContext dbContext) : IAnalysisJobReader
+internal sealed class AnalysisJobReader(JobsDbContext dbContext) : IAnalysisJobReader
 {
     public async Task<AnalysisJobSnapshot?> FindLatestForDocumentAsync(
         Guid documentId, CancellationToken cancellationToken)

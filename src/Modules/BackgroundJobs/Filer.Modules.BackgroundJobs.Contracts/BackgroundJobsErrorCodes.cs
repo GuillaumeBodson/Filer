@@ -1,9 +1,11 @@
 namespace Filer.Modules.BackgroundJobs.Contracts;
 
 /// <summary>
-/// Stable machine-readable error codes returned by the BackgroundJobs module
-/// (03-api-specification.md). Callers and tests assert on these, never on
-/// human-readable messages.
+/// Stable machine-readable error codes for job-side outcomes. These are internal
+/// worker diagnostics recorded on the job row — they never reach a client
+/// problem-details body, hence the <c>jobs.</c> namespace prefix that sets them
+/// apart from the client-facing snake_case vocabulary (03-api-specification.md).
+/// Callers and tests assert on these, never on human-readable messages.
 /// </summary>
 public static class BackgroundJobsErrorCodes
 {

@@ -16,7 +16,7 @@ public sealed class FakeAnalysisProviderTests
     private readonly FakeAnalysisProvider _provider = new(NullLogger<FakeAnalysisProvider>.Instance);
 
     [Fact]
-    public async Task AnalyzeAsync_suggests_the_first_existing_folder_by_name()
+    public async Task AnalyzeAsync_WithExistingFolders_SuggestsFirstByName()
     {
         var work = new ExistingFolder(Guid.NewGuid(), "Work");
         var archive = new ExistingFolder(Guid.NewGuid(), "Archive");
@@ -30,7 +30,7 @@ public sealed class FakeAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_proposes_a_new_folder_when_none_exist()
+    public async Task AnalyzeAsync_WhenNoFoldersExist_ProposesNewFolder()
     {
         DocumentAnalysisResult result = await _provider.AnalyzeAsync(
             Request(folders: []), TestContext.Current.CancellationToken);
@@ -43,7 +43,7 @@ public sealed class FakeAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_echoes_at_most_two_existing_tags_ordered_by_name()
+    public async Task AnalyzeAsync_WithExistingTags_EchoesAtMostTwoOrderedByName()
     {
         DocumentAnalysisResult result = await _provider.AnalyzeAsync(
             Request(tags: ["taxes", "banking", "insurance"]), TestContext.Current.CancellationToken);
@@ -54,7 +54,7 @@ public sealed class FakeAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_proposes_the_file_extension_as_tag_when_no_tags_exist()
+    public async Task AnalyzeAsync_WhenNoTagsExist_ProposesFileExtensionAsTag()
     {
         DocumentAnalysisResult result = await _provider.AnalyzeAsync(
             Request(fileName: "report.pdf", tags: []), TestContext.Current.CancellationToken);
@@ -64,7 +64,7 @@ public sealed class FakeAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_suggests_no_tags_when_no_tags_exist_and_the_file_has_no_extension()
+    public async Task AnalyzeAsync_WhenNoTagsAndNoExtension_SuggestsNoTags()
     {
         DocumentAnalysisResult result = await _provider.AnalyzeAsync(
             Request(fileName: "README", tags: []), TestContext.Current.CancellationToken);
@@ -73,7 +73,7 @@ public sealed class FakeAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_reports_no_duplicate_signals()
+    public async Task AnalyzeAsync_Always_ReportsNoDuplicateSignals()
     {
         DocumentAnalysisResult result = await _provider.AnalyzeAsync(
             Request(), TestContext.Current.CancellationToken);
@@ -83,7 +83,7 @@ public sealed class FakeAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_is_deterministic_for_the_same_request()
+    public async Task AnalyzeAsync_ForSameRequest_IsDeterministic()
     {
         DocumentAnalysisRequest request = Request(
             folders: [new ExistingFolder(Guid.NewGuid(), "Bills")],
@@ -97,7 +97,7 @@ public sealed class FakeAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_ignores_the_structural_folder_fields_and_stays_deterministic()
+    public async Task AnalyzeAsync_WithStructuralFolderFields_StaysDeterministic()
     {
         // #118 adds ParentId/DocumentCount for tree-aware providers; the fake must
         // keep producing the same canned suggestions regardless of their values.
@@ -119,7 +119,7 @@ public sealed class FakeAnalysisProviderTests
     }
 
     [Fact]
-    public async Task AnalyzeAsync_throws_when_already_cancelled()
+    public async Task AnalyzeAsync_WhenAlreadyCancelled_Throws()
     {
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
