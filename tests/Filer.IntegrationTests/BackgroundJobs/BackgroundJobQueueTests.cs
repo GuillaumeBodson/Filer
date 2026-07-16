@@ -73,7 +73,8 @@ public sealed class BackgroundJobQueueTests(FilerApiFactory factory)
             queuedJobId = (await queue.EnqueueAnalysisAsync(documentId, TestContext.Current.CancellationToken)).Value;
 
             var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
-            ClaimedAnalysisJob? claimed = await store.ClaimNextAsync(TestContext.Current.CancellationToken);
+            ClaimedAnalysisJob? claimed =
+                await store.ClaimNextAsync("TestProvider", TestContext.Current.CancellationToken);
             claimed!.JobId.Should().Be(runningJobId, "claiming takes the oldest queued job");
         }
 

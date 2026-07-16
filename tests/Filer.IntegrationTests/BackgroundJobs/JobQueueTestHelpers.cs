@@ -21,7 +21,8 @@ internal static class JobQueueTestHelpers
             await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
             var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
 
-            ClaimedAnalysisJob? leftover = await store.ClaimNextAsync(TestContext.Current.CancellationToken);
+            ClaimedAnalysisJob? leftover =
+                await store.ClaimNextAsync("TestDrain", TestContext.Current.CancellationToken);
             if (leftover is null)
             {
                 return;

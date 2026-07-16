@@ -93,7 +93,12 @@ public sealed class AnalysisJobWorker(
         await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
         var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
 
-        ClaimedAnalysisJob? job = await store.ClaimNextAsync(cancellationToken);
+        // Resolved before the claim: the claim itself stamps AnalysisJob.Provider
+        // with the provider that will run the attempt, in the same atomic write
+        // that flips the row to Running (02-data-model.md).
+        var handler = scope.ServiceProvider.GetRequiredService<IAnalysisJobHandler>();
+
+        ClaimedAnalysisJob? job = await store.ClaimNextAsync(handler.ProviderName, cancellationToken);
         if (job is null)
         {
             return false;
@@ -108,7 +113,6 @@ public sealed class AnalysisJobWorker(
 
         logger.JobClaimed(job.AttemptCount);
 
-        var handler = scope.ServiceProvider.GetRequiredService<IAnalysisJobHandler>();
         long startTimestamp = Stopwatch.GetTimestamp();
         try
         {

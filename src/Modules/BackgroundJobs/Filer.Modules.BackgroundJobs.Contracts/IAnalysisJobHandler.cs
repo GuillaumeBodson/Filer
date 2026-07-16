@@ -13,6 +13,14 @@ namespace Filer.Modules.BackgroundJobs.Contracts;
 public interface IAnalysisJobHandler
 {
     /// <summary>
+    /// Diagnostic name of the analysis provider this handler dispatches to. The
+    /// worker stamps it on the job row when a run starts (<c>AnalysisJob.Provider</c>,
+    /// 02-data-model.md), so a stored result — or a failure — can always be
+    /// attributed to the provider that produced it.
+    /// </summary>
+    string ProviderName { get; }
+
+    /// <summary>
     /// Processes one claimed job and reports the outcome the worker records:
     /// <list type="bullet">
     /// <item><description><b>Success</b> — the value is the serialized analysis
