@@ -21,6 +21,8 @@ namespace Filer.IntegrationTests.BackgroundJobs;
 [Collection(IntegrationCollection.Name)]
 public sealed class AnalysisJobClaimTests(FilerApiFactory factory)
 {
+    private const string ClaimProviderName = "TestProvider";
+
     private readonly FilerApiFactory _factory = factory;
 
     [Fact]
@@ -39,6 +41,8 @@ public sealed class AnalysisJobClaimTests(FilerApiFactory factory)
         row.Status.Should().Be(AnalysisJobStatus.Running);
         row.StartedAt.Should().NotBeNull();
         row.AttemptCount.Should().Be(1);
+        row.Provider.Should().Be(
+            ClaimProviderName, "the claim stamps the provider that will run the attempt (02-data-model.md)");
     }
 
     [Fact]
@@ -260,7 +264,7 @@ public sealed class AnalysisJobClaimTests(FilerApiFactory factory)
     {
         await using AsyncServiceScope scope = _factory.Services.CreateAsyncScope();
         var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
-        return await store.ClaimNextAsync(TestContext.Current.CancellationToken);
+        return await store.ClaimNextAsync(ClaimProviderName, TestContext.Current.CancellationToken);
     }
 
     private async Task<AnalysisJob> GetJobAsync(Guid jobId)

@@ -24,9 +24,14 @@ public sealed class AnalysisJobWorkerTests
 {
     private static readonly DateTimeOffset TestTime = new(2026, 6, 12, 12, 0, 0, TimeSpan.Zero);
 
+    private const string ProviderName = "TestProvider";
+
     private readonly FakeAnalysisJobStore _store = new();
     private readonly Mock<IAnalysisJobHandler> _handler = new();
     private readonly MutableClock _clock = new() { UtcNow = TestTime };
+
+    public AnalysisJobWorkerTests() =>
+        _handler.SetupGet(h => h.ProviderName).Returns(ProviderName);
 
     private static ClaimedAnalysisJob NewJob(int attemptCount = 1) =>
         new(Guid.NewGuid(), Guid.NewGuid(), attemptCount);
@@ -246,6 +251,25 @@ public sealed class AnalysisJobWorkerTests
         _store.Succeeded.Should().BeEmpty();
         _store.Failed.Should().BeEmpty();
         _store.Retried.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_OnEveryClaim_PassesTheHandlersProviderNameToTheStore()
+    {
+        // The claim stamps AnalysisJob.Provider (#163): the worker must hand the
+        // store the name of the handler that will run the attempt.
+        _store.Enqueue(NewJob());
+        _handler
+            .Setup(h => h.HandleAsync(It.IsAny<ClaimedAnalysisJob>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<string?>(null));
+
+        AnalysisJobWorker sut = CreateSut();
+        await sut.ProcessNextAsync(CancellationToken.None);
+        await sut.ProcessNextAsync(CancellationToken.None);
+
+        _store.ClaimProviderNames.Should().OnlyContain(
+            name => name == ProviderName,
+            "every claim — including empty ones — carries the active provider name");
     }
 
     [Fact]

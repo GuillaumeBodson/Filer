@@ -15,7 +15,11 @@ public sealed class AnalysisJob : BaseEntity
 
     public AnalysisJobStatus Status { get; set; } = AnalysisJobStatus.Queued;
 
-    /// <summary>Which <c>IAIAnalysisProvider</c> ran the job; null until a run starts (06).</summary>
+    /// <summary>
+    /// Which <c>IAIAnalysisProvider</c> ran the job (06): stamped by the claim on
+    /// every attempt, so null only until the first run starts and always naming
+    /// the provider of the latest attempt after that.
+    /// </summary>
     public string? Provider { get; set; }
 
     /// <summary>Number of processing attempts, for retry/backoff (06).</summary>

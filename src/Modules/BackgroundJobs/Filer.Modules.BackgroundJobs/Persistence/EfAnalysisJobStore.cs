@@ -22,18 +22,21 @@ public sealed class EfAnalysisJobStore(JobsDbContext dbContext, IClock clock) : 
     private static readonly string Queued = nameof(AnalysisJobStatus.Queued);
     private static readonly string Running = nameof(AnalysisJobStatus.Running);
 
-    public async Task<ClaimedAnalysisJob?> ClaimNextAsync(CancellationToken cancellationToken)
+    public async Task<ClaimedAnalysisJob?> ClaimNextAsync(string providerName, CancellationToken cancellationToken)
     {
         DateTimeOffset now = clock.UtcNow;
 
         // Raw SQL because the locking claim cannot be expressed in LINQ. The
         // interpolated values become parameters (FromSql), never string concat.
+        // Provider is (re-)stamped on every claim, so after a retry the row names
+        // the provider of the latest attempt (02-data-model.md).
         List<AnalysisJob> claimed = await dbContext.AnalysisJobs
             .FromSql($"""
                 UPDATE jobs."AnalysisJobs"
                 SET "Status" = {Running},
                     "StartedAt" = {now},
                     "UpdatedAt" = {now},
+                    "Provider" = {providerName},
                     "NextAttemptAt" = NULL,
                     "AttemptCount" = "AttemptCount" + 1
                 WHERE "Id" = (

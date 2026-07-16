@@ -14,6 +14,9 @@ namespace Filer.Modules.BackgroundJobs.Worker;
 /// </summary>
 public sealed class NoOpAnalysisJobHandler(ILogger<NoOpAnalysisJobHandler> logger) : IAnalysisJobHandler
 {
+    /// <summary>Stamped on claimed rows so a no-op run is distinguishable from a real provider's.</summary>
+    public string ProviderName => "None";
+
     public Task<Result<string?>> HandleAsync(ClaimedAnalysisJob job, CancellationToken cancellationToken)
     {
         logger.NoOpHandlerInvoked(job.JobId, job.DocumentId, job.AttemptCount);
