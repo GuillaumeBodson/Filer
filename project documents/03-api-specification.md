@@ -52,13 +52,20 @@ All errors return a consistent body (RFC 7807-style problem details):
 
 ```json
 {
-  "type": "https://docs/errors/validation",
+  "type": "https://docs/errors/file_name_invalid",
   "title": "Validation failed",
   "status": 400,
   "detail": "FileName is required.",
+  "code": "file_name_invalid",
   "errors": { "fileName": ["required"] }
 }
 ```
+
+Contract (#169): `title` is a short human-readable summary derived from the error
+category (safe to display as a headline); the machine-readable error code
+(snake_case, e.g. `invalid_credentials`) lives in the `code` extension member —
+clients branch on `code`, never on `title` or `detail`. `type` is the code's
+documentation URI.
 
 Common statuses: 400 validation, 401 unauthenticated, 404 not found / not owned,
 409 conflict (e.g. duplicate), 413 payload too large, 415 unsupported media type,

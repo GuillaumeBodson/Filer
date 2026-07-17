@@ -48,7 +48,7 @@ public sealed class LoginEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
-        problem!.Title.Should().Be(AuthErrorCodes.InvalidCredentials);
+        problem!.Code().Should().Be(AuthErrorCodes.InvalidCredentials);
     }
 
     [Fact]
@@ -60,6 +60,6 @@ public sealed class LoginEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
-        problem!.Title.Should().Be(AuthErrorCodes.InvalidCredentials);
+        problem!.Code().Should().Be(AuthErrorCodes.InvalidCredentials);
     }
 }

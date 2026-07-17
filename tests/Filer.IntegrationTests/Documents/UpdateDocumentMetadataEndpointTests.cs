@@ -140,7 +140,7 @@ public sealed class UpdateDocumentMetadataEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("update_empty");
+        problem.Code().Should().Be("update_empty");
     }
 
     [Theory]
@@ -157,7 +157,7 @@ public sealed class UpdateDocumentMetadataEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("file_name_invalid");
+        problem.Code().Should().Be("file_name_invalid");
     }
 
     [Fact]
@@ -231,7 +231,7 @@ public sealed class UpdateDocumentMetadataEndpointTests(FilerApiFactory factory)
     {
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("document_not_found");
+        problem.Code().Should().Be("document_not_found");
     }
 
     /// <summary>Same uniform-404 stance for move targets: cross-owner and missing are identical.</summary>
@@ -239,7 +239,7 @@ public sealed class UpdateDocumentMetadataEndpointTests(FilerApiFactory factory)
     {
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_not_found");
+        problem.Code().Should().Be("folder_not_found");
     }
 
     /// <summary>Folder creation through the public POST endpoint, as a client would (#40).</summary>

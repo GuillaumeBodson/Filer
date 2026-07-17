@@ -102,7 +102,7 @@ public sealed class ListFoldersEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_view_invalid");
+        problem.Code().Should().Be("folder_view_invalid");
     }
 
     [Fact]

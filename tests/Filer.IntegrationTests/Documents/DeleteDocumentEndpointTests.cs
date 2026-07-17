@@ -137,7 +137,7 @@ public sealed class DeleteDocumentEndpointTests(FilerApiFactory factory)
     {
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("document_not_found");
+        problem.Code().Should().Be("document_not_found");
     }
 
     /// <summary>

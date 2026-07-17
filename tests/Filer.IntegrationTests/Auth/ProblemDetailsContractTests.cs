@@ -29,8 +29,14 @@ public sealed class ProblemDetailsContractTests(FilerApiFactory factory)
         ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
         problem.Should().NotBeNull();
         problem!.Status.Should().Be((int)response.StatusCode);
-        problem.Title.Should().NotBeNullOrWhiteSpace();
         problem.Type.Should().StartWith("https://docs/errors/");
+
+        // Contract split (#169): title is the human headline, the machine code
+        // travels in the "code" extension — clients branch on code, display title.
+        problem.Title.Should().NotBeNullOrWhiteSpace();
+        problem.Title.Should().NotContain("_", "title must be the human summary, not the snake_case code");
+        problem.Code().Should().NotBeNullOrWhiteSpace();
+        problem.Type.Should().EndWith(problem.Code());
     }
 
     [Fact]

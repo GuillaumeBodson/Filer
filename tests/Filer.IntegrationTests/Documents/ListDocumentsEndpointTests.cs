@@ -158,7 +158,7 @@ public sealed class ListDocumentsEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be(expectedCode);
+        problem.Code().Should().Be(expectedCode);
     }
 
     [Theory]

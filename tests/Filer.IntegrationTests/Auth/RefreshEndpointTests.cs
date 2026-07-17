@@ -63,7 +63,7 @@ public sealed class RefreshEndpointTests(FilerApiFactory factory)
 
         replay.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         ProblemDetails? problem = await replay.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
-        problem!.Title.Should().Be(AuthErrorCodes.InvalidRefreshToken);
+        problem!.Code().Should().Be(AuthErrorCodes.InvalidRefreshToken);
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public sealed class RefreshEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
-        problem!.Title.Should().Be(AuthErrorCodes.InvalidRefreshToken);
+        problem!.Code().Should().Be(AuthErrorCodes.InvalidRefreshToken);
     }
 
     [Fact]

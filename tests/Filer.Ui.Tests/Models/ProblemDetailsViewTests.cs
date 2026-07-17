@@ -11,10 +11,11 @@ public sealed class ProblemDetailsViewTests
     {
         const string json = """
         {
-          "type": "https://docs/errors/validation",
+          "type": "https://docs/errors/file_name_invalid",
           "title": "Validation failed",
           "status": 400,
           "detail": "FileName is required.",
+          "code": "file_name_invalid",
           "errors": { "fileName": ["required", "too short"] }
         }
         """;
@@ -22,8 +23,9 @@ public sealed class ProblemDetailsViewTests
         var problem = ProblemDetailsView.TryParse(json);
 
         problem.Should().NotBeNull();
-        problem!.Type.Should().Be("https://docs/errors/validation");
+        problem!.Type.Should().Be("https://docs/errors/file_name_invalid");
         problem.Title.Should().Be("Validation failed");
+        problem.Code.Should().Be("file_name_invalid");
         problem.Status.Should().Be(400);
         problem.Detail.Should().Be("FileName is required.");
         problem.HasValidationErrors.Should().BeTrue();
@@ -69,5 +71,14 @@ public sealed class ProblemDetailsViewTests
         problem.Should().NotBeNull();
         problem!.HasValidationErrors.Should().BeFalse();
         problem.Errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Parsed_body_without_code_extension_has_null_code()
+    {
+        var problem = ProblemDetailsView.TryParse("""{ "title": "Conflict", "status": 409 }""");
+
+        problem.Should().NotBeNull();
+        problem!.Code.Should().BeNull();
     }
 }

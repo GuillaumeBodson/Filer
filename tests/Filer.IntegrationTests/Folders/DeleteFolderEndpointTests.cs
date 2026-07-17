@@ -186,7 +186,7 @@ public sealed class DeleteFolderEndpointTests(FilerApiFactory factory)
     {
         response.StatusCode.Should().Be(status);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be(code);
+        problem.Code().Should().Be(code);
     }
 
     /// <summary>

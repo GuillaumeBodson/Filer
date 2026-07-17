@@ -62,7 +62,7 @@ public sealed class CreateTagEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("tag_name_conflict");
+        problem.Code().Should().Be("tag_name_conflict");
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public sealed class CreateTagEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("tag_name_invalid");
+        problem.Code().Should().Be("tag_name_invalid");
     }
 
     [Fact]
