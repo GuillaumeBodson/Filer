@@ -177,4 +177,75 @@ public sealed class DocumentsService(FilerApiClient api) : IDocumentsService
             return new DocumentMetadataResult(null, ex.ToProblemView());
         }
     }
+
+    public async Task<DocumentTagsResult> GetTagsAsync(
+        Guid documentId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            DocumentTagsResponse? tags = await _api.Api.V1.Documents[documentId].Tags
+                .GetAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            return ToTagsResult(tags);
+        }
+        catch (ApiException ex)
+        {
+            return new DocumentTagsResult(null, ex.ToProblemView());
+        }
+    }
+
+    public async Task<DocumentTagsResult> AddTagAsync(
+        Guid documentId, Guid tagId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            DocumentTagsResponse? tags = await _api.Api.V1.Documents[documentId].Tags[tagId]
+                .PostAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            return ToTagsResult(tags);
+        }
+        catch (ApiException ex)
+        {
+            return new DocumentTagsResult(null, ex.ToProblemView());
+        }
+    }
+
+    public async Task<ProblemDetailsView?> RemoveTagAsync(
+        Guid documentId, Guid tagId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _api.Api.V1.Documents[documentId].Tags[tagId]
+                .DeleteAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            return null;
+        }
+        catch (ApiException ex)
+        {
+            return ex.ToProblemView();
+        }
+    }
+
+    public async Task<DocumentTagsResult> ReplaceTagsAsync(
+        Guid documentId, IReadOnlyList<Guid> tagIds, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            DocumentTagsResponse? tags = await _api.Api.V1.Documents[documentId].Tags
+                .PutAsync(
+                    new ReplaceDocumentTagsRequest { TagIds = [.. tagIds.Cast<Guid?>()] },
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
+            return ToTagsResult(tags);
+        }
+        catch (ApiException ex)
+        {
+            return new DocumentTagsResult(null, ex.ToProblemView());
+        }
+    }
+
+    private static DocumentTagsResult ToTagsResult(DocumentTagsResponse? tags) =>
+        tags is null
+            ? new DocumentTagsResult(null, new ProblemDetailsView
+            {
+                Title = "Tags unavailable",
+                Detail = "The server returned an empty response. Try again.",
+            })
+            : new DocumentTagsResult(tags, null);
 }

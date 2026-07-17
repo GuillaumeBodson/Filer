@@ -49,6 +49,8 @@ else if (_document is not null)
         <dd>@(CurrentFolderName() ?? "—")</dd>
     </dl>
 
+    <DocumentTagsPanel DocumentId="Id" />
+
     <section class="detail-actions" aria-label="Document actions">
         <form class="action" @onsubmit="RenameAsync">
             <label for="rename">Rename</label>

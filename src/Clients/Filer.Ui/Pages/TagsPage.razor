@@ -1,0 +1,188 @@
+@namespace Filer.Ui.Pages
+@page "/tags"
+@using Filer.ApiClient.Generated.Models
+@using Filer.Ui.Tags
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject ITagsService TagsApi
+
+<PageTitle>Tags — Filer</PageTitle>
+
+<h1>Tags</h1>
+
+@if (_loading)
+{
+    <LoadingIndicator Message="Loading tags…" />
+}
+else if (_loadProblem is not null)
+{
+    <ErrorState Problem="_loadProblem" OnRetry="LoadAsync" />
+}
+else
+{
+    <form class="tags-create" @onsubmit="CreateAsync">
+        <label for="new-tag">New tag</label>
+        <div class="tags-row">
+            <input id="new-tag" type="text" placeholder="Tag name" @bind="_newName" />
+            <button type="submit" class="btn btn-primary" disabled="@_busy">Create</button>
+        </div>
+    </form>
+
+    @if (_tags.Count == 0)
+    {
+        <EmptyState Title="No tags yet"
+                    Description="Tags you create can be applied to any of your documents." />
+    }
+    else
+    {
+        <ul class="tag-list">
+            @foreach (TagListItemResponse tag in _tags)
+            {
+                <li class="tag-row">
+                    @if (_editingId == tag.Id)
+                    {
+                        <form class="tags-row" @onsubmit="() => RenameAsync(tag.Id!.Value)">
+                            <input type="text" aria-label="New name for @tag.Name" @bind="_renameInput" />
+                            <button type="submit" class="btn btn-primary" disabled="@_busy">Save</button>
+                            <button type="button" class="btn" @onclick="() => _editingId = null">Cancel</button>
+                        </form>
+                    }
+                    else if (_deletingId == tag.Id)
+                    {
+                        <span class="tag-name">@tag.Name</span>
+                        <span class="tags-confirm">Delete this tag? Documents keep their other tags.</span>
+                        <button type="button" class="btn btn-danger tags-confirm-yes" disabled="@_busy"
+                                @onclick="() => DeleteAsync(tag.Id!.Value)">Yes, delete</button>
+                        <button type="button" class="btn" @onclick="() => _deletingId = null">Cancel</button>
+                    }
+                    else
+                    {
+                        <span class="tag-name">@tag.Name</span>
+                        <a class="tag-docs" href="documents?tagId=@tag.Id">documents</a>
+                        <button type="button" class="btn tag-action" @onclick="() => StartRename(tag)">Rename</button>
+                        <button type="button" class="btn btn-danger tag-action" @onclick="() => _deletingId = tag.Id">Delete</button>
+                    }
+                </li>
+            }
+        </ul>
+    }
+
+    @if (_actionNotice is not null)
+    {
+        <p class="tags-notice" role="status" aria-live="polite">@_actionNotice</p>
+    }
+    @if (_actionProblem is not null)
+    {
+        <ErrorState Problem="_actionProblem"
+                    NotFoundTitle="Tag not found"
+                    NotFoundDescription="This tag doesn't exist or isn't yours." />
+    }
+}
+
+@code {
+    private IReadOnlyList<TagListItemResponse> _tags = [];
+    private ProblemDetailsView? _loadProblem;
+    private ProblemDetailsView? _actionProblem;
+    private string? _actionNotice;
+    private bool _loading = true;
+    private bool _busy;
+    private Guid? _editingId;
+    private Guid? _deletingId;
+    private string? _newName;
+    private string? _renameInput;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _loadProblem = null;
+        try
+        {
+            TagsListResult result = await TagsApi.ListAsync();
+            _tags = result.Tags ?? [];
+            _loadProblem = result.Problem;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void StartRename(TagListItemResponse tag)
+    {
+        _editingId = tag.Id;
+        _deletingId = null;
+        _renameInput = tag.Name;
+        _actionProblem = null;
+        _actionNotice = null;
+    }
+
+    private Task CreateAsync() => RunActionAsync(async () =>
+    {
+        if (string.IsNullOrWhiteSpace(_newName))
+        {
+            return;
+        }
+
+        TagMutationResult result = await TagsApi.CreateAsync(_newName.Trim());
+        if (result.Problem is not null)
+        {
+            // Per-owner uniqueness: tag_name_conflict renders here (03).
+            _actionProblem = result.Problem;
+            return;
+        }
+
+        _newName = null;
+        _actionNotice = $"Created “{result.Name}”.";
+        await LoadAsync();
+    });
+
+    private Task RenameAsync(Guid tagId) => RunActionAsync(async () =>
+    {
+        if (string.IsNullOrWhiteSpace(_renameInput))
+        {
+            return;
+        }
+
+        TagMutationResult result = await TagsApi.RenameAsync(tagId, _renameInput.Trim());
+        if (result.Problem is not null)
+        {
+            _actionProblem = result.Problem;
+            return;
+        }
+
+        _editingId = null;
+        _actionNotice = $"Renamed to “{result.Name}”.";
+        await LoadAsync();
+    });
+
+    private Task DeleteAsync(Guid tagId) => RunActionAsync(async () =>
+    {
+        ProblemDetailsView? problem = await TagsApi.DeleteAsync(tagId);
+        _deletingId = null;
+        if (problem is not null)
+        {
+            _actionProblem = problem;
+            return;
+        }
+
+        _actionNotice = "Tag deleted.";
+        await LoadAsync();
+    });
+
+    private async Task RunActionAsync(Func<Task> action)
+    {
+        _busy = true;
+        _actionProblem = null;
+        _actionNotice = null;
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

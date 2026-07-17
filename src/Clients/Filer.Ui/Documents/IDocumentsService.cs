@@ -34,7 +34,24 @@ public interface IDocumentsService
 
     /// <summary>Soft-deletes the document. Returns <c>null</c> on success.</summary>
     Task<ProblemDetailsView?> DeleteAsync(Guid documentId, CancellationToken cancellationToken = default);
+
+    /// <summary>The document's current tag associations with their Source (#139, 02-data-model.md).</summary>
+    Task<DocumentTagsResult> GetTagsAsync(Guid documentId, CancellationToken cancellationToken = default);
+
+    /// <summary>Attaches an owned tag as <c>Source=User</c> (promotes an AI suggestion; idempotent).</summary>
+    Task<DocumentTagsResult> AddTagAsync(Guid documentId, Guid tagId, CancellationToken cancellationToken = default);
+
+    /// <summary>Detaches a tag from the document. Returns <c>null</c> on success.</summary>
+    Task<ProblemDetailsView?> RemoveTagAsync(Guid documentId, Guid tagId, CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces the document's user-managed tag set in one call.</summary>
+    Task<DocumentTagsResult> ReplaceTagsAsync(Guid documentId, IReadOnlyList<Guid> tagIds, CancellationToken cancellationToken = default);
 }
+
+/// <summary>Outcome of a tag read/mutation: exactly one side is set.</summary>
+public sealed record DocumentTagsResult(
+    DocumentTagsResponse? Tags,
+    ProblemDetailsView? Problem);
 
 /// <summary>What to change on a document; leave a member unset to keep it.</summary>
 public sealed record DocumentUpdate
