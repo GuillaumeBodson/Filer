@@ -1,0 +1,18 @@
+@namespace Filer.Ui.Components
+@inject NavigationManager Navigation
+
+@* Route guard body: rendered by AuthorizeRouteView's NotAuthorized when an anonymous
+   user reaches a protected page (#133). Redirects to the login page carrying the
+   intended target so sign-in returns the user where they were headed. *@
+
+@code {
+    protected override void OnInitialized()
+    {
+        string target = Navigation.ToBaseRelativePath(Navigation.Uri);
+        string destination = string.IsNullOrEmpty(target)
+            ? "login"
+            : $"login?returnUrl={Uri.EscapeDataString(target)}";
+
+        Navigation.NavigateTo(destination, replace: true);
+    }
+}

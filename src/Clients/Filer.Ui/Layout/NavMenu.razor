@@ -1,5 +1,26 @@
 @namespace Filer.Ui.Layout
+@using Filer.Ui.Auth
+@inject IAuthSession Auth
+@inject NavigationManager Navigation
 
 <nav class="nav" aria-label="Primary">
     <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Home</NavLink>
+    <AuthorizeView>
+        <Authorized>
+            <NavLink class="nav-link" href="profile">Profile</NavLink>
+            <button type="button" class="nav-signout" @onclick="SignOutAsync">Sign out</button>
+        </Authorized>
+        <NotAuthorized>
+            <NavLink class="nav-link" href="login">Sign in</NavLink>
+        </NotAuthorized>
+    </AuthorizeView>
 </nav>
+
+@code {
+    private async Task SignOutAsync()
+    {
+        // Auth state flips via the token store's Changed event; we only navigate home.
+        await Auth.LogoutAsync();
+        Navigation.NavigateTo("", replace: true);
+    }
+}

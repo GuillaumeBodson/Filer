@@ -19,3 +19,18 @@
     color: var(--color-primary);
     font-weight: 600;
 }
+
+/* Sign-out is an action, not navigation - a button styled to sit among the links. */
+.nav-signout {
+    border: none;
+    background: none;
+    font: inherit;
+    color: var(--color-text-muted);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.nav-signout:hover {
+    color: var(--color-text);
+}

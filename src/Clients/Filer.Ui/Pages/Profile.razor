@@ -1,0 +1,53 @@
+@namespace Filer.Ui.Pages
+@page "/profile"
+@using Filer.ApiClient.Generated.Models
+@using Filer.Ui.Auth
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IAuthSession Auth
+
+<PageTitle>Profile — Filer</PageTitle>
+
+<h1>Profile</h1>
+
+@if (_loading)
+{
+    <LoadingIndicator Message="Loading your profile…" />
+}
+else if (_problem is not null)
+{
+    <ErrorState Problem="_problem" OnRetry="LoadAsync" />
+}
+else if (_profile is not null)
+{
+    <dl class="profile">
+        <dt>Email</dt>
+        <dd>@_profile.Email</dd>
+        <dt>Account id</dt>
+        <dd>@_profile.Id</dd>
+    </dl>
+}
+
+@code {
+    private MeResponse? _profile;
+    private ProblemDetailsView? _problem;
+    private bool _loading = true;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _problem = null;
+        try
+        {
+            ProfileResult result = await Auth.GetProfileAsync();
+            _profile = result.Profile;
+            _problem = result.Problem;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}
