@@ -1,0 +1,141 @@
+@namespace Filer.Ui.Components
+@using Filer.Ui.Documents
+@using Filer.Ui.Formatting
+@using Filer.Ui.Models
+@using Microsoft.AspNetCore.Components.Forms
+@inject IDocumentsService DocumentsApi
+
+@* Upload modelling the async pipeline (06-ai-analysis-pipeline.md): the POST returns
+   immediately, then this component polls the document's metadata to surface the
+   Uploaded/Analyzing → Ready transition - no synchronous AI wait, ever. *@
+<div class="upload">
+    <div class="upload-controls">
+        <label class="btn btn-primary" for="file-upload">Upload a document</label>
+        <InputFile id="file-upload" OnChange="OnFileSelectedAsync" disabled="@(_phase == Phase.Uploading)" />
+        <span class="upload-hint">PDF, Office, image, text or Markdown — up to @ByteSize.Format(MaxSizeBytes)</span>
+    </div>
+
+    @if (_phase == Phase.Uploading)
+    {
+        <div class="upload-progress" role="status" aria-live="polite">
+            <span class="upload-bar" aria-hidden="true"></span>
+            <span>Uploading “@_fileName” (@ByteSize.Format(_fileSize))…</span>
+        </div>
+    }
+    else if (_phase is Phase.Tracking or Phase.Settled && _status is not null)
+    {
+        <p class="upload-status" role="status" aria-live="polite">
+            “@_fileName” uploaded — <DocumentStatusBadge Status="@_status" />
+            @if (_phase == Phase.Settled && IsPending(_status))
+            {
+                <span class="upload-hint">Analysis is taking longer than usual; the list will catch up.</span>
+            }
+        </p>
+    }
+
+    @if (_problem is not null)
+    {
+        <ErrorState Problem="_problem" />
+        @if (_duplicateOf is not null)
+        {
+            <p class="upload-duplicate">The identical document is already in your library (reference @_duplicateOf).</p>
+        }
+    }
+</div>
+
+@code {
+    private enum Phase { Idle, Uploading, Tracking, Settled }
+
+    private Phase _phase = Phase.Idle;
+    private string? _fileName;
+    private long _fileSize;
+    private string? _status;
+    private Guid? _documentId;
+    private Guid? _duplicateOf;
+    private ProblemDetailsView? _problem;
+
+    /// <summary>Client-side ceiling; defaults to the mirrored server limit.</summary>
+    [Parameter] public long MaxSizeBytes { get; set; } = UploadRules.MaxSizeBytes;
+
+    /// <summary>Delay between status polls after a successful upload.</summary>
+    [Parameter] public TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>Upper bound on polls before giving up on watching the transition.</summary>
+    [Parameter] public int MaxPollAttempts { get; set; } = 30;
+
+    /// <summary>Raised after the upload lands and again when the status settles - hosts refresh their list.</summary>
+    [Parameter] public EventCallback OnUploaded { get; set; }
+
+    private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
+    {
+        IBrowserFile file = e.File;
+        _problem = null;
+        _duplicateOf = null;
+        _status = null;
+        _fileName = file.Name;
+        _fileSize = file.Size;
+
+        string? contentType = UploadRules.ResolveContentType(file.Name, file.ContentType);
+        _problem = UploadRules.Validate(file.Name, contentType, file.Size, MaxSizeBytes);
+        if (_problem is not null)
+        {
+            _phase = Phase.Idle;
+            return;
+        }
+
+        _phase = Phase.Uploading;
+        try
+        {
+            await using Stream content = file.OpenReadStream(MaxSizeBytes);
+            DocumentUploadResult result = await DocumentsApi.UploadAsync(
+                new DocumentUploadRequest(content, file.Name, contentType!));
+
+            if (result.Problem is not null)
+            {
+                _problem = result.Problem;
+                _duplicateOf = result.DuplicateOfDocumentId;
+                _phase = Phase.Idle;
+                return;
+            }
+
+            _documentId = result.Document!.Id;
+            _status = result.Document.Status ?? "Uploaded";
+            _phase = Phase.Tracking;
+        }
+        catch (IOException)
+        {
+            _problem = new ProblemDetailsView
+            {
+                Title = "Upload failed",
+                Detail = "The file could not be read. Try again.",
+            };
+            _phase = Phase.Idle;
+            return;
+        }
+
+        await OnUploaded.InvokeAsync();
+        await TrackStatusAsync();
+    }
+
+    private async Task TrackStatusAsync()
+    {
+        for (int attempt = 0; attempt < MaxPollAttempts && IsPending(_status) && _documentId is Guid id; attempt++)
+        {
+            await Task.Delay(PollInterval);
+            DocumentMetadataResult result = await DocumentsApi.GetMetadataAsync(id);
+            if (result.Problem is not null)
+            {
+                // Polling is best-effort UX; the document itself landed fine.
+                break;
+            }
+
+            _status = result.Document?.Status ?? _status;
+            StateHasChanged();
+        }
+
+        _phase = Phase.Settled;
+        await OnUploaded.InvokeAsync();
+    }
+
+    private static bool IsPending(string? status) => status is "Uploaded" or "Analyzing";
+}

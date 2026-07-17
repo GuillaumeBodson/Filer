@@ -1,0 +1,72 @@
+.upload {
+    margin-bottom: var(--space-4);
+    display: grid;
+    gap: var(--space-2);
+}
+
+.upload-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+/* The visible control is the styled label; the input stays focusable for keyboards
+   but visually collapses (not display:none, which would remove it from tab order). */
+.upload-controls ::deep input[type="file"] {
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.upload-hint {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
+
+.upload-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-muted);
+}
+
+/* Indeterminate: the transport gives no byte-level progress; motion says "working". */
+.upload-bar {
+    width: 8rem;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg,
+        var(--color-border) 0%,
+        var(--color-primary) 50%,
+        var(--color-border) 100%);
+    background-size: 200% 100%;
+    animation: upload-slide 1.2s linear infinite;
+}
+
+@keyframes upload-slide {
+    from { background-position: 200% 0; }
+    to { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .upload-bar {
+        animation-duration: 3s;
+    }
+}
+
+.upload-status {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.upload-duplicate {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
