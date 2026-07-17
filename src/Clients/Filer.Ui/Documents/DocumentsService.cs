@@ -69,6 +69,93 @@ public sealed class DocumentsService(FilerApiClient api) : IDocumentsService
         }
     }
 
+    public async Task<DocumentUpdateResult> UpdateAsync(
+        Guid documentId, DocumentUpdate update, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var body = new UpdateDocumentMetadataRequest();
+            if (update.NewFileName is not null)
+            {
+                body.FileName = update.NewFileName;
+            }
+
+            if (update.MoveFolder)
+            {
+                if (update.TargetFolderId is Guid target)
+                {
+                    body.FolderId = target;
+                }
+                else
+                {
+                    // Merge-patch: an explicit "folderId": null moves to the root; the
+                    // generated writer skips null typed properties, AdditionalData not.
+                    body.AdditionalData["folderId"] = null!;
+                }
+            }
+
+            UpdateDocumentMetadataResponse? updated = await _api.Api.V1.Documents[documentId]
+                .PatchAsync(body, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return updated is null
+                ? new DocumentUpdateResult(null, new ProblemDetailsView
+                {
+                    Title = "Update failed",
+                    Detail = "The server returned an empty response. Try again.",
+                })
+                : new DocumentUpdateResult(updated, null);
+        }
+        catch (ApiException ex)
+        {
+            return new DocumentUpdateResult(null, ex.ToProblemView());
+        }
+    }
+
+    public async Task<DocumentContentResult> DownloadAsync(
+        Guid documentId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            Stream? content = await _api.Api.V1.Documents[documentId].Content
+                .GetAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            if (content is null)
+            {
+                return new DocumentContentResult(null, new ProblemDetailsView
+                {
+                    Title = "Download failed",
+                    Detail = "The server returned no content. Try again.",
+                });
+            }
+
+            await using (content.ConfigureAwait(false))
+            {
+                using var buffer = new MemoryStream();
+                await content.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
+                return new DocumentContentResult(buffer.ToArray(), null);
+            }
+        }
+        catch (ApiException ex)
+        {
+            return new DocumentContentResult(null, ex.ToProblemView());
+        }
+    }
+
+    public async Task<ProblemDetailsView?> DeleteAsync(
+        Guid documentId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _api.Api.V1.Documents[documentId]
+                .DeleteAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            return null;
+        }
+        catch (ApiException ex)
+        {
+            return ex.ToProblemView();
+        }
+    }
+
     public async Task<DocumentMetadataResult> GetMetadataAsync(
         Guid documentId, CancellationToken cancellationToken = default)
     {

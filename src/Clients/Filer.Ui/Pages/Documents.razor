@@ -80,7 +80,7 @@ else if (_page is not null)
             @foreach (DocumentListItemResponse item in _page.Items!)
             {
                 <tr>
-                    <td class="doc-name">@item.FileName</td>
+                    <td class="doc-name"><a href="documents/@item.Id">@item.FileName</a></td>
                     <td class="doc-size">@ByteSize.Format(item.SizeBytes)</td>
                     <td><DocumentStatusBadge Status="@item.Status" /></td>
                     <td class="doc-date">@item.CreatedAt?.LocalDateTime.ToString("d")</td>

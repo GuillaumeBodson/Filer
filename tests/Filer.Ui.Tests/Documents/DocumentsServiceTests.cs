@@ -1,6 +1,7 @@
 using System.Net;
 using Filer.ApiClient.Generated;
 using Filer.Ui.Documents;
+using Filer.Ui.Models;
 using Filer.Ui.Tests.Auth;
 using FluentAssertions;
 using Microsoft.Kiota.Abstractions.Authentication;
@@ -148,6 +149,86 @@ public sealed class DocumentsServiceTests
         missing.Problem!.IsNotFound.Should().BeTrue();
         inner.Requests.Should().HaveCount(2);
         inner.Requests[0].RequestUri!.AbsolutePath.Should().Be($"/api/v1/documents/{docId}");
+    }
+
+    [Fact]
+    public async Task Update_patches_only_what_changes()
+    {
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.OK, """
+        { "id": "11111111-1111-1111-1111-111111111111", "fileName": "renamed.pdf",
+          "contentType": "application/pdf", "sizeBytes": 8, "status": "Ready" }
+        """);
+        DocumentsService service = CreateService(inner);
+
+        DocumentUpdateResult result = await service.UpdateAsync(
+            docId, new DocumentUpdate { NewFileName = "renamed.pdf" },
+            TestContext.Current.CancellationToken);
+
+        result.Document!.FileName.Should().Be("renamed.pdf");
+        var request = inner.Requests.Should().ContainSingle().Which;
+        request.Method.Method.Should().Be("PATCH");
+        string body = System.Text.Encoding.UTF8.GetString(request.Body!);
+        body.Should().Contain("\"fileName\"").And.NotContain("folderId");
+    }
+
+    [Fact]
+    public async Task Moving_to_the_root_sends_an_explicit_null_folderId()
+    {
+        // Merge-patch (03): absent = untouched, explicit null = root. The generated
+        // writer drops null typed properties, so the service goes through
+        // AdditionalData - this pins that the null actually reaches the wire.
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.OK, """
+        { "id": "11111111-1111-1111-1111-111111111111", "fileName": "invoice.pdf",
+          "contentType": "application/pdf", "sizeBytes": 8, "status": "Ready" }
+        """);
+        DocumentsService service = CreateService(inner);
+
+        await service.UpdateAsync(
+            docId, new DocumentUpdate { MoveFolder = true, TargetFolderId = null },
+            TestContext.Current.CancellationToken);
+
+        string body = System.Text.Encoding.UTF8.GetString(inner.Requests.Single().Body!);
+        body.Replace(" ", "", StringComparison.Ordinal).Should().Contain("\"folderId\":null");
+    }
+
+    [Fact]
+    public async Task Download_returns_the_raw_bytes()
+    {
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inner = new StubHttpMessageHandler().Enqueue(_ =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent("%PDF-1.7"u8.ToArray()),
+            }));
+        DocumentsService service = CreateService(inner);
+
+        DocumentContentResult result = await service.DownloadAsync(docId, TestContext.Current.CancellationToken);
+
+        result.Problem.Should().BeNull();
+        System.Text.Encoding.UTF8.GetString(result.Content!).Should().Be("%PDF-1.7");
+        inner.Requests.Single().RequestUri!.AbsolutePath.Should().Be($"/api/v1/documents/{docId}/content");
+    }
+
+    [Fact]
+    public async Task Delete_returns_null_on_204_and_the_problem_on_404()
+    {
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inner = new StubHttpMessageHandler()
+            .Enqueue(HttpStatusCode.NoContent)
+            .Enqueue(HttpStatusCode.NotFound, """
+            { "type": "https://docs/errors/document_not_found", "title": "Resource not found",
+              "status": 404, "detail": "Document not found.", "code": "document_not_found" }
+            """);
+        DocumentsService service = CreateService(inner);
+
+        (await service.DeleteAsync(docId, TestContext.Current.CancellationToken)).Should().BeNull();
+        ProblemDetailsView? missing = await service.DeleteAsync(docId, TestContext.Current.CancellationToken);
+
+        missing!.IsNotFound.Should().BeTrue();
+        inner.Requests.Should().HaveCount(2);
+        inner.Requests[0].Method.Method.Should().Be("DELETE");
     }
 
     [Fact]
