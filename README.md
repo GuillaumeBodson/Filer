@@ -7,8 +7,8 @@ is fixed by `10-solution-structure.md` and the ADRs in `09-decision-log.md`.
 ## Current state
 
 Milestones M1 (foundation), M2 (authentication), M3 (upload pipeline),
-M4 (folders & tags), M5 (AI analysis pipeline) and FE-M1 (frontend foundation)
-are complete. Seven modules are wired into the host, each exposing only its
+M4 (folders & tags), M5 (AI analysis pipeline), FE-M1 (frontend foundation)
+and FE-M2 (core document workflow on the web) are complete. Seven modules are wired into the host, each exposing only its
 `*.Contracts` project (enforced by the compiler and `Filer.Architecture.Tests`):
 
 ```
@@ -36,7 +36,10 @@ WebAssembly host), `Filer.Ui` (shared Razor Class Library — layout, routing,
 shared UI states) and `Filer.ApiClient` (Kiota-generated typed client with
 bearer-token/401-refresh plumbing — regeneration guide in
 [`src/Clients/Filer.ApiClient/README.md`](src/Clients/Filer.ApiClient/README.md)).
-Feature pages (login, document browsing) arrive with FE-M2/FE-M3.
+The app covers register/login/profile, the documents list
+(filters + pagination), upload with async analysis status, document detail
+(rename/move/download/delete), folders and tags (FE-M2); the AI suggestions
+review arrives with FE-M3.
 
 ## Endpoints
 
@@ -53,6 +56,7 @@ Feature pages (login, document browsing) arrive with FE-M2/FE-M3.
 | GET    | `/api/v1/documents/{id}/content` | Yes | Stream the file content              |
 | PATCH  | `/api/v1/documents/{id}` | Yes  | Rename / move (merge-patch semantics)      |
 | DELETE | `/api/v1/documents/{id}` | Yes  | Soft-delete; cancels pending analysis jobs |
+| GET    | `/api/v1/documents/{id}/tags` | Yes | The document's tag set (with `source`) |
 | PUT    | `/api/v1/documents/{id}/tags` | Yes | Replace the document's user tag set    |
 | POST   | `/api/v1/documents/{id}/tags/{tagId}` | Yes | Attach a tag (idempotent)       |
 | DELETE | `/api/v1/documents/{id}/tags/{tagId}` | Yes | Detach a tag                    |
@@ -110,8 +114,9 @@ dotnet run --project src/Clients/Filer.Web
 
 Serves the Blazor WASM app; the API base address comes from
 `src/Clients/Filer.Web/wwwroot/appsettings.json` (default
-`http://localhost:5232/`, the API's `http` profile). Cross-origin dev requires
-the CORS policy tracked in #148.
+`http://localhost:5232/`, the API's `http` profile). Cross-origin dev is covered by the
+CORS policy (`Cors:AllowedOrigins`; dev origins ship in the API's
+`appsettings.Development.json`).
 
 ### Smoke test
 
@@ -202,5 +207,4 @@ mount outside Development (07-storage-and-deployment.md).
    architecture gate.
 3. Bulk operations (M8) — bulk tag add/remove, sync + capped (ADR-010).
 4. RabbitMQ job dispatch with Postgres outbox (ADR-008, deferred from M5).
-5. Frontend: auth UI + document browsing (FE-M2), upload + AI suggestions
-   review (FE-M3).
+5. Frontend: AI suggestions review + search UI (FE-M3).

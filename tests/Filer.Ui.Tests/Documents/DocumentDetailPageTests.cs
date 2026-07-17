@@ -91,7 +91,7 @@ public sealed class DocumentDetailPageTests : BunitContext
             _service.Updates[0].Update.NewFileName.Should().Be("renamed.pdf");
             _service.Updates[0].Update.MoveFolder.Should().BeFalse();
             cut.Find("h1").TextContent.Should().Be("renamed.pdf");
-            cut.Find(".detail-notice").TextContent.Should().Contain("Renamed");
+            cut.Find(".action-notice").TextContent.Should().Contain("Renamed");
         });
     }
 
@@ -152,7 +152,7 @@ public sealed class DocumentDetailPageTests : BunitContext
             _service.Downloads.Should().ContainSingle().Which.Should().Be(DocId);
             JSInterop.VerifyInvoke("filerUi.downloadFile")
                 .Arguments.Should().ContainInOrder("invoice.pdf", "application/pdf");
-            cut.Find(".detail-notice").TextContent.Should().Contain("Download started");
+            cut.Find(".action-notice").TextContent.Should().Contain("Download started");
         });
     }
 

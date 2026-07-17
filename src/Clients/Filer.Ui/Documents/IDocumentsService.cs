@@ -43,9 +43,6 @@ public interface IDocumentsService
 
     /// <summary>Detaches a tag from the document. Returns <c>null</c> on success.</summary>
     Task<ProblemDetailsView?> RemoveTagAsync(Guid documentId, Guid tagId, CancellationToken cancellationToken = default);
-
-    /// <summary>Replaces the document's user-managed tag set in one call.</summary>
-    Task<DocumentTagsResult> ReplaceTagsAsync(Guid documentId, IReadOnlyList<Guid> tagIds, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Outcome of a tag read/mutation: exactly one side is set.</summary>

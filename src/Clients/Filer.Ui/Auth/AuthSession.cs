@@ -27,7 +27,7 @@ public sealed class AuthSession(FilerApiClient api, ITokenStore tokenStore) : IA
 
             if (response?.AccessToken is null || response.RefreshToken is null)
             {
-                return new ProblemDetailsView { Title = "Sign-in failed", Detail = "The server returned an unusable response. Try again." };
+                return EmptyResponseProblem("Sign-in failed");
             }
 
             await _tokenStore.SaveAsync(
@@ -97,7 +97,7 @@ public sealed class AuthSession(FilerApiClient api, ITokenStore tokenStore) : IA
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return me is null
-                ? new ProfileResult(null, new ProblemDetailsView { Title = "Profile unavailable", Detail = "The server returned an empty profile. Try again." })
+                ? new ProfileResult(null, EmptyResponseProblem("Profile unavailable"))
                 : new ProfileResult(me, null);
         }
         catch (ApiException ex)
@@ -105,4 +105,11 @@ public sealed class AuthSession(FilerApiClient api, ITokenStore tokenStore) : IA
             return new ProfileResult(null, ex.ToProblemView());
         }
     }
+
+    // Same "server returned an empty body" fallback shape as the other UI services.
+    private static ProblemDetailsView EmptyResponseProblem(string title) => new()
+    {
+        Title = title,
+        Detail = "The server returned an empty response. Try again.",
+    };
 }

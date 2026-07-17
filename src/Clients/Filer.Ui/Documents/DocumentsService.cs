@@ -223,23 +223,6 @@ public sealed class DocumentsService(FilerApiClient api) : IDocumentsService
         }
     }
 
-    public async Task<DocumentTagsResult> ReplaceTagsAsync(
-        Guid documentId, IReadOnlyList<Guid> tagIds, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            DocumentTagsResponse? tags = await _api.Api.V1.Documents[documentId].Tags
-                .PutAsync(
-                    new ReplaceDocumentTagsRequest { TagIds = [.. tagIds.Cast<Guid?>()] },
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-            return ToTagsResult(tags);
-        }
-        catch (ApiException ex)
-        {
-            return new DocumentTagsResult(null, ex.ToProblemView());
-        }
-    }
-
     private static DocumentTagsResult ToTagsResult(DocumentTagsResponse? tags) =>
         tags is null
             ? new DocumentTagsResult(null, new ProblemDetailsView

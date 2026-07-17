@@ -4,5 +4,13 @@
 <PageTitle>Filer</PageTitle>
 
 <h1>Filer</h1>
-<p>Document management platform — web client foundation.</p>
-<p class="text-muted">Authentication, document browsing, folders and tags arrive in FE-M2.</p>
+<p>Your documents, organised and searchable.</p>
+<AuthorizeView>
+    <Authorized>
+        <p><a href="documents">Browse your documents</a> — or manage your
+            <a href="folders">folders</a> and <a href="tags">tags</a>.</p>
+    </Authorized>
+    <NotAuthorized>
+        <p class="text-muted"><a href="login">Sign in</a> to manage your documents, folders and tags.</p>
+    </NotAuthorized>
+</AuthorizeView>

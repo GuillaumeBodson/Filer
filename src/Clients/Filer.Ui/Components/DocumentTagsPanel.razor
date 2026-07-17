@@ -122,47 +122,44 @@
         return _allTags.Where(t => t.Id is Guid id && !applied.Contains(id));
     }
 
-    private async Task AddAsync()
+    private Task AddAsync() => RunActionAsync(async () =>
     {
         if (!Guid.TryParse(_addTarget, out Guid tagId))
         {
             return;
         }
 
-        _busy = true;
-        _actionProblem = null;
-        try
+        DocumentTagsResult result = await DocumentsApi.AddTagAsync(DocumentId, tagId);
+        if (result.Problem is not null)
         {
-            DocumentTagsResult result = await DocumentsApi.AddTagAsync(DocumentId, tagId);
-            if (result.Problem is not null)
-            {
-                _actionProblem = result.Problem;
-                return;
-            }
-
-            _applied = result.Tags!.Tags ?? [];
-            _addTarget = "";
+            _actionProblem = result.Problem;
+            return;
         }
-        finally
+
+        _applied = result.Tags!.Tags ?? [];
+        _addTarget = "";
+    });
+
+    private Task RemoveAsync(Guid tagId) => RunActionAsync(async () =>
+    {
+        ProblemDetailsView? problem = await DocumentsApi.RemoveTagAsync(DocumentId, tagId);
+        if (problem is not null)
         {
-            _busy = false;
+            _actionProblem = problem;
+            return;
         }
-    }
 
-    private async Task RemoveAsync(Guid tagId)
+        _applied = [.. _applied.Where(a => a.TagId != tagId)];
+    });
+
+    // Same busy/problem scaffolding as the pages' RunActionAsync helper.
+    private async Task RunActionAsync(Func<Task> action)
     {
         _busy = true;
         _actionProblem = null;
         try
         {
-            ProblemDetailsView? problem = await DocumentsApi.RemoveTagAsync(DocumentId, tagId);
-            if (problem is not null)
-            {
-                _actionProblem = problem;
-                return;
-            }
-
-            _applied = [.. _applied.Where(a => a.TagId != tagId)];
+            await action();
         }
         finally
         {

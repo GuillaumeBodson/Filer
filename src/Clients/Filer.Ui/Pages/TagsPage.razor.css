@@ -58,20 +58,15 @@
     font-size: 0.875rem;
 }
 
-.btn-danger,
-.tag-action.btn-danger {
-    background: var(--color-danger);
-    border-color: transparent;
-    color: var(--color-primary-contrast);
-}
-
 .tags-confirm {
     color: var(--color-danger);
     font-weight: 600;
     font-size: 0.875rem;
 }
 
-.tags-notice {
-    color: var(--color-success);
-    font-weight: 600;
+/* Outranks the scoped .tag-action neutral look for the destructive variant. */
+.tag-action.btn-danger {
+    background: var(--color-danger);
+    border-color: transparent;
+    color: var(--color-primary-contrast);
 }

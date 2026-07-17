@@ -25,6 +25,7 @@ Tout le *quoi* vit dans `project documents/`. En cas de conflit avec ce fichier,
 | Workflow Git, branches, commits, PR, CI, releases   | `11-git-workflow.md` |
 | Stratégie de tests, tests requis, seuil de couverture | `12-testing-strategy.md` |
 | Standards de code, OOP/SOLID, patterns, Definition of Done | `13-code-quality-and-design.md` |
+| Roadmap post-V1 (features différées)                | `14-roadmap.md` |
 
 ## Commandes
 
