@@ -1,0 +1,28 @@
+@namespace Filer.Ui.Components
+
+@* Analysis status as a tinted pill (06-ai-analysis-pipeline.md lifecycle). Colours
+   come from the semantic tokens (#178); the label carries the meaning, the tint
+   supports it. Shared by the list (#135) and the detail view (#137). *@
+<span class="status @Variant">@Label</span>
+
+@code {
+    /// <summary>The document status string from the API (Uploaded/Analyzing/Ready/Failed).</summary>
+    [Parameter, EditorRequired] public string? Status { get; set; }
+
+    private string Variant => Status switch
+    {
+        "Ready" => "status-ok",
+        "Analyzing" => "status-run",
+        "Failed" => "status-err",
+        _ => "status-neutral",
+    };
+
+    private string Label => Status switch
+    {
+        "Uploaded" => "Uploaded",
+        "Analyzing" => "Analyzing…",
+        "Ready" => "Ready",
+        "Failed" => "Analysis failed",
+        _ => Status ?? "Unknown",
+    };
+}

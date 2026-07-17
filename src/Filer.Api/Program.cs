@@ -49,6 +49,13 @@ if (builder.Environment.IsDevelopment())
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
+// Strict JSON numbers. The web default (AllowReadingFromString) makes the OpenAPI
+// generator describe every number as ["integer","string"], a union Kiota can only
+// map to UntypedNode - which un-types PagedResult and sizes in the generated client
+// (ADR-011: client quality depends on contract quality). Numbers are numbers.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.Strict);
+
 // CORS for browser clients on another origin (#148, 05-security.md): origins come
 // from configuration only — no wildcard, off when the list is empty (same-origin
 // deployments behind a reverse proxy need no CORS at all). The bearer scheme needs

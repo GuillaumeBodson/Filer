@@ -23,37 +23,13 @@ namespace Filer.ApiClient.Generated.Models
         public List<global::Filer.ApiClient.Generated.Models.DocumentListItemResponse> Items { get; set; }
 #endif
         /// <summary>The page property</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-        public UntypedNode? Page { get; set; }
-#nullable restore
-#else
-        public UntypedNode Page { get; set; }
-#endif
+        public int? Page { get; set; }
         /// <summary>The pageSize property</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-        public UntypedNode? PageSize { get; set; }
-#nullable restore
-#else
-        public UntypedNode PageSize { get; set; }
-#endif
+        public int? PageSize { get; set; }
         /// <summary>The totalCount property</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-        public UntypedNode? TotalCount { get; set; }
-#nullable restore
-#else
-        public UntypedNode TotalCount { get; set; }
-#endif
+        public long? TotalCount { get; set; }
         /// <summary>The totalPages property</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-        public UntypedNode? TotalPages { get; set; }
-#nullable restore
-#else
-        public UntypedNode TotalPages { get; set; }
-#endif
+        public int? TotalPages { get; set; }
         /// <summary>
         /// Instantiates a new <see cref="global::Filer.ApiClient.Generated.Models.PagedResultOfDocumentListItemResponse"/> and sets the default values.
         /// </summary>
@@ -80,10 +56,10 @@ namespace Filer.ApiClient.Generated.Models
             return new Dictionary<string, Action<IParseNode>>
             {
                 { "items", n => { Items = n.GetCollectionOfObjectValues<global::Filer.ApiClient.Generated.Models.DocumentListItemResponse>(global::Filer.ApiClient.Generated.Models.DocumentListItemResponse.CreateFromDiscriminatorValue)?.AsList(); } },
-                { "page", n => { Page = n.GetObjectValue<UntypedNode>(UntypedNode.CreateFromDiscriminatorValue); } },
-                { "pageSize", n => { PageSize = n.GetObjectValue<UntypedNode>(UntypedNode.CreateFromDiscriminatorValue); } },
-                { "totalCount", n => { TotalCount = n.GetObjectValue<UntypedNode>(UntypedNode.CreateFromDiscriminatorValue); } },
-                { "totalPages", n => { TotalPages = n.GetObjectValue<UntypedNode>(UntypedNode.CreateFromDiscriminatorValue); } },
+                { "page", n => { Page = n.GetIntValue(); } },
+                { "pageSize", n => { PageSize = n.GetIntValue(); } },
+                { "totalCount", n => { TotalCount = n.GetLongValue(); } },
+                { "totalPages", n => { TotalPages = n.GetIntValue(); } },
             };
         }
         /// <summary>
@@ -94,10 +70,10 @@ namespace Filer.ApiClient.Generated.Models
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
             writer.WriteCollectionOfObjectValues<global::Filer.ApiClient.Generated.Models.DocumentListItemResponse>("items", Items);
-            writer.WriteObjectValue<UntypedNode>("page", Page);
-            writer.WriteObjectValue<UntypedNode>("pageSize", PageSize);
-            writer.WriteObjectValue<UntypedNode>("totalCount", TotalCount);
-            writer.WriteObjectValue<UntypedNode>("totalPages", TotalPages);
+            writer.WriteIntValue("page", Page);
+            writer.WriteIntValue("pageSize", PageSize);
+            writer.WriteLongValue("totalCount", TotalCount);
+            writer.WriteIntValue("totalPages", TotalPages);
             writer.WriteAdditionalData(AdditionalData);
         }
     }

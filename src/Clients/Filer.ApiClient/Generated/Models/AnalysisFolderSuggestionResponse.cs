@@ -15,13 +15,7 @@ namespace Filer.ApiClient.Generated.Models
         /// <summary>Stores additional data not described in the OpenAPI description found when deserializing. Can be used for serialization as well.</summary>
         public IDictionary<string, object> AdditionalData { get; set; }
         /// <summary>The confidence property</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-        public UntypedNode? Confidence { get; set; }
-#nullable restore
-#else
-        public UntypedNode Confidence { get; set; }
-#endif
+        public double? Confidence { get; set; }
         /// <summary>The existingFolderId property</summary>
         public Guid? ExistingFolderId { get; set; }
         /// <summary>The name property</summary>
@@ -57,7 +51,7 @@ namespace Filer.ApiClient.Generated.Models
         {
             return new Dictionary<string, Action<IParseNode>>
             {
-                { "confidence", n => { Confidence = n.GetObjectValue<UntypedNode>(UntypedNode.CreateFromDiscriminatorValue); } },
+                { "confidence", n => { Confidence = n.GetDoubleValue(); } },
                 { "existingFolderId", n => { ExistingFolderId = n.GetGuidValue(); } },
                 { "name", n => { Name = n.GetStringValue(); } },
             };
@@ -69,7 +63,7 @@ namespace Filer.ApiClient.Generated.Models
         public virtual void Serialize(ISerializationWriter writer)
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
-            writer.WriteObjectValue<UntypedNode>("confidence", Confidence);
+            writer.WriteDoubleValue("confidence", Confidence);
             writer.WriteGuidValue("existingFolderId", ExistingFolderId);
             writer.WriteStringValue("name", Name);
             writer.WriteAdditionalData(AdditionalData);
