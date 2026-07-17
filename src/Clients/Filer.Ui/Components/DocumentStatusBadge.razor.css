@@ -1,0 +1,28 @@
+.status {
+    display: inline-block;
+    padding: var(--space-1) var(--space-2);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-ok {
+    background: var(--color-success-soft);
+    color: var(--color-success);
+}
+
+.status-run {
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.status-err {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+}
+
+.status-neutral {
+    background: var(--color-border);
+    color: var(--color-text-muted);
+}

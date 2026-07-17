@@ -45,13 +45,7 @@ namespace Filer.ApiClient.Generated.Models
         /// <summary>The id property</summary>
         public Guid? Id { get; set; }
         /// <summary>The sizeBytes property</summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-        public UntypedNode? SizeBytes { get; set; }
-#nullable restore
-#else
-        public UntypedNode SizeBytes { get; set; }
-#endif
+        public long? SizeBytes { get; set; }
         /// <summary>The status property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
@@ -93,7 +87,7 @@ namespace Filer.ApiClient.Generated.Models
                 { "fileName", n => { FileName = n.GetStringValue(); } },
                 { "folderId", n => { FolderId = n.GetGuidValue(); } },
                 { "id", n => { Id = n.GetGuidValue(); } },
-                { "sizeBytes", n => { SizeBytes = n.GetObjectValue<UntypedNode>(UntypedNode.CreateFromDiscriminatorValue); } },
+                { "sizeBytes", n => { SizeBytes = n.GetLongValue(); } },
                 { "status", n => { Status = n.GetStringValue(); } },
                 { "updatedAt", n => { UpdatedAt = n.GetDateTimeOffsetValue(); } },
             };
@@ -111,7 +105,7 @@ namespace Filer.ApiClient.Generated.Models
             writer.WriteStringValue("fileName", FileName);
             writer.WriteGuidValue("folderId", FolderId);
             writer.WriteGuidValue("id", Id);
-            writer.WriteObjectValue<UntypedNode>("sizeBytes", SizeBytes);
+            writer.WriteLongValue("sizeBytes", SizeBytes);
             writer.WriteStringValue("status", Status);
             writer.WriteDateTimeOffsetValue("updatedAt", UpdatedAt);
             writer.WriteAdditionalData(AdditionalData);

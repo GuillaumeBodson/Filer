@@ -1,0 +1,180 @@
+@namespace Filer.Ui.Pages
+@page "/documents"
+@using Filer.ApiClient.Generated.Models
+@using Filer.Ui.Documents
+@using Filer.Ui.Formatting
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IDocumentsService DocumentsApi
+@inject NavigationManager Navigation
+
+<PageTitle>Documents — Filer</PageTitle>
+
+<h1>Documents</h1>
+
+@* The URL is the single source of truth for filters and paging: shareable,
+   back-button friendly, and folder/tag views (#138/#139) deep-link into it. *@
+<form class="filters" @onsubmit="ApplySearch">
+    <input id="search" type="search" aria-label="Search documents"
+           placeholder="Search documents…" @bind="_searchInput" />
+    <button type="submit" class="btn btn-primary">Search</button>
+</form>
+
+@if (HasActiveFilters)
+{
+    <p class="active-filters">
+        Filtered
+        @if (!string.IsNullOrWhiteSpace(Q))
+        {
+            <span class="filter-chip">text: “@Q”</span>
+        }
+        @if (FolderId is not null)
+        {
+            <span class="filter-chip">folder</span>
+        }
+        @if (TagId is not null)
+        {
+            <span class="filter-chip">tag</span>
+        }
+        — <a href="documents">clear filters</a>
+    </p>
+}
+
+@if (_loading)
+{
+    <LoadingIndicator Message="Loading documents…" />
+}
+else if (_problem is not null)
+{
+    <ErrorState Problem="_problem" OnRetry="LoadAsync" />
+}
+else if (_page is not null && (_page.Items?.Count ?? 0) == 0)
+{
+    @if (HasActiveFilters)
+    {
+        <EmptyState Title="No matching documents"
+                    Description="No documents match the current filters.">
+            <a href="documents">Clear filters</a>
+        </EmptyState>
+    }
+    else
+    {
+        <EmptyState Title="No documents yet"
+                    Description="Documents you upload will show up here." />
+    }
+}
+else if (_page is not null)
+{
+    <table class="doc-table">
+        <thead>
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Size</th>
+                <th scope="col">Status</th>
+                <th scope="col">Added</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (DocumentListItemResponse item in _page.Items!)
+            {
+                <tr>
+                    <td class="doc-name">@item.FileName</td>
+                    <td class="doc-size">@ByteSize.Format(item.SizeBytes)</td>
+                    <td><DocumentStatusBadge Status="@item.Status" /></td>
+                    <td class="doc-date">@item.CreatedAt?.LocalDateTime.ToString("d")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <nav class="pager" aria-label="Pagination">
+        <button type="button" class="btn" disabled="@(CurrentPage <= 1)"
+                @onclick="() => GoToPage(CurrentPage - 1)">Previous</button>
+        <span class="pager-status" aria-live="polite">
+            Page @CurrentPage of @Math.Max(_page.TotalPages ?? 1, 1)
+            (@_page.TotalCount document@((_page.TotalCount ?? 0) == 1 ? "" : "s"))
+        </span>
+        <button type="button" class="btn" disabled="@(CurrentPage >= (_page.TotalPages ?? 1))"
+                @onclick="() => GoToPage(CurrentPage + 1)">Next</button>
+
+        <label class="pager-size">
+            Per page
+            <select value="@CurrentPageSize" @onchange="ChangePageSize">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+            </select>
+        </label>
+    </nav>
+}
+
+@code {
+    private PagedResultOfDocumentListItemResponse? _page;
+    private ProblemDetailsView? _problem;
+    private bool _loading = true;
+    private string? _searchInput;
+    private (Guid?, Guid?, string?, int, int)? _loadedKey;
+
+    [Parameter, SupplyParameterFromQuery(Name = "folderId")] public Guid? FolderId { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "tagId")] public Guid? TagId { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "q")] public string? Q { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "page")] public int? Page { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "pageSize")] public int? PageSize { get; set; }
+
+    private int CurrentPage => Page is > 0 ? Page.Value : 1;
+    private int CurrentPageSize => PageSize is > 0 ? PageSize.Value : 20;
+    private bool HasActiveFilters => FolderId is not null || TagId is not null || !string.IsNullOrWhiteSpace(Q);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Same-page navigations re-run this; only reload when the query changed.
+        (Guid?, Guid?, string?, int, int) key = (FolderId, TagId, Q, CurrentPage, CurrentPageSize);
+        if (key == _loadedKey)
+        {
+            return;
+        }
+
+        _loadedKey = key;
+        _searchInput = Q;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _problem = null;
+        try
+        {
+            DocumentsPageResult result = await DocumentsApi.ListAsync(
+                new DocumentsQuery(FolderId, TagId, Q, CurrentPage, CurrentPageSize));
+            _page = result.Page;
+            _problem = result.Problem;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ApplySearch() =>
+        NavigateWith(text: _searchInput, page: 1);
+
+    private void GoToPage(int page) =>
+        NavigateWith(text: Q, page: page);
+
+    private void ChangePageSize(ChangeEventArgs e) =>
+        NavigateWith(text: Q, page: 1, pageSize: int.TryParse((string?)e.Value, out int size) ? size : null);
+
+    private void NavigateWith(string? text, int page, int? pageSize = null)
+    {
+        string uri = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
+        {
+            ["folderId"] = FolderId,
+            ["tagId"] = TagId,
+            ["q"] = string.IsNullOrWhiteSpace(text) ? null : text,
+            ["page"] = page == 1 ? null : page,
+            ["pageSize"] = (pageSize ?? CurrentPageSize) == 20 ? null : pageSize ?? CurrentPageSize,
+        });
+        Navigation.NavigateTo(uri);
+    }
+}
