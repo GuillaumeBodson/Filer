@@ -5,7 +5,8 @@ namespace Filer.ApiClient.Auth;
 
 /// <summary>
 /// Delegating handler on the API <see cref="HttpClient"/> that attaches the bearer
-/// access token and, on a 401, refreshes once and retries the request (05-security.md).
+/// access token and, on a 401, refreshes once and retries the request (05-security.md,
+/// ADR-014).
 /// A failed refresh clears the session; the store's <see cref="ITokenStore.Changed"/>
 /// event flips auth state so the app routes the user to sign in.
 /// </summary>
