@@ -23,6 +23,11 @@ public static class RenameTagEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("RenameTag")
+        .Produces<RenameTagResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict)
         .RequireAuthorization();
     }
 }

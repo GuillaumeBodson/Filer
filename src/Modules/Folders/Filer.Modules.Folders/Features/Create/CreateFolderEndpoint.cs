@@ -22,6 +22,11 @@ public static class CreateFolderEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("CreateFolder")
+        .Produces<CreateFolderResponse>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict)
         .RequireAuthorization();
     }
 }

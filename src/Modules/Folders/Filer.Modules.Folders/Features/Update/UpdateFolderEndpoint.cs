@@ -23,6 +23,11 @@ public static class UpdateFolderEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("UpdateFolder")
+        .Produces<UpdateFolderResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict)
         .RequireAuthorization();
     }
 }

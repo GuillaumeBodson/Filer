@@ -22,6 +22,9 @@ public static class DeleteDocumentEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("DeleteDocument")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization();
     }
 }

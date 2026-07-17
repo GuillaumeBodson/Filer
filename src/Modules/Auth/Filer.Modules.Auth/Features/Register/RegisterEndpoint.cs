@@ -27,6 +27,8 @@ public static class RegisterEndpoint
         })
         .WithName("Register")
         .Produces<RegisterResponse>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status409Conflict)
         .AllowAnonymous();
     }
 }

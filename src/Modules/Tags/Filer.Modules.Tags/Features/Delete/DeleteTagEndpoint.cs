@@ -22,6 +22,9 @@ public static class DeleteTagEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("DeleteTag")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization();
     }
 }

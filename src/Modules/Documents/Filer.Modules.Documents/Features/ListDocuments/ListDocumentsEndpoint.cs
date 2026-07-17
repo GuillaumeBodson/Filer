@@ -33,6 +33,9 @@ public static class ListDocumentsEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("ListDocuments")
+        .Produces<PagedResult<DocumentListItemResponse>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
         .RequireAuthorization();
     }
 }

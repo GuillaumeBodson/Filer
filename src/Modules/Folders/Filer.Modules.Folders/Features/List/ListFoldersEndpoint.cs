@@ -28,6 +28,9 @@ public static class ListFoldersEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("ListFolders")
+        .Produces<IReadOnlyList<FolderListItemResponse>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
         .RequireAuthorization();
     }
 }

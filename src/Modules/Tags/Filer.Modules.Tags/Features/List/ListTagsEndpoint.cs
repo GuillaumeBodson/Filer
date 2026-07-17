@@ -21,6 +21,8 @@ public static class ListTagsEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("ListTags")
+        .Produces<IReadOnlyList<TagListItemResponse>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
         .RequireAuthorization();
     }
 }

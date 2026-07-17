@@ -24,6 +24,9 @@ public static class AddDocumentTagEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("AddDocumentTag")
+        .Produces<DocumentTagsResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization();
     }
 }

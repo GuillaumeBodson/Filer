@@ -32,6 +32,9 @@ public static class DownloadDocumentContentEndpoint
                 fileDownloadName: content.FileName);
         })
         .WithName("DownloadDocumentContent")
+        .Produces<Stream>(StatusCodes.Status200OK, "application/octet-stream")
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization();
     }
 }
