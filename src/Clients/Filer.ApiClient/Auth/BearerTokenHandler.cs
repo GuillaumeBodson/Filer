@@ -11,16 +11,30 @@ namespace Filer.ApiClient.Auth;
 /// store's <see cref="ITokenStore.Changed"/> event flips auth state so the app routes
 /// the user to sign in. A <see cref="TokenRefreshResult.TransientFailure"/> keeps the
 /// tokens: the original 401 surfaces and a later request retries the refresh (#167).
+/// The token is only ever attached to requests targeting the configured API origin;
+/// any other origin gets the request with the Authorization header stripped (#168).
 /// </summary>
-public sealed class BearerTokenHandler(ITokenStore tokenStore, ITokenRefresher tokenRefresher)
+public sealed class BearerTokenHandler(
+    ITokenStore tokenStore, ITokenRefresher tokenRefresher, Uri apiBaseAddress)
     : DelegatingHandler
 {
     private readonly ITokenStore _tokenStore = tokenStore;
     private readonly ITokenRefresher _tokenRefresher = tokenRefresher;
+    private readonly Uri _apiBaseAddress = apiBaseAddress;
 
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        // Defense in depth (#168): the named-client BaseAddress plus Kiota's relative
+        // URLs normally keep every request on the API origin, but an absolute URL to
+        // a foreign origin must never carry the user's token - strip anything pre-set
+        // and stay out of the refresh flow.
+        if (!TargetsApiOrigin(request.RequestUri))
+        {
+            request.Headers.Authorization = null;
+            return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+
         TokenPair? tokens = await _tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
         ApplyBearer(request, tokens?.AccessToken);
 
@@ -54,6 +68,14 @@ public sealed class BearerTokenHandler(ITokenStore tokenStore, ITokenRefresher t
         response.Dispose();
         return await base.SendAsync(retry, cancellationToken).ConfigureAwait(false);
     }
+
+    private bool TargetsApiOrigin(Uri? requestUri) =>
+        // A relative URI resolves against the named client's BaseAddress, which is
+        // the API - only an absolute URI can point elsewhere.
+        requestUri is not { IsAbsoluteUri: true }
+        || (string.Equals(requestUri.Scheme, _apiBaseAddress.Scheme, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(requestUri.Host, _apiBaseAddress.Host, StringComparison.OrdinalIgnoreCase)
+            && requestUri.Port == _apiBaseAddress.Port);
 
     private static void ApplyBearer(HttpRequestMessage request, string? accessToken)
     {

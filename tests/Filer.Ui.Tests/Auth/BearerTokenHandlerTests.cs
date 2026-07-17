@@ -8,6 +8,8 @@ namespace Filer.Ui.Tests.Auth;
 
 public sealed class BearerTokenHandlerTests
 {
+    private static readonly Uri ApiBase = new("https://api.test/");
+
     private static TokenPair Tokens(string access = "access-1", string refresh = "refresh-1") =>
         new(access, DateTimeOffset.MaxValue, refresh, DateTimeOffset.MaxValue);
 
@@ -29,7 +31,7 @@ public sealed class BearerTokenHandlerTests
         var refresher = new FakeTokenRefresher(store, succeeds: false);
         var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.OK);
 
-        using var handler = new BearerTokenHandler(store, refresher);
+        using var handler = new BearerTokenHandler(store, refresher, ApiBase);
         await SendAsync(handler, inner, Request());
 
         inner.Requests.Should().ContainSingle();
@@ -43,7 +45,7 @@ public sealed class BearerTokenHandlerTests
         var refresher = new FakeTokenRefresher(store, succeeds: false);
         var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.OK);
 
-        using var handler = new BearerTokenHandler(store, refresher);
+        using var handler = new BearerTokenHandler(store, refresher, ApiBase);
         await SendAsync(handler, inner, Request());
 
         inner.Requests.Should().ContainSingle();
@@ -60,7 +62,7 @@ public sealed class BearerTokenHandlerTests
             .Enqueue(HttpStatusCode.Unauthorized)
             .Enqueue(HttpStatusCode.OK);
 
-        using var handler = new BearerTokenHandler(store, refresher);
+        using var handler = new BearerTokenHandler(store, refresher, ApiBase);
         var response = await SendAsync(handler, inner, Request());
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -77,7 +79,7 @@ public sealed class BearerTokenHandlerTests
         var refresher = new FakeTokenRefresher(store, succeeds: false);
         var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.Unauthorized);
 
-        using var handler = new BearerTokenHandler(store, refresher);
+        using var handler = new BearerTokenHandler(store, refresher, ApiBase);
         var response = await SendAsync(handler, inner, Request());
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -96,7 +98,7 @@ public sealed class BearerTokenHandlerTests
         var refresher = new FakeTokenRefresher(store, TokenRefreshResult.TransientFailure);
         var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.Unauthorized);
 
-        using var handler = new BearerTokenHandler(store, refresher);
+        using var handler = new BearerTokenHandler(store, refresher, ApiBase);
         var response = await SendAsync(handler, inner, Request());
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -113,7 +115,7 @@ public sealed class BearerTokenHandlerTests
         var refresher = new FakeTokenRefresher(store, succeeds: true);
         var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.Unauthorized);
 
-        using var handler = new BearerTokenHandler(store, refresher);
+        using var handler = new BearerTokenHandler(store, refresher, ApiBase);
         var response = await SendAsync(handler, inner, Request());
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -130,7 +132,7 @@ public sealed class BearerTokenHandlerTests
             .Enqueue(HttpStatusCode.Unauthorized)
             .Enqueue(HttpStatusCode.Unauthorized);
 
-        using var handler = new BearerTokenHandler(store, refresher);
+        using var handler = new BearerTokenHandler(store, refresher, ApiBase);
         var response = await SendAsync(handler, inner, Request());
 
         // The "no infinite loop" guarantee: one refresh, one retry, then the 401 surfaces.
@@ -153,7 +155,7 @@ public sealed class BearerTokenHandlerTests
             Content = new StringContent("""{ "name": "Taxes" }""", Encoding.UTF8, "application/json"),
         };
 
-        using var handler = new BearerTokenHandler(store, refresher);
+        using var handler = new BearerTokenHandler(store, refresher, ApiBase);
         var response = await SendAsync(handler, inner, request);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -163,6 +165,43 @@ public sealed class BearerTokenHandlerTests
         inner.Requests[1].BearerToken.Should().Be("access-2");
     }
 
+    [Theory]
+    [InlineData("https://evil.test/api/v1/documents")] // different host
+    [InlineData("http://api.test/api/v1/documents")]   // different scheme
+    [InlineData("https://api.test:8443/api/v1/documents")] // different port
+    public async Task Foreign_origin_never_receives_the_bearer_token(string foreignUri)
+    {
+        // Defense in depth (#168): even a pre-set Authorization header is stripped
+        // when the request leaves the configured API origin.
+        var store = new FakeTokenStore(Tokens());
+        var refresher = new FakeTokenRefresher(store, succeeds: true);
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.OK);
+        var request = new HttpRequestMessage(HttpMethod.Get, foreignUri);
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "leaked");
+
+        using var handler = new BearerTokenHandler(store, refresher, ApiBase);
+        await SendAsync(handler, inner, request);
+
+        inner.Requests.Should().ContainSingle();
+        inner.Requests[0].BearerToken.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Foreign_origin_401_does_not_trigger_refresh_or_clear_the_session()
+    {
+        var store = new FakeTokenStore(Tokens());
+        var refresher = new FakeTokenRefresher(store, succeeds: true);
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.Unauthorized);
+
+        using var handler = new BearerTokenHandler(store, refresher, ApiBase);
+        var response = await SendAsync(handler, inner,
+            new HttpRequestMessage(HttpMethod.Get, "https://evil.test/login"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        refresher.CallCount.Should().Be(0);
+        store.ClearCount.Should().Be(0);
+    }
+
     [Fact]
     public async Task Non_401_response_passes_through_untouched()
     {
@@ -170,7 +209,7 @@ public sealed class BearerTokenHandlerTests
         var refresher = new FakeTokenRefresher(store, succeeds: true);
         var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.BadRequest);
 
-        using var handler = new BearerTokenHandler(store, refresher);
+        using var handler = new BearerTokenHandler(store, refresher, ApiBase);
         var response = await SendAsync(handler, inner, Request());
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
