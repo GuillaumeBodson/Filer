@@ -142,8 +142,11 @@ Uploads are the largest attack surface. Required controls:
 * Security headers on API responses (HSTS, `X-Content-Type-Options: nosniff`,
   appropriate `Content-Disposition` on downloads to force download rather than
   inline render where relevant).
-* CORS configured to the known client origins only (relevant once the Blazor
-  WebAssembly client and future apps are defined).
+* CORS configured to the known client origins only: `Cors:AllowedOrigins` in
+  configuration (no wildcard, no credentials — the API is bearer-token only).
+  An empty list disables the middleware entirely, which is the expected state
+  when the SPA and API share an origin behind a reverse proxy. Dev origins for
+  the Blazor WASM client live in `appsettings.Development.json` (#148).
 
 ---
 

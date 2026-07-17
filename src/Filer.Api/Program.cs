@@ -49,6 +49,19 @@ if (builder.Environment.IsDevelopment())
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
+// CORS for browser clients on another origin (#148, 05-security.md): origins come
+// from configuration only — no wildcard, off when the list is empty (same-origin
+// deployments behind a reverse proxy need no CORS at all). The bearer scheme needs
+// the Authorization header; no cookies, so credentials stay disallowed.
+string[] corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+if (corsOrigins.Length > 0)
+{
+    builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
+        .WithOrigins(corsOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod()));
+}
+
 // Backstop for unhandled exceptions: logs server-side, returns problem-details
 // without leaking internals (Infrastructure/GlobalExceptionHandler.cs, 05-security.md).
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -111,6 +124,11 @@ if (app.Environment.IsDevelopment())
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
+}
+
+if (corsOrigins.Length > 0)
+{
+    app.UseCors();
 }
 
 app.UseAuthentication();
