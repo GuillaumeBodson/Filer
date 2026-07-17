@@ -14,8 +14,15 @@ public sealed record ProblemDetailsView
     /// <summary>RFC 7807 <c>type</c> URI.</summary>
     public string? Type { get; init; }
 
-    /// <summary>Short, human-readable summary of the problem.</summary>
+    /// <summary>Short, human-readable summary of the problem — safe to headline.</summary>
     public string? Title { get; init; }
+
+    /// <summary>
+    /// Machine-readable error code from the <c>code</c> extension member
+    /// (03-api-specification.md, #169) — e.g. <c>invalid_credentials</c>. UI logic
+    /// branches on this, never on <see cref="Title"/> or <see cref="Detail"/>.
+    /// </summary>
+    public string? Code { get; init; }
 
     /// <summary>HTTP status code, when known.</summary>
     public int? Status { get; init; }
@@ -71,6 +78,7 @@ public sealed record ProblemDetailsView
             {
                 Type = dto.Type,
                 Title = dto.Title,
+                Code = dto.Code,
                 Status = dto.Status,
                 Detail = dto.Detail,
                 Errors = Normalize(dto.Errors),
@@ -100,6 +108,7 @@ public sealed record ProblemDetailsView
     {
         public string? Type { get; init; }
         public string? Title { get; init; }
+        public string? Code { get; init; }
         public int? Status { get; init; }
         public string? Detail { get; init; }
 

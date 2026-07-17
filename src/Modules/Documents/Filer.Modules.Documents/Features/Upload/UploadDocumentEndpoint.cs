@@ -41,12 +41,13 @@ public static class UploadDocumentEndpoint
                 // 409 carrying the existing document's reference so the client can
                 // decide whether to proceed (03-api-specification.md, upload behavior).
                 return Results.Problem(
-                    title: DocumentsErrorCodes.DuplicateContent,
+                    title: "Conflict",
                     detail: "A document with identical content already exists.",
                     statusCode: StatusCodes.Status409Conflict,
                     type: $"https://docs/errors/{DocumentsErrorCodes.DuplicateContent}",
                     extensions: new Dictionary<string, object?>
                     {
+                        [ErrorResults.CodeExtension] = DocumentsErrorCodes.DuplicateContent,
                         ["existingDocumentId"] = existingDocumentId.ToString(),
                     });
             }

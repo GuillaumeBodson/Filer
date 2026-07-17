@@ -1,3 +1,4 @@
+using Filer.WebKernel;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -42,14 +43,16 @@ internal sealed class GlobalExceptionHandler(
             return true;
         }
 
-        (int status, string code, string detail) = exception switch
+        (int status, string title, string code, string detail) = exception switch
         {
             DbUpdateConcurrencyException => (
                 StatusCodes.Status409Conflict,
+                "Conflict",
                 "conflict",
                 "The resource was modified concurrently. Reload and try again."),
             _ => (
                 StatusCodes.Status500InternalServerError,
+                "An unexpected error occurred",
                 "unexpected",
                 "An unexpected error occurred."),
         };
@@ -61,7 +64,7 @@ internal sealed class GlobalExceptionHandler(
         httpContext.Response.StatusCode = status;
 
         // Same problem-details shape as the per-slice mapping (ErrorResults):
-        // title = error code, type = the error's doc URI.
+        // human title, machine code in the "code" extension, type = doc URI (#169).
         return await _problemDetailsService.TryWriteAsync(new ProblemDetailsContext
         {
             HttpContext = httpContext,
@@ -69,9 +72,10 @@ internal sealed class GlobalExceptionHandler(
             ProblemDetails = new ProblemDetails
             {
                 Status = status,
-                Title = code,
+                Title = title,
                 Detail = detail,
                 Type = $"https://docs/errors/{code}",
+                Extensions = { [ErrorResults.CodeExtension] = code },
             },
         });
     }

@@ -82,7 +82,7 @@ public sealed class UploadDocumentEndpointTests(FilerApiFactory factory)
         second.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
 
         using JsonDocument problem = JsonDocument.Parse(await second.Content.ReadAsStringAsync(Ct));
-        problem.RootElement.GetProperty("title").GetString().Should().Be("duplicate_content");
+        problem.RootElement.GetProperty("code").GetString().Should().Be("duplicate_content");
         problem.RootElement.GetProperty("existingDocumentId").GetString()
             .Should().Be(original.Id.ToString());
     }
@@ -120,7 +120,7 @@ public sealed class UploadDocumentEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.UnsupportedMediaType);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("unsupported_file_type");
+        problem.Code().Should().Be("unsupported_file_type");
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public sealed class UploadDocumentEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.UnsupportedMediaType);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("content_type_mismatch");
+        problem.Code().Should().Be("content_type_mismatch");
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public sealed class UploadDocumentEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.RequestEntityTooLarge);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("file_too_large");
+        problem.Code().Should().Be("file_too_large");
     }
 
     [Fact]

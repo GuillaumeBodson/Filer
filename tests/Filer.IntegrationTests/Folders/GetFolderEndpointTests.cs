@@ -64,7 +64,7 @@ public sealed class GetFolderEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_not_found");
+        problem.Code().Should().Be("folder_not_found");
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public sealed class GetFolderEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_not_found");
+        problem.Code().Should().Be("folder_not_found");
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public sealed class GetFolderEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_not_found");
+        problem.Code().Should().Be("folder_not_found");
     }
 
     private async Task SoftDeleteFolderAsync(Guid folderId)

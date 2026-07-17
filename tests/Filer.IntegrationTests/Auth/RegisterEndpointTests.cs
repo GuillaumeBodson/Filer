@@ -49,7 +49,7 @@ public sealed class RegisterEndpointTests(FilerApiFactory factory)
 
         duplicate.StatusCode.Should().Be(HttpStatusCode.Conflict);
         ProblemDetails? problem = await duplicate.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
-        problem!.Title.Should().Be(AuthErrorCodes.EmailTaken);
+        problem!.Code().Should().Be(AuthErrorCodes.EmailTaken);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class RegisterEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
-        problem!.Title.Should().Be(AuthErrorCodes.Email);
+        problem!.Code().Should().Be(AuthErrorCodes.Email);
     }
 
     [Fact]
@@ -75,6 +75,6 @@ public sealed class RegisterEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(CancellationToken.None);
-        problem!.Title.Should().Be(AuthErrorCodes.Password);
+        problem!.Code().Should().Be(AuthErrorCodes.Password);
     }
 }

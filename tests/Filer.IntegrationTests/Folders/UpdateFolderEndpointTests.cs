@@ -94,7 +94,7 @@ public sealed class UpdateFolderEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_update_empty");
+        problem.Code().Should().Be("folder_update_empty");
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public sealed class UpdateFolderEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_not_found");
+        problem.Code().Should().Be("folder_not_found");
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public sealed class UpdateFolderEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_not_found");
+        problem.Code().Should().Be("folder_not_found");
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public sealed class UpdateFolderEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("parent_folder_not_found");
+        problem.Code().Should().Be("parent_folder_not_found");
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public sealed class UpdateFolderEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_move_cycle");
+        problem.Code().Should().Be("folder_move_cycle");
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public sealed class UpdateFolderEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_move_cycle");
+        problem.Code().Should().Be("folder_move_cycle");
     }
 
     [Fact]
@@ -188,7 +188,7 @@ public sealed class UpdateFolderEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_name_conflict");
+        problem.Code().Should().Be("folder_name_conflict");
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public sealed class UpdateFolderEndpointTests(FilerApiFactory factory)
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         ProblemDetails problem = (await response.Content.ReadFromJsonAsync<ProblemDetails>(Ct))!;
-        problem.Title.Should().Be("folder_name_conflict");
+        problem.Code().Should().Be("folder_name_conflict");
     }
 
     private async Task<HttpClient> AuthenticatedClientAsync()
