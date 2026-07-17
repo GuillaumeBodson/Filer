@@ -16,7 +16,9 @@ begins. `11` is the Git workflow. `12` is the testing strategy (required tests a
 coverage), and `13` is the code-quality and design standard (coding rules,
 OOP/SOLID, design patterns, and the Definition of Done) — read `12`/`13` before
 writing code. `14` is the roadmap of post-V1 features (intent and sequencing, not
-spec) — everything there is deferred until the V1 milestones ship.
+spec) — everything there is deferred until the V1 milestones ship. `15` is the
+frontend counterpart of `10`: the client project layout and the conventions the
+FE milestones established — read it before touching `src/Clients/`.
 
 ---
 
@@ -39,6 +41,7 @@ spec) — everything there is deferred until the V1 milestones ship.
 | 12  | Testing Strategy            | Test pyramid, required tests per slice, coverage gate | Active |
 | 13  | Code Quality & Design       | Coding standards, OOP/SOLID, patterns, Definition of Done | Active |
 | 14  | Roadmap                     | Post-V1 features: intent, rationale, sequencing      | Active |
+| 15  | Frontend Architecture       | Client projects, service seams, page patterns, tokens, bUnit idioms | Active |
 
 ---
 

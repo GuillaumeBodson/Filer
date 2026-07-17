@@ -1365,5 +1365,5 @@ dependency.
 Held. The "Registre" identity (#178) landed on the token contract as planned;
 every FE-M2 screen shipped on tokens + native primitives with no component
 library. The `15-frontend-architecture.md` conventions doc promised here and in
-ADR-012 is still unwritten — tracked as a follow-up issue from the FE-M2
-milestone review.
+ADR-012 was authored just after the review (#194), capturing the
+component-authoring and token rules as built.
