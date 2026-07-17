@@ -30,4 +30,8 @@ builder.Services.AddSingleton<ITokenStore, LocalStorageTokenStore>();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, FilerAuthenticationStateProvider>();
 
+// Auth flows for the UI (#133): pages drive sign-in/out through this seam rather
+// than touching the Kiota client or the token store directly.
+builder.Services.AddScoped<IAuthSession, AuthSession>();
+
 await builder.Build().RunAsync();

@@ -1,0 +1,21 @@
+.profile {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--space-2) var(--space-4);
+    max-width: 36rem;
+    margin: 0;
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.profile dt {
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.profile dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}

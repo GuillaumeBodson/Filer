@@ -1,0 +1,87 @@
+@namespace Filer.Ui.Pages
+@page "/login"
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@using Filer.Ui.Auth
+@inject IAuthSession Auth
+@inject NavigationManager Navigation
+
+<PageTitle>Sign in — Filer</PageTitle>
+
+<section class="auth-card">
+    <h1>Sign in</h1>
+
+    <EditForm Model="_model" OnValidSubmit="SubmitAsync">
+        <DataAnnotationsValidator />
+
+        <div class="field">
+            <label for="email">Email</label>
+            <InputText id="email" @bind-Value="_model.Email" type="email" autocomplete="username" />
+            <ValidationMessage For="() => _model.Email" />
+        </div>
+
+        <div class="field">
+            <label for="password">Password</label>
+            <InputText id="password" @bind-Value="_model.Password" type="password" autocomplete="current-password" />
+            <ValidationMessage For="() => _model.Password" />
+        </div>
+
+        @if (_problem is not null)
+        {
+            <ErrorState Problem="_problem" />
+        }
+
+        <button type="submit" class="btn btn-primary" disabled="@_busy">
+            @(_busy ? "Signing in…" : "Sign in")
+        </button>
+    </EditForm>
+
+    <p class="auth-alt">No account yet? <a href="register">Create one</a></p>
+</section>
+
+@code {
+    private readonly LoginModel _model = new();
+    private ProblemDetailsView? _problem;
+    private bool _busy;
+
+    /// <summary>Where to land after sign-in; set by the route guard (RedirectToLogin).</summary>
+    [Parameter, SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _problem = null;
+        try
+        {
+            _problem = await Auth.LoginAsync(_model.Email!, _model.Password!);
+        }
+        finally
+        {
+            _busy = false;
+        }
+
+        if (_problem is null)
+        {
+            Navigation.NavigateTo(SafeReturnUrl(), replace: true);
+        }
+    }
+
+    // Only base-relative targets: an absolute returnUrl would be an open redirect.
+    private string SafeReturnUrl() =>
+        !string.IsNullOrWhiteSpace(ReturnUrl)
+        && Uri.TryCreate(ReturnUrl, UriKind.Relative, out _)
+        && !ReturnUrl.StartsWith("//", StringComparison.Ordinal)
+            ? ReturnUrl
+            : "";
+
+    private sealed class LoginModel
+    {
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
+        public string? Email { get; set; }
+
+        [Required(ErrorMessage = "Password is required.")]
+        public string? Password { get; set; }
+    }
+}

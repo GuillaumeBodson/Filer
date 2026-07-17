@@ -40,3 +40,64 @@ a:hover {
 .text-muted {
     color: var(--color-text-muted);
 }
+
+/* --- Forms & buttons (shared element styling, token-driven) --- */
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: var(--space-1);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"] {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
+input:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 1px;
+}
+
+/* Blazor's EditForm stamps these on inputs and validation messages. */
+.invalid {
+    border-color: var(--color-danger);
+}
+
+.validation-message {
+    color: var(--color-danger);
+    font-size: 0.875rem;
+    margin-top: var(--space-1);
+}
+
+.btn {
+    display: inline-block;
+    padding: var(--space-2) var(--space-4);
+    font: inherit;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: var(--color-primary-contrast);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+}

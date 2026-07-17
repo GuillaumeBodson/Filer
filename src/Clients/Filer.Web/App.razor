@@ -1,7 +1,7 @@
 @*
-    Thin host router. Auth state cascades from the token store (#128); pages render
-    through AuthorizeRouteView so a [Authorize] page reached while signed out shows the
-    sign-in prompt instead of the page. Routable pages and the default layout live in
+    Thin host router. Auth state cascades from the token store (#128); a protected
+    page reached while signed out redirects to /login carrying the intended target,
+    and sign-in returns there (#133). Routable pages and the default layout live in
     the shared RCL (Filer.Ui), discovered via AdditionalAssemblies for MAUI reuse (RM-02).
 *@
 <CascadingAuthenticationState>
@@ -11,7 +11,7 @@
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Filer.Ui.Layout.MainLayout)">
                 <NotAuthorized>
-                    <SignInPrompt />
+                    <RedirectToLogin />
                 </NotAuthorized>
             </AuthorizeRouteView>
             <FocusOnNavigate RouteData="@routeData" Selector="h1" />
