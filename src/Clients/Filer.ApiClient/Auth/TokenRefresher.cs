@@ -24,12 +24,12 @@ public sealed class TokenRefresher(
     private readonly string _authHttpClientName = authHttpClientName;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    public async Task<bool> TryRefreshAsync(CancellationToken cancellationToken = default)
+    public async Task<TokenRefreshResult> RefreshAsync(CancellationToken cancellationToken = default)
     {
         TokenPair? before = await _tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
         if (before?.RefreshToken is null)
         {
-            return false;
+            return TokenRefreshResult.Rejected;
         }
 
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -39,12 +39,12 @@ public sealed class TokenRefresher(
             TokenPair? current = await _tokenStore.GetAsync(cancellationToken).ConfigureAwait(false);
             if (current?.RefreshToken is null)
             {
-                return false;
+                return TokenRefreshResult.Rejected;
             }
 
             if (!string.Equals(current.AccessToken, before.AccessToken, StringComparison.Ordinal))
             {
-                return true;
+                return TokenRefreshResult.Refreshed;
             }
 
             FilerApiClient client = CreateAnonymousClient();
@@ -56,7 +56,9 @@ public sealed class TokenRefresher(
 
                 if (response?.AccessToken is null || response.RefreshToken is null)
                 {
-                    return false;
+                    // A 2xx without a usable pair is a server fault, not a verdict on
+                    // the refresh token - don't end the session over it.
+                    return TokenRefreshResult.TransientFailure;
                 }
 
                 await _tokenStore.SaveAsync(
@@ -67,12 +69,18 @@ public sealed class TokenRefresher(
                         response.RefreshTokenExpiresAt),
                     cancellationToken).ConfigureAwait(false);
 
-                return true;
+                return TokenRefreshResult.Refreshed;
+            }
+            catch (ApiException ex) when (ex.ResponseStatusCode is 401 or 403)
+            {
+                // Invalid/expired/reused refresh token - the caller ends the session.
+                return TokenRefreshResult.Rejected;
             }
             catch (ApiException)
             {
-                // Invalid/expired/reused refresh token (401) - caller ends the session.
-                return false;
+                // 5xx / gateway timeout during a deploy: the token was never judged.
+                // Keep the session; a later request retries the refresh (#167).
+                return TokenRefreshResult.TransientFailure;
             }
         }
         finally
