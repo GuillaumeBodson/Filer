@@ -21,4 +21,10 @@
     <ProjectReference Include="..\Filer.ApiClient\Filer.ApiClient.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The ITokenStore implementation stays internal; its tests live with the other
+         client auth tests (12-testing-strategy.md, #170). -->
+    <InternalsVisibleTo Include="Filer.Ui.Tests" />
+  </ItemGroup>
+
 </Project>
