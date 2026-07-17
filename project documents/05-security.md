@@ -9,7 +9,7 @@ authenticated, how access is authorized, how files are handled safely, and how
 secrets are managed. Security is a core, first-class concern (`08`).
 
 Related documents: `02-data-model.md`, `03-api-specification.md`,
-`04-non-functional.md`. Related decisions: ADR-002, ADR-003.
+`04-non-functional.md`. Related decisions: ADR-002, ADR-003, ADR-014.
 
 ---
 
@@ -48,6 +48,26 @@ DDoS mitigation, formal pen-testing/compliance certification.
 * **Logout / revocation:** `/auth/logout` revokes the active refresh token.
 * JWT signing keys come from configuration/secret storage, never source control,
   and are rotatable.
+
+### Client-side token storage (ADR-014)
+
+Where a *client* keeps the token pair is host-specific, behind the `ITokenStore`
+seam in `Filer.ApiClient`:
+
+* **Web (Blazor WASM):** both tokens persist in browser **localStorage** so the
+  session survives reload/restart. This is script-readable storage — an XSS
+  compromise of the origin leaks the pair. Accepted for V1's personal-use threat
+  model because the server design bounds the damage: the access token is
+  short-lived and the refresh token is single-use with rotation + family
+  revocation (theft detection). Client-side mitigations: Blazor's default output
+  encoding, no third-party scripts in the app shell.
+* On a 401 the client refreshes **once** and retries once (single-flight, via a
+  bearer-free client so the refresh cannot recurse); a failed refresh clears the
+  store, which signs the user out everywhere at once.
+* **Future MAUI shell (RM-02):** platform secure storage, same seam.
+* **SaaS-phase hardening path:** move the refresh token to an HttpOnly cookie
+  (requires server cookie handling + CSRF defense) and/or keep access tokens
+  in memory only — a host-level swap behind the seam (ADR-014).
 
 ### Future
 
@@ -163,6 +183,9 @@ Uploads are the largest attack surface. Required controls:
 ## Open Questions
 
 * Email verification and password-reset flows (deferred; needed before SaaS).
+* Content-Security-Policy for the web client (tightens the XSS exposure that
+  localStorage token storage accepts — ADR-014); revisit with production
+  hosting of the static assets (`07`).
 * Rate limiting / brute-force protection on `/auth/login` (recommended early).
 * Whether antivirus scanning is enabled in V1 or deferred to SaaS.
 * MFA support (SaaS-phase consideration).

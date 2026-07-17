@@ -790,7 +790,8 @@ type.**
 ## ADR-011 — API client: generate a typed Blazor client from OpenAPI with Kiota
 
 * **Date:** 2026-06-14
-* **Status:** Accepted (design; implementation when frontend work begins — see ADR-012)
+* **Status:** Accepted (ratified 2026-07-17 — implementation shipped with the
+  FE-M1 client slice, #144; see the Ratification section below)
 
 ### Context
 
@@ -858,6 +859,22 @@ server DTO classes with the browser.
   tests; rejected.
 * **Refit (handwritten typed interfaces).** Still manual contract maintenance, just
   relocated; rejected for the same drift reason.
+
+### Ratification (2026-07-17, FE-M1)
+
+The implementation landed as designed (#144). The two sub-decisions this ADR
+explicitly deferred to the implementing slice were resolved as follows (details
+in `src/Clients/Filer.ApiClient/README.md`):
+
+* **Checked-in generation, not generate-on-build.** The generated client *and*
+  its input snapshot (`openapi/v1.json`) are committed. A CI **drift gate**
+  regenerates from the snapshot and fails the build on any diff, so a contract
+  change cannot land without regenerating — CI needs neither a running API nor
+  PostgreSQL, and generated diffs are reviewable.
+* **Standalone `Filer.ApiClient` project, not the shared RCL.** The client is a
+  platform-neutral class library so the future MAUI shell (RM-02) can reference
+  it without dragging in Razor/UI dependencies; the RCL (`Filer.Ui`) consumes it
+  like any other host.
 
 ---
 
@@ -1086,3 +1103,146 @@ before confirming. Points worth recording without a full ADR:
   authz mapping) with no consumer - a plain port is enough. Revisit only if a
   remote/multi-tool agent becomes a real requirement.
 * Business value is unproven; the experiment does not gate M5 closure.
+
+---
+
+## ADR-014 — Client-side token storage: browser localStorage behind the host-owned `ITokenStore` seam
+
+* **Date:** 2026-07-17
+* **Status:** Accepted (records the FE-M1 implementation, #128; gap surfaced by
+  the FE-M1 milestone review, #134/#171)
+
+### Context
+
+FE-M1 shipped the client auth plumbing (#128): `BearerTokenHandler` attaches the
+JWT bearer token, `TokenRefresher` rotates the pair through `/auth/refresh`, and
+persistence sits behind the `ITokenStore` interface in `Filer.ApiClient`, with
+each host supplying its own implementation. `05-security.md` fixes the *server*
+side — short-lived access JWT (~15 min), refresh tokens stored hashed, rotation
+with family revocation on reuse — but said nothing about where a **client**
+keeps the pair. The web host had to decide, and the decision shipped silently:
+`LocalStorageTokenStore` writes both tokens to browser localStorage. Anything
+readable by JavaScript in the origin is readable by successful XSS, so this is a
+security-relevant choice that deserved an ADR at the time; this entry records it
+retroactively, together with the 401-retry design that has no other home.
+
+Constraints that shaped it:
+
+* The API is stateless bearer-token auth (`05`); no cookie session exists
+  server-side, and introducing one is a server-contract change.
+* A session must survive a page reload and a browser restart — re-entering
+  credentials on every F5 is unacceptable for a daily-use personal tool.
+* ADR-001's multi-client plan means storage must be per-host: browser storage on
+  web, platform secure storage on the future MAUI shell (RM-02).
+
+### Decision
+
+* **The persistence seam is host-owned.** `ITokenStore`
+  (get/save/clear + a `Changed` event) lives in `Filer.ApiClient`; each host
+  registers its own implementation. The shared plumbing never knows where
+  tokens live.
+* **The web host persists the full `TokenPair` — access and refresh token — in
+  browser localStorage** (`LocalStorageTokenStore`, `internal` to `Filer.Web`),
+  as camelCase JSON under the single key `filer.tokens`.
+* **The store is the single source of truth for auth state.** `Changed` fires on
+  save and clear and drives `FilerAuthenticationStateProvider`; signing out is
+  clearing the store. Corrupted or legacy JSON reads as `null` (signed out) —
+  it never throws.
+* **401 → refresh-once → retry** (recorded here for lack of another home):
+  `BearerTokenHandler` attaches the bearer when present; on a 401 *with a
+  refresh token in hand* it refreshes once and retries the request once with the
+  rotated token. `TokenRefresher` is single-flight (a semaphore serializes
+  concurrent refreshes; a caller that arrives after the pair already rotated
+  succeeds without a round-trip) and calls `/auth/refresh` through a dedicated
+  handler-free named client, so a refresh can never recurse into the handler or
+  carry a bearer token. A failed refresh clears the store, ending the session
+  everywhere at once via `Changed`.
+
+### Rationale
+
+* **Session persistence is the point.** localStorage is the only browser
+  primitive that survives reload and restart without server-side changes; it
+  matches the stateless bearer contract the API already has.
+* **The blast radius is bounded by the server design.** The access token expires
+  in ~15 minutes; the refresh token is single-use with rotation, and reuse of a
+  consumed token revokes the family (`05`). A stolen pair is therefore
+  detectable and time-boxed, which is what makes the localStorage trade
+  tenable at V1's single-user scale.
+* **The seam contains the decision.** Hardening later (e.g. moving the refresh
+  token to an HttpOnly cookie, or in-memory access tokens) is a host-level swap
+  behind `ITokenStore` plus a server change — no shared plumbing moves.
+* **Refresh-once is the loop-free minimum.** One refresh and one retry per
+  request bounds the work a hostile 401 can cause; single-flight prevents a
+  burst of parallel 401s from spending the refresh token twice (which rotation
+  would punish by revoking the family).
+
+### Trade-offs accepted
+
+* **XSS exposure, accepted explicitly.** Any script running in the origin can
+  read both tokens. Mitigations: Blazor's default output encoding (no raw HTML
+  interpolation), no third-party scripts in the app shell, short access-token
+  life + rotation/family-revocation server-side. Accepted for the V1
+  personal-use threat model (`05`); revisit before SaaS.
+* Tokens are shared across tabs — one session per browser profile. Also a
+  feature (sign-out in one tab signs out all).
+* The `Changed` event makes the store stateful, which pins its DI lifetime to
+  the auth-state provider's — a composition constraint the DI-scoping fix
+  (#166) must respect.
+
+### Alternatives considered
+
+* **Refresh token in an HttpOnly, Secure, SameSite cookie; access token in
+  memory.** The strongest browser posture (script cannot read the refresh
+  token), but requires the API to issue/accept cookies on the refresh endpoint,
+  CSRF defense, and CORS credentialed-request handling — a server contract
+  change serving only browser clients, while MAUI would keep the token flow.
+  Deferred as the designated SaaS-phase hardening, not done for V1.
+* **In-memory only.** Immune to storage theft, but the session dies on every
+  reload; rejected on UX for a daily-use tool.
+* **sessionStorage.** Per-tab and gone with it: marginally narrower exposure
+  than localStorage (still script-readable) with strictly worse UX; rejected.
+
+---
+
+## ADR-015 — Test libraries: xUnit v3 runner, FluentAssertions, Moq at the seams, bUnit for components
+
+* **Date:** 2026-07-17
+* **Status:** Accepted (records choices already pinned in
+  `Directory.Packages.props`; closes the corresponding `12` open item)
+
+### Context
+
+`12-testing-strategy.md` names the framework *roles* (runner, assertions, mocks,
+component rendering) but left the concrete libraries as an open item to be
+recorded "as a short ADR once picked". They are de facto picked: every test
+project pins them centrally via `Directory.Packages.props`, and FE-M1 added the
+component-test layer. This entry ratifies the set.
+
+### Decision
+
+* **Runner: xUnit v3** (`xunit.v3`) across all test projects.
+* **Assertions: FluentAssertions 8.x** — used under the Xceed Community
+  Licence, free for non-commercial use; Filer is a personal, non-commercial
+  project. Revisit the licence position if the project ever commercializes
+  (options then: pay, pin to 7.x, or migrate to Shouldly/AwesomeAssertions).
+* **Mocks: Moq**, at designed seams only, per `12`'s mocking policy (mock the
+  seam, never the type under test; hand-rolled fakes remain preferred where
+  behavior matters, e.g. the `FakeTokenStore` in `Filer.Ui.Tests`).
+* **Components: bUnit 2.x** for rendering Razor components in `Filer.Ui.Tests`
+  — test-framework agnostic, pairs with xunit.v3.
+* Versions stay centrally pinned in `Directory.Packages.props` (`10`).
+
+### Rationale
+
+* All four are the mainstream, actively maintained default in their role, and
+  they are already in use across 600+ green tests — ratifying beats churning.
+* The FluentAssertions 8.x licence caveat is the one non-obvious fact worth a
+  permanent record; it is documented here and next to the pin.
+
+### Alternatives considered
+
+* **Shouldly / AwesomeAssertions** — licence-clean alternatives to
+  FluentAssertions; not adopted now to avoid a mechanical rewrite of the whole
+  suite, kept as the designated fallback if the licence position changes.
+* **NSubstitute** — equivalent capability to Moq; no reason to switch an
+  established suite.
