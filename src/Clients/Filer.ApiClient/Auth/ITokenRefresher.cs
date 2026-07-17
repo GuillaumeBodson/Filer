@@ -9,8 +9,12 @@ namespace Filer.ApiClient.Auth;
 public interface ITokenRefresher
 {
     /// <summary>
-    /// Attempts a single refresh. Returns <c>true</c> and stores the rotated pair on
-    /// success; <c>false</c> when there is no refresh token or the server rejects it.
+    /// Attempts a single refresh. Stores the rotated pair and returns
+    /// <see cref="TokenRefreshResult.Refreshed"/> on success;
+    /// <see cref="TokenRefreshResult.Rejected"/> when there is no refresh token or the
+    /// server rejects it (401/403); <see cref="TokenRefreshResult.TransientFailure"/>
+    /// when the call fails without condemning the token (5xx, malformed response) so
+    /// the caller keeps the session (#167).
     /// </summary>
-    Task<bool> TryRefreshAsync(CancellationToken cancellationToken = default);
+    Task<TokenRefreshResult> RefreshAsync(CancellationToken cancellationToken = default);
 }

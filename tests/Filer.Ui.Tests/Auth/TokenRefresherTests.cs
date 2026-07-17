@@ -21,16 +21,16 @@ public sealed class TokenRefresherTests
     """;
 
     [Fact]
-    public async Task Refresh_stores_the_rotated_pair_and_returns_true()
+    public async Task Refresh_stores_the_rotated_pair_and_returns_Refreshed()
     {
         var store = new FakeTokenStore(new TokenPair("old-access", null, "old-refresh", null));
         var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.OK, RefreshJson);
         using var refresher = new TokenRefresher(
             new SingleClientFactory(inner), store, BaseAddress, "FilerApiAuth");
 
-        bool result = await refresher.TryRefreshAsync(TestContext.Current.CancellationToken);
+        TokenRefreshResult result = await refresher.RefreshAsync(TestContext.Current.CancellationToken);
 
-        result.Should().BeTrue();
+        result.Should().Be(TokenRefreshResult.Refreshed);
         store.Current.Should().NotBeNull();
         store.Current!.AccessToken.Should().Be("new-access");
         store.Current.RefreshToken.Should().Be("new-refresh");
@@ -38,37 +38,60 @@ public sealed class TokenRefresherTests
         inner.Requests[0].RequestUri!.AbsolutePath.Should().Be("/api/v1/auth/refresh");
     }
 
-    [Fact]
-    public async Task Rejected_refresh_token_returns_false_and_keeps_old_tokens()
+    [Theory]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    public async Task Rejected_refresh_token_returns_Rejected_and_keeps_old_tokens(HttpStatusCode status)
     {
         var store = new FakeTokenStore(new TokenPair("old-access", null, "old-refresh", null));
-        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.Unauthorized);
+        var inner = new StubHttpMessageHandler().Enqueue(status);
         using var refresher = new TokenRefresher(
             new SingleClientFactory(inner), store, BaseAddress, "FilerApiAuth");
 
-        bool result = await refresher.TryRefreshAsync(TestContext.Current.CancellationToken);
+        TokenRefreshResult result = await refresher.RefreshAsync(TestContext.Current.CancellationToken);
 
-        result.Should().BeFalse();
+        result.Should().Be(TokenRefreshResult.Rejected);
         store.Current!.AccessToken.Should().Be("old-access");
         store.SaveCount.Should().Be(0);
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    [InlineData(HttpStatusCode.GatewayTimeout)]
+    public async Task Server_blip_during_refresh_returns_TransientFailure_and_keeps_old_tokens(HttpStatusCode status)
+    {
+        // A 5xx is not a verdict on the refresh token (#167): the session survives
+        // and a later request can retry the refresh.
+        var store = new FakeTokenStore(new TokenPair("old-access", null, "old-refresh", null));
+        var inner = new StubHttpMessageHandler().Enqueue(status);
+        using var refresher = new TokenRefresher(
+            new SingleClientFactory(inner), store, BaseAddress, "FilerApiAuth");
+
+        TokenRefreshResult result = await refresher.RefreshAsync(TestContext.Current.CancellationToken);
+
+        result.Should().Be(TokenRefreshResult.TransientFailure);
+        store.Current!.AccessToken.Should().Be("old-access");
+        store.SaveCount.Should().Be(0);
+        store.ClearCount.Should().Be(0);
+    }
+
     [Fact]
-    public async Task No_refresh_token_returns_false_without_calling_the_server()
+    public async Task No_refresh_token_returns_Rejected_without_calling_the_server()
     {
         var store = new FakeTokenStore(initial: null);
         var inner = new StubHttpMessageHandler();
         using var refresher = new TokenRefresher(
             new SingleClientFactory(inner), store, BaseAddress, "FilerApiAuth");
 
-        bool result = await refresher.TryRefreshAsync(TestContext.Current.CancellationToken);
+        TokenRefreshResult result = await refresher.RefreshAsync(TestContext.Current.CancellationToken);
 
-        result.Should().BeFalse();
+        result.Should().Be(TokenRefreshResult.Rejected);
         inner.Requests.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task Refresh_response_missing_a_token_returns_false_and_stores_nothing()
+    public async Task Refresh_response_missing_a_token_is_a_TransientFailure_and_stores_nothing()
     {
         var store = new FakeTokenStore(new TokenPair("old-access", null, "old-refresh", null));
         var inner = new StubHttpMessageHandler().Enqueue(
@@ -77,9 +100,10 @@ public sealed class TokenRefresherTests
         using var refresher = new TokenRefresher(
             new SingleClientFactory(inner), store, BaseAddress, "FilerApiAuth");
 
-        bool result = await refresher.TryRefreshAsync(TestContext.Current.CancellationToken);
+        TokenRefreshResult result = await refresher.RefreshAsync(TestContext.Current.CancellationToken);
 
-        result.Should().BeFalse();
+        // A 2xx without a usable pair is a server fault, not a verdict on the token.
+        result.Should().Be(TokenRefreshResult.TransientFailure);
         store.SaveCount.Should().Be(0);
         store.Current!.AccessToken.Should().Be("old-access");
     }
@@ -102,19 +126,19 @@ public sealed class TokenRefresherTests
 
         // The first caller acquires the gate and is now awaiting the gated response;
         // the second queues up behind the semaphore.
-        Task<bool> first = refresher.TryRefreshAsync(TestContext.Current.CancellationToken);
-        Task<bool> second = refresher.TryRefreshAsync(TestContext.Current.CancellationToken);
+        Task<TokenRefreshResult> first = refresher.RefreshAsync(TestContext.Current.CancellationToken);
+        Task<TokenRefreshResult> second = refresher.RefreshAsync(TestContext.Current.CancellationToken);
         release.SetResult();
 
-        (await first).Should().BeTrue();
-        (await second).Should().BeTrue();
+        (await first).Should().Be(TokenRefreshResult.Refreshed);
+        (await second).Should().Be(TokenRefreshResult.Refreshed);
         inner.Requests.Should().ContainSingle();
         store.SaveCount.Should().Be(1);
         store.Current!.AccessToken.Should().Be("new-access");
     }
 
     [Fact]
-    public async Task Already_rotated_pair_returns_true_without_a_round_trip()
+    public async Task Already_rotated_pair_returns_Refreshed_without_a_round_trip()
     {
         // The store hands out a different pair on the second read, as if another caller
         // rotated the tokens while this one waited on the gate.
@@ -125,9 +149,9 @@ public sealed class TokenRefresherTests
         using var refresher = new TokenRefresher(
             new SingleClientFactory(inner), store, BaseAddress, "FilerApiAuth");
 
-        bool result = await refresher.TryRefreshAsync(TestContext.Current.CancellationToken);
+        TokenRefreshResult result = await refresher.RefreshAsync(TestContext.Current.CancellationToken);
 
-        result.Should().BeTrue();
+        result.Should().Be(TokenRefreshResult.Refreshed);
         inner.Requests.Should().BeEmpty();
     }
 

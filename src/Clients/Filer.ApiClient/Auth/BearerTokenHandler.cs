@@ -7,8 +7,10 @@ namespace Filer.ApiClient.Auth;
 /// Delegating handler on the API <see cref="HttpClient"/> that attaches the bearer
 /// access token and, on a 401, refreshes once and retries the request (05-security.md,
 /// ADR-014).
-/// A failed refresh clears the session; the store's <see cref="ITokenStore.Changed"/>
-/// event flips auth state so the app routes the user to sign in.
+/// A <see cref="TokenRefreshResult.Rejected"/> refresh clears the session - the
+/// store's <see cref="ITokenStore.Changed"/> event flips auth state so the app routes
+/// the user to sign in. A <see cref="TokenRefreshResult.TransientFailure"/> keeps the
+/// tokens: the original 401 surfaces and a later request retries the refresh (#167).
 /// </summary>
 public sealed class BearerTokenHandler(ITokenStore tokenStore, ITokenRefresher tokenRefresher)
     : DelegatingHandler
@@ -30,11 +32,18 @@ public sealed class BearerTokenHandler(ITokenStore tokenStore, ITokenRefresher t
             return response;
         }
 
-        bool refreshed = await _tokenRefresher.TryRefreshAsync(cancellationToken).ConfigureAwait(false);
-        if (!refreshed)
+        TokenRefreshResult refreshed = await _tokenRefresher.RefreshAsync(cancellationToken).ConfigureAwait(false);
+        if (refreshed == TokenRefreshResult.Rejected)
         {
             // Refresh token is dead: end the session and surface the original 401.
             await _tokenStore.ClearAsync(cancellationToken).ConfigureAwait(false);
+            return response;
+        }
+
+        if (refreshed == TokenRefreshResult.TransientFailure)
+        {
+            // Server blip, not a verdict on the session: keep the tokens and surface
+            // the original 401 - the next request retries the refresh.
             return response;
         }
 

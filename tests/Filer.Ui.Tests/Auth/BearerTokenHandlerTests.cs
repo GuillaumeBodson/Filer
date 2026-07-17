@@ -88,6 +88,25 @@ public sealed class BearerTokenHandlerTests
     }
 
     [Fact]
+    public async Task On_401_with_transient_refresh_failure_keeps_the_session_and_returns_401()
+    {
+        // A 5xx during refresh is not a dead session (#167): tokens stay, the original
+        // 401 surfaces, and no retry is attempted with a token we know is stale.
+        var store = new FakeTokenStore(Tokens());
+        var refresher = new FakeTokenRefresher(store, TokenRefreshResult.TransientFailure);
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.Unauthorized);
+
+        using var handler = new BearerTokenHandler(store, refresher);
+        var response = await SendAsync(handler, inner, Request());
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        refresher.CallCount.Should().Be(1);
+        store.ClearCount.Should().Be(0);
+        store.Current.Should().NotBeNull();
+        inner.Requests.Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task Does_not_refresh_when_there_is_no_refresh_token()
     {
         var store = new FakeTokenStore(new TokenPair("access-1", null, RefreshToken: "", null));
@@ -158,23 +177,38 @@ public sealed class BearerTokenHandlerTests
         refresher.CallCount.Should().Be(0);
     }
 
-    private sealed class FakeTokenRefresher(
-        FakeTokenStore store, bool succeeds, string rotatedAccessToken = "access-2") : ITokenRefresher
+    private sealed class FakeTokenRefresher : ITokenRefresher
     {
+        private readonly FakeTokenStore _store;
+        private readonly TokenRefreshResult _result;
+        private readonly string _rotatedAccessToken;
+
+        public FakeTokenRefresher(FakeTokenStore store, bool succeeds, string rotatedAccessToken = "access-2")
+            : this(store, succeeds ? TokenRefreshResult.Refreshed : TokenRefreshResult.Rejected, rotatedAccessToken)
+        {
+        }
+
+        public FakeTokenRefresher(FakeTokenStore store, TokenRefreshResult result, string rotatedAccessToken = "access-2")
+        {
+            _store = store;
+            _result = result;
+            _rotatedAccessToken = rotatedAccessToken;
+        }
+
         public int CallCount { get; private set; }
 
-        public async Task<bool> TryRefreshAsync(CancellationToken cancellationToken = default)
+        public async Task<TokenRefreshResult> RefreshAsync(CancellationToken cancellationToken = default)
         {
             CallCount++;
-            if (!succeeds)
+            if (_result != TokenRefreshResult.Refreshed)
             {
-                return false;
+                return _result;
             }
 
-            await store.SaveAsync(
-                new TokenPair(rotatedAccessToken, DateTimeOffset.MaxValue, "refresh-2", DateTimeOffset.MaxValue),
+            await _store.SaveAsync(
+                new TokenPair(_rotatedAccessToken, DateTimeOffset.MaxValue, "refresh-2", DateTimeOffset.MaxValue),
                 cancellationToken);
-            return true;
+            return TokenRefreshResult.Refreshed;
         }
     }
 }
