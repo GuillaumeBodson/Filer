@@ -23,7 +23,12 @@ public static class FilerApiClientServiceCollectionExtensions
     /// <summary>
     /// Adds the typed Filer API client and its auth plumbing to the container. The host
     /// must also register an <see cref="ITokenStore"/> (e.g. browser localStorage in
-    /// Filer.Web) that supplies and persists the tokens.
+    /// Filer.Web) that supplies and persists the tokens — <b>as a singleton</b>:
+    /// <see cref="IHttpClientFactory"/> builds message-handler chains in its own DI
+    /// scope, so a scoped store would split into one instance inside
+    /// <see cref="BearerTokenHandler"/> and another in the app scope, and the store's
+    /// <c>Changed</c> event raised by a refresh would never reach app-side
+    /// subscribers (#166).
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="baseAddress">The API base address, e.g. <c>https://api.example.com/</c>.</param>
@@ -37,7 +42,11 @@ public static class FilerApiClientServiceCollectionExtensions
         services.AddSingleton<IAuthenticationProvider, AnonymousAuthenticationProvider>();
 
         services.AddTransient<BearerTokenHandler>();
-        services.AddScoped<ITokenRefresher>(sp => new TokenRefresher(
+
+        // Singleton, not scoped (#166): the refresher is resolved both from the app
+        // scope and from IHttpClientFactory's handler scope. Its single-flight gate
+        // ("concurrent refreshes are serialized") only holds if both see one instance.
+        services.AddSingleton<ITokenRefresher>(sp => new TokenRefresher(
             sp.GetRequiredService<IHttpClientFactory>(),
             sp.GetRequiredService<ITokenStore>(),
             baseAddress,

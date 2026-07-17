@@ -22,7 +22,11 @@ builder.Services.AddFilerApiClient(new Uri(apiBaseAddress, UriKind.Absolute));
 // Auth plumbing (#128, 05-security.md): tokens persist in browser localStorage; the
 // bearer/refresh handler (registered by AddFilerApiClient) reads them; auth state for
 // AuthorizeView/AuthorizeRouteView derives from the same store.
-builder.Services.AddScoped<ITokenStore, LocalStorageTokenStore>();
+// Singleton, not scoped (#166): IHttpClientFactory builds its handler chain in its own
+// DI scope, so a scoped store would give BearerTokenHandler a different instance than
+// the one FilerAuthenticationStateProvider subscribes to - its Changed event would
+// never reach the UI.
+builder.Services.AddSingleton<ITokenStore, LocalStorageTokenStore>();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, FilerAuthenticationStateProvider>();
 
