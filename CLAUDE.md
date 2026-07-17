@@ -26,6 +26,7 @@ Tout le *quoi* vit dans `project documents/`. En cas de conflit avec ce fichier,
 | Stratégie de tests, tests requis, seuil de couverture | `12-testing-strategy.md` |
 | Standards de code, OOP/SOLID, patterns, Definition of Done | `13-code-quality-and-design.md` |
 | Roadmap post-V1 (features différées)                | `14-roadmap.md` |
+| Architecture frontend, seams UI, tokens, tests bUnit | `15-frontend-architecture.md` |
 
 ## Commandes
 
