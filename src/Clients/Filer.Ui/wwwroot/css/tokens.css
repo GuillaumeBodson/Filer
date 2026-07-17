@@ -2,24 +2,45 @@
   Design tokens — the single source of visual primitives for every Filer client
   (web today, MAUI shell later, RM-02). Components and scoped styles reference these
   custom properties; no component hard-codes colours, spacing or fonts.
+
+  Identity: "Registre" (#178) — warm paper neutrals and a bottle-green primary; the
+  brand name alone is set in a system serif (--font-brand), zero webfont payload.
+
+  Theming: light is the default; dark ("warm ink" — olive-leaning neutrals, never a
+  blue-grey) follows the OS via prefers-color-scheme. A future in-app toggle stamps
+  data-theme="light|dark" on <html>, which overrides the OS preference both ways.
+  Components consume tokens only — never a colour inside a media query.
 */
 :root {
     color-scheme: light;
 
-    /* Colour */
-    --color-bg: #f7f8fa;
-    --color-surface: #ffffff;
-    --color-text: #1c2230;
-    --color-text-muted: #5b6472;
-    --color-border: #e2e5eb;
-    --color-primary: #1b6ec2;
-    --color-primary-contrast: #ffffff;
-    --color-danger: #c0392b;
-    --color-danger-bg: #fff5f5;
-    --color-focus-ring: #258cfb;
+    /* Colour — surfaces and text */
+    --color-bg: #f8f5ee;
+    --color-surface: #fdfbf5;
+    --color-text: #26251e;
+    --color-text-muted: #6e6a5b;
+    --color-border: #e2dccc;
+
+    /* Colour — primary (actions, navigation, links) */
+    --color-primary: #35604b;
+    --color-primary-hover: #27503a;
+    --color-primary-contrast: #f8f5ee;
+    --color-primary-soft: #e4ebe2;
+
+    /* Colour — semantic (statuses, upload UX). The soft variant is the tinted
+       background behind the strong text colour (pills, banners). */
+    --color-success: #4c7e3e;
+    --color-success-soft: #e5efdd;
+    --color-warning: #a2651c;
+    --color-warning-soft: #f4e8d2;
+    --color-danger: #a83a32;
+    --color-danger-soft: #f5e1de;
+
+    --color-focus-ring: #35604b;
 
     /* Typography */
     --font-sans: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    --font-brand: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
     --font-size-base: 1rem;
     --line-height-base: 1.5;
 
@@ -33,9 +54,91 @@
     /* Radius + elevation */
     --radius-sm: 4px;
     --radius-md: 8px;
-    --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+    --shadow-sm: 0 1px 2px rgba(38, 37, 30, 0.08);
 
     /* Layout */
     --topbar-height: 3.5rem;
     --content-max-width: 72rem;
+}
+
+/* Dark — "warm ink". OS preference; overridden by an explicit data-theme below. */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+
+        --color-bg: #191a13;
+        --color-surface: #22231a;
+        --color-text: #eae6d8;
+        --color-text-muted: #a09c88;
+        --color-border: #33342a;
+
+        --color-primary: #8cbba0;
+        --color-primary-hover: #a3ccb3;
+        --color-primary-contrast: #14231b;
+        --color-primary-soft: #24352b;
+
+        --color-success: #9cc17e;
+        --color-success-soft: #263019;
+        --color-warning: #d9a85c;
+        --color-warning-soft: #362a12;
+        --color-danger: #de8a80;
+        --color-danger-soft: #38201b;
+
+        --color-focus-ring: #8cbba0;
+
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+    }
+}
+
+/* Explicit theme choice (future in-app toggle) beats the OS preference. */
+:root[data-theme="light"] {
+    color-scheme: light;
+
+    --color-bg: #f8f5ee;
+    --color-surface: #fdfbf5;
+    --color-text: #26251e;
+    --color-text-muted: #6e6a5b;
+    --color-border: #e2dccc;
+
+    --color-primary: #35604b;
+    --color-primary-hover: #27503a;
+    --color-primary-contrast: #f8f5ee;
+    --color-primary-soft: #e4ebe2;
+
+    --color-success: #4c7e3e;
+    --color-success-soft: #e5efdd;
+    --color-warning: #a2651c;
+    --color-warning-soft: #f4e8d2;
+    --color-danger: #a83a32;
+    --color-danger-soft: #f5e1de;
+
+    --color-focus-ring: #35604b;
+
+    --shadow-sm: 0 1px 2px rgba(38, 37, 30, 0.08);
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --color-bg: #191a13;
+    --color-surface: #22231a;
+    --color-text: #eae6d8;
+    --color-text-muted: #a09c88;
+    --color-border: #33342a;
+
+    --color-primary: #8cbba0;
+    --color-primary-hover: #a3ccb3;
+    --color-primary-contrast: #14231b;
+    --color-primary-soft: #24352b;
+
+    --color-success: #9cc17e;
+    --color-success-soft: #263019;
+    --color-warning: #d9a85c;
+    --color-warning-soft: #362a12;
+    --color-danger: #de8a80;
+    --color-danger-soft: #38201b;
+
+    --color-focus-ring: #8cbba0;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
 }

@@ -36,9 +36,12 @@
     box-shadow: var(--shadow-sm);
 }
 
+/* The brand is the one serif element of the identity ("Registre", #178). */
 .brand {
+    font-family: var(--font-brand);
     font-weight: 600;
-    font-size: 1.125rem;
+    font-size: 1.25rem;
+    letter-spacing: 0.01em;
     color: var(--color-text);
 }
 
