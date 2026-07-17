@@ -1246,3 +1246,107 @@ component-test layer. This entry ratifies the set.
   suite, kept as the designated fallback if the licence position changes.
 * **NSubstitute** — equivalent capability to Moq; no reason to switch an
   established suite.
+
+---
+
+## ADR-016 — Frontend design system: hand-rolled CSS on design tokens, no component library
+
+* **Date:** 2026-07-17
+* **Status:** Accepted (re-evaluate at the FE-M2 milestone review, #132)
+
+### Context
+
+FE-M1 shipped an implicit visual direction that was never recorded as a
+decision: `tokens.css` in the `Filer.Ui` RCL as the single source of visual
+primitives (colours, typography, spacing, radius, elevation), scoped
+`.razor.css` per component, and **no component library**. The investment so far
+is small (~200 lines of CSS) and deliberately token-driven — no component
+hard-codes a colour or spacing.
+
+FE-M2 builds the first six real screens (auth forms, server-paginated document
+list, upload status UX, folder tree with rename/move, dialogs, menus, toasts).
+This is where the choice becomes structural and the last moment where switching
+is cheap, so it must be decided explicitly. The two credible component
+libraries were evaluated against their mid-2026 state (sources on #177):
+
+* **MudBlazor v9.7** — healthy monthly cadence, net10.0 supported, and its
+  look is genuinely themable from CSS custom properties (`--mud-palette-*`,
+  `--mud-typography-*`), so `tokens.css` could drive it. But it adds **~2 MB to
+  the WASM download** (one of the heaviest Blazor libraries), has **no formal
+  WCAG conformance** (community-driven a11y with documented gaps in menus,
+  radio, pagination), `MudTreeView` has **no node drag-and-drop and no inline
+  rename** — precisely what the folder tree (#138) needs — and bUnit testing
+  carries documented friction (`MudPopoverProvider` setup, loose JSInterop,
+  DataGrid disposal bug).
+* **Fluent UI Blazor v4.14 / v5-RC** — *not* an officially supported Microsoft
+  product (best-effort OSS maintained by MS employees + community). The v5
+  rewrite is **still RC with no announced GA date**, so adopting v4 today buys
+  a migration; moving away from the stock Fluent look is hard **by design**
+  (v5 explicitly targets pixel-perfect Fluent 2); `FluentDataGrid` with a
+  server-side `ItemsProvider` — the shape of the document list (#135) — has
+  several open pagination bugs; bUnit needs JS-module and DesignToken mocks in
+  v4.
+
+Two cross-cutting observations weighed heavily. First, both libraries are
+weakest exactly on FE-M2's core components (the folder tree and the
+server-paginated list), so Filer would pay the dependency *and* still hand-roll
+the hard parts. Second, Fluent's own v5 rewrite abandons its web-components
+layer in favour of native `<dialog>` elements and plain HTML tables — the very
+browser primitives a hand-rolled approach uses directly, without the
+dependency.
+
+### Decision
+
+**Keep the hand-rolled design system.**
+
+* `tokens.css` stays the single source of visual primitives; components and
+  scoped styles reference tokens only, never raw values.
+* Overlay primitives (dialogs, menus, toasts) build on **native browser
+  primitives**: `<dialog>` (built-in focus trap and top-layer rendering) and
+  the popover API — both baseline in evergreen browsers.
+* Shared components live in the `Filer.Ui` RCL, which the future MAUI Blazor
+  Hybrid shell (RM-02) reuses; plain HTML/CSS is Hybrid-compatible by
+  construction.
+* **Accessibility is an in-house responsibility** — no library was going to
+  provide it anyway (see Context); the Definition of Done already mandates
+  labelled controls and keyboard reachability per screen.
+* A visual-identity pass on the tokens (palette, dark-mode decision, AA
+  contrast check) precedes the first screen slice — tracked as #178.
+* Frontend conventions, including these component-authoring rules, land in
+  `15-frontend-architecture.md` as ADR-012 already planned.
+
+### Rationale
+
+* **The evaluation strengthened, not just permitted, the status quo**: the
+  libraries' gaps land on FE-M2's core needs, their a11y story removes their
+  best argument, and MudBlazor's ~2 MB payload is material for a WASM app.
+* **Anti-anticipation** (`13`): a heavyweight dependency adopted for
+  convenience components that then need hand-rolling anyway removes no real
+  complexity.
+* **bUnit stays trivial** — hand-rolled components are plain markup; both
+  libraries carry documented test-harness friction while `12` requires
+  component tests per slice.
+
+### Trade-offs accepted
+
+* Every primitive (tree, pagination, toasts) is paid for in build time and
+  bUnit tests rather than downloaded — accepted for FE-M2's modest component
+  needs.
+* WCAG-correct behaviour must be verified in-house per the DoD, with no
+  library baseline to lean on.
+* **Explicit exit ramp:** re-evaluate at the FE-M2 milestone review (#132). If
+  the screens revealed real pain, adopting MudBlazor then costs barely more
+  than today — the protected investment is a token file and a small set of
+  RCL components.
+
+### Alternatives considered
+
+* **MudBlazor v9** — richest free component set and honest CSS-variable
+  theming; rejected on payload, absent WCAG conformance, tree-component gaps,
+  and bUnit friction.
+* **Fluent UI Blazor v4** — rejected on timing (v5 RC with no GA date means a
+  guaranteed migration), rigid theming, DataGrid pagination bugs, and its
+  unsupported-OSS status despite the Microsoft branding.
+* **Wait for Fluent UI Blazor v5** — indefinite (no GA date) and it would
+  still impose the Fluent 2 look; its own move to native primitives is better
+  consumed directly.
