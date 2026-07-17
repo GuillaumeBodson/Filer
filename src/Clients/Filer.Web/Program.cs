@@ -2,6 +2,7 @@ using Filer.ApiClient;
 using Filer.ApiClient.Auth;
 using Filer.Ui.Auth;
 using Filer.Ui.Documents;
+using Filer.Ui.Folders;
 using Filer.Web;
 using Filer.Web.Auth;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -35,7 +36,8 @@ builder.Services.AddScoped<AuthenticationStateProvider, FilerAuthenticationState
 // than touching the Kiota client or the token store directly.
 builder.Services.AddScoped<IAuthSession, AuthSession>();
 
-// Document browsing (#135), same seam pattern.
+// Document browsing (#135) and folders (#137 move picker), same seam pattern.
 builder.Services.AddScoped<IDocumentsService, DocumentsService>();
+builder.Services.AddScoped<IFoldersService, FoldersService>();
 
 await builder.Build().RunAsync();

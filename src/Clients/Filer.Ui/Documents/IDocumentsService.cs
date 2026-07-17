@@ -21,7 +21,43 @@ public interface IDocumentsService
 
     /// <summary>Loads one document's metadata (status polling, detail view #137).</summary>
     Task<DocumentMetadataResult> GetMetadataAsync(Guid documentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Renames and/or moves a document (merge-patch, 03-api-specification.md):
+    /// only the fields the update carries change; moving with a null target goes
+    /// to the root.
+    /// </summary>
+    Task<DocumentUpdateResult> UpdateAsync(Guid documentId, DocumentUpdate update, CancellationToken cancellationToken = default);
+
+    /// <summary>Downloads the binary content (07-storage-and-deployment.md).</summary>
+    Task<DocumentContentResult> DownloadAsync(Guid documentId, CancellationToken cancellationToken = default);
+
+    /// <summary>Soft-deletes the document. Returns <c>null</c> on success.</summary>
+    Task<ProblemDetailsView?> DeleteAsync(Guid documentId, CancellationToken cancellationToken = default);
 }
+
+/// <summary>What to change on a document; leave a member unset to keep it.</summary>
+public sealed record DocumentUpdate
+{
+    /// <summary>New file name, or <c>null</c> to keep the current one.</summary>
+    public string? NewFileName { get; init; }
+
+    /// <summary>Whether the update changes the folder at all.</summary>
+    public bool MoveFolder { get; init; }
+
+    /// <summary>Target folder when <see cref="MoveFolder"/> is set; <c>null</c> = root.</summary>
+    public Guid? TargetFolderId { get; init; }
+}
+
+/// <summary>Outcome of an update: exactly one side is set.</summary>
+public sealed record DocumentUpdateResult(
+    UpdateDocumentMetadataResponse? Document,
+    ProblemDetailsView? Problem);
+
+/// <summary>Downloaded bytes, or the problem that prevented the download.</summary>
+public sealed record DocumentContentResult(
+    byte[]? Content,
+    ProblemDetailsView? Problem);
 
 /// <summary>One file to upload; the stream is read once by the transport.</summary>
 public sealed record DocumentUploadRequest(Stream Content, string FileName, string ContentType);

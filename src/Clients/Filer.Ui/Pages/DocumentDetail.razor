@@ -1,0 +1,261 @@
+@namespace Filer.Ui.Pages
+@page "/documents/{Id:guid}"
+@using Filer.ApiClient.Generated.Models
+@using Filer.Ui.Documents
+@using Filer.Ui.Folders
+@using Filer.Ui.Formatting
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@attribute [Authorize]
+@inject IDocumentsService DocumentsApi
+@inject IFoldersService FoldersApi
+@inject NavigationManager Navigation
+@inject IJSRuntime Js
+
+<PageTitle>@(_document?.FileName ?? "Document") — Filer</PageTitle>
+
+@if (_loading)
+{
+    <LoadingIndicator Message="Loading the document…" />
+}
+else if (_loadProblem is not null)
+{
+    @* Missing and cross-owner are the same 404 by design (05-security.md); ErrorState
+       renders it as a calm not-found. *@
+    <ErrorState Problem="_loadProblem"
+                NotFoundTitle="Document not found"
+                NotFoundDescription="This document doesn't exist or isn't yours."
+                OnRetry="LoadAsync" />
+    <p><a href="documents">Back to documents</a></p>
+}
+else if (_document is not null)
+{
+    <div class="detail-head">
+        <h1>@_document.FileName</h1>
+        <DocumentStatusBadge Status="@_document.Status" />
+    </div>
+    <p><a href="documents">← Back to documents</a></p>
+
+    <dl class="detail-meta">
+        <dt>Type</dt>
+        <dd>@_document.ContentType</dd>
+        <dt>Size</dt>
+        <dd>@ByteSize.Format(_document.SizeBytes)</dd>
+        <dt>Added</dt>
+        <dd>@_document.CreatedAt?.LocalDateTime.ToString("g")</dd>
+        <dt>Updated</dt>
+        <dd>@_document.UpdatedAt?.LocalDateTime.ToString("g")</dd>
+        <dt>Folder</dt>
+        <dd>@(CurrentFolderName() ?? "—")</dd>
+    </dl>
+
+    <section class="detail-actions" aria-label="Document actions">
+        <form class="action" @onsubmit="RenameAsync">
+            <label for="rename">Rename</label>
+            <div class="action-row">
+                <input id="rename" type="text" @bind="_renameInput" />
+                <button type="submit" class="btn btn-primary" disabled="@_busy">Rename</button>
+            </div>
+        </form>
+
+        <form class="action" @onsubmit="MoveAsync">
+            <label for="move-folder">Move to folder</label>
+            <div class="action-row">
+                <select id="move-folder" @bind="_moveTarget" disabled="@(_folders is null)">
+                    <option value="">(No folder)</option>
+                    @foreach (FolderListItemResponse folder in _folders ?? [])
+                    {
+                        <option value="@folder.Id">@folder.Name</option>
+                    }
+                </select>
+                <button type="submit" class="btn btn-primary" disabled="@_busy">Move</button>
+            </div>
+        </form>
+
+        <div class="action">
+            <span class="action-label">Content</span>
+            <div class="action-row">
+                <button type="button" class="btn detail-download" disabled="@_busy" @onclick="DownloadAsync">
+                    Download
+                </button>
+            </div>
+        </div>
+
+        <div class="action">
+            <span class="action-label">Danger zone</span>
+            <div class="action-row">
+                @if (!_confirmingDelete)
+                {
+                    <button type="button" class="btn btn-danger" disabled="@_busy" @onclick="() => _confirmingDelete = true">
+                        Delete
+                    </button>
+                }
+                else
+                {
+                    <span class="detail-confirm">Delete “@_document.FileName”?</span>
+                    <button type="button" class="btn btn-danger detail-confirm-yes" disabled="@_busy" @onclick="DeleteAsync">
+                        Yes, delete
+                    </button>
+                    <button type="button" class="btn" disabled="@_busy" @onclick="() => _confirmingDelete = false">
+                        Cancel
+                    </button>
+                }
+            </div>
+        </div>
+    </section>
+
+    @if (_actionNotice is not null)
+    {
+        <p class="detail-notice" role="status" aria-live="polite">@_actionNotice</p>
+    }
+    @if (_actionProblem is not null)
+    {
+        <ErrorState Problem="_actionProblem" />
+    }
+}
+
+@code {
+    private DocumentMetadataResponse? _document;
+    private ProblemDetailsView? _loadProblem;
+    private ProblemDetailsView? _actionProblem;
+    private string? _actionNotice;
+    private bool _loading = true;
+    private bool _busy;
+    private bool _confirmingDelete;
+    private string? _renameInput;
+    private string _moveTarget = "";
+    private IReadOnlyList<FolderListItemResponse>? _folders;
+
+    [Parameter] public Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        // Folder names for the picker and the metadata line; a failure here only
+        // degrades the picker, it doesn't block the page.
+        FoldersListResult folders = await FoldersApi.ListAsync();
+        _folders = folders.Folders;
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _loadProblem = null;
+        try
+        {
+            DocumentMetadataResult result = await DocumentsApi.GetMetadataAsync(Id);
+            _document = result.Document;
+            _loadProblem = result.Problem;
+            _renameInput = _document?.FileName;
+            _moveTarget = _document?.FolderId?.ToString() ?? "";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string? CurrentFolderName() =>
+        _folders?.FirstOrDefault(f => f.Id == _document?.FolderId)?.Name;
+
+    private async Task RenameAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_renameInput) || _renameInput == _document?.FileName)
+        {
+            return;
+        }
+
+        await RunActionAsync(async () =>
+        {
+            DocumentUpdateResult result = await DocumentsApi.UpdateAsync(
+                Id, new DocumentUpdate { NewFileName = _renameInput!.Trim() });
+            if (result.Problem is not null)
+            {
+                _actionProblem = result.Problem;
+                return;
+            }
+
+            _actionNotice = $"Renamed to “{result.Document!.FileName}”.";
+            await LoadAsync();
+        });
+    }
+
+    private async Task MoveAsync()
+    {
+        Guid? target = Guid.TryParse(_moveTarget, out Guid parsed) ? parsed : null;
+        if (target == _document?.FolderId)
+        {
+            return;
+        }
+
+        await RunActionAsync(async () =>
+        {
+            DocumentUpdateResult result = await DocumentsApi.UpdateAsync(
+                Id, new DocumentUpdate { MoveFolder = true, TargetFolderId = target });
+            if (result.Problem is not null)
+            {
+                _actionProblem = result.Problem;
+                return;
+            }
+
+            _actionNotice = target is null
+                ? "Moved out of its folder."
+                : $"Moved to “{CurrentFolderNameFor(target)}”.";
+            await LoadAsync();
+        });
+    }
+
+    private string? CurrentFolderNameFor(Guid? folderId) =>
+        _folders?.FirstOrDefault(f => f.Id == folderId)?.Name ?? "its new folder";
+
+    private async Task DownloadAsync()
+    {
+        await RunActionAsync(async () =>
+        {
+            DocumentContentResult result = await DocumentsApi.DownloadAsync(Id);
+            if (result.Problem is not null)
+            {
+                _actionProblem = result.Problem;
+                return;
+            }
+
+            await Js.InvokeVoidAsync(
+                "filerUi.downloadFile",
+                _document!.FileName,
+                _document.ContentType,
+                Convert.ToBase64String(result.Content!));
+            _actionNotice = "Download started.";
+        });
+    }
+
+    private async Task DeleteAsync()
+    {
+        await RunActionAsync(async () =>
+        {
+            ProblemDetailsView? problem = await DocumentsApi.DeleteAsync(Id);
+            if (problem is not null)
+            {
+                _actionProblem = problem;
+                _confirmingDelete = false;
+                return;
+            }
+
+            Navigation.NavigateTo("documents", replace: true);
+        });
+    }
+
+    private async Task RunActionAsync(Func<Task> action)
+    {
+        _busy = true;
+        _actionProblem = null;
+        _actionNotice = null;
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}
