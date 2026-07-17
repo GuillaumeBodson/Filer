@@ -103,6 +103,65 @@ public sealed class DocumentsServiceTests
     }
 
     [Fact]
+    public async Task Upload_never_reads_the_source_stream_synchronously()
+    {
+        // Blazor's BrowserFileStream throws on synchronous reads, and Kiota's
+        // MultipartBody serializes with a sync CopyTo — the service must buffer.
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.Created, """
+        { "id": "11111111-1111-1111-1111-111111111111", "fileName": "invoice.pdf",
+          "contentType": "application/pdf", "sizeBytes": 8, "status": "Uploaded",
+          "createdAt": "2026-07-18T10:00:00+00:00" }
+        """);
+        DocumentsService service = CreateService(inner);
+        using var content = new AsyncOnlyStream("%PDF-1.7"u8.ToArray());
+
+        DocumentUploadResult result = await service.UploadAsync(
+            new DocumentUploadRequest(content, "invoice.pdf", "application/pdf"),
+            TestContext.Current.CancellationToken);
+
+        result.Problem.Should().BeNull();
+        System.Text.Encoding.UTF8.GetString(inner.Requests.Single().Body!).Should().Contain("%PDF-1.7");
+    }
+
+    /// <summary>Mimics BrowserFileStream: async reads only, sync reads throw.</summary>
+    private sealed class AsyncOnlyStream(byte[] data) : Stream
+    {
+        private readonly MemoryStream _inner = new(data);
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => _inner.Length;
+        public override long Position
+        {
+            get => _inner.Position;
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new NotSupportedException("Synchronous reads are not supported.");
+
+        public override ValueTask<int> ReadAsync(
+            Memory<byte> buffer, CancellationToken cancellationToken = default) =>
+            _inner.ReadAsync(buffer, cancellationToken);
+
+        public override void Flush() => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _inner.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+    }
+
+    [Fact]
     public async Task The_duplicate_409_carries_the_existing_document_id()
     {
         var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.Conflict, """
