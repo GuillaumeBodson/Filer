@@ -26,6 +26,10 @@ public static class DeleteFolderEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("DeleteFolder")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict)
         .RequireAuthorization();
     }
 }

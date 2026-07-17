@@ -23,6 +23,9 @@ public static class RemoveDocumentTagEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("RemoveDocumentTag")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization();
     }
 }

@@ -23,6 +23,10 @@ public static class ApplyDocumentAnalysisEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("ApplyDocumentAnalysis")
+        .Produces<ApplyDocumentAnalysisResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization();
     }
 }

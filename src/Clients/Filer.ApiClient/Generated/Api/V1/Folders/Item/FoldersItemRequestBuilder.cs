@@ -33,52 +33,78 @@ namespace Filer.ApiClient.Generated.Api.V1.Folders.Item
         public FoldersItemRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/v1/folders/{id}{?recursive*}", rawUrl)
         {
         }
-        /// <returns>A <see cref="Stream"/></returns>
         /// <param name="cancellationToken">Cancellation token to use when cancelling requests</param>
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
+        /// <exception cref="global::Filer.ApiClient.Generated.Models.ProblemDetails">When receiving a 401 status code</exception>
+        /// <exception cref="global::Filer.ApiClient.Generated.Models.ProblemDetails">When receiving a 404 status code</exception>
+        /// <exception cref="global::Filer.ApiClient.Generated.Models.ProblemDetails">When receiving a 409 status code</exception>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public async Task<Stream?> DeleteAsync(Action<RequestConfiguration<global::Filer.ApiClient.Generated.Api.V1.Folders.Item.FoldersItemRequestBuilder.FoldersItemRequestBuilderDeleteQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task DeleteAsync(Action<RequestConfiguration<global::Filer.ApiClient.Generated.Api.V1.Folders.Item.FoldersItemRequestBuilder.FoldersItemRequestBuilderDeleteQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #nullable restore
 #else
-        public async Task<Stream> DeleteAsync(Action<RequestConfiguration<global::Filer.ApiClient.Generated.Api.V1.Folders.Item.FoldersItemRequestBuilder.FoldersItemRequestBuilderDeleteQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task DeleteAsync(Action<RequestConfiguration<global::Filer.ApiClient.Generated.Api.V1.Folders.Item.FoldersItemRequestBuilder.FoldersItemRequestBuilderDeleteQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #endif
             var requestInfo = ToDeleteRequestInformation(requestConfiguration);
-            return await RequestAdapter.SendPrimitiveAsync<Stream>(requestInfo, default, cancellationToken).ConfigureAwait(false);
+            var errorMapping = new Dictionary<string, ParsableFactory<IParsable>>
+            {
+                { "401", global::Filer.ApiClient.Generated.Models.ProblemDetails.CreateFromDiscriminatorValue },
+                { "404", global::Filer.ApiClient.Generated.Models.ProblemDetails.CreateFromDiscriminatorValue },
+                { "409", global::Filer.ApiClient.Generated.Models.ProblemDetails.CreateFromDiscriminatorValue },
+            };
+            await RequestAdapter.SendNoContentAsync(requestInfo, errorMapping, cancellationToken).ConfigureAwait(false);
         }
-        /// <returns>A <see cref="Stream"/></returns>
+        /// <returns>A <see cref="global::Filer.ApiClient.Generated.Models.GetFolderResponse"/></returns>
         /// <param name="cancellationToken">Cancellation token to use when cancelling requests</param>
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
+        /// <exception cref="global::Filer.ApiClient.Generated.Models.ProblemDetails">When receiving a 401 status code</exception>
+        /// <exception cref="global::Filer.ApiClient.Generated.Models.ProblemDetails">When receiving a 404 status code</exception>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public async Task<Stream?> GetAsync(Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<global::Filer.ApiClient.Generated.Models.GetFolderResponse?> GetAsync(Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #nullable restore
 #else
-        public async Task<Stream> GetAsync(Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<global::Filer.ApiClient.Generated.Models.GetFolderResponse> GetAsync(Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #endif
             var requestInfo = ToGetRequestInformation(requestConfiguration);
-            return await RequestAdapter.SendPrimitiveAsync<Stream>(requestInfo, default, cancellationToken).ConfigureAwait(false);
+            var errorMapping = new Dictionary<string, ParsableFactory<IParsable>>
+            {
+                { "401", global::Filer.ApiClient.Generated.Models.ProblemDetails.CreateFromDiscriminatorValue },
+                { "404", global::Filer.ApiClient.Generated.Models.ProblemDetails.CreateFromDiscriminatorValue },
+            };
+            return await RequestAdapter.SendAsync<global::Filer.ApiClient.Generated.Models.GetFolderResponse>(requestInfo, global::Filer.ApiClient.Generated.Models.GetFolderResponse.CreateFromDiscriminatorValue, errorMapping, cancellationToken).ConfigureAwait(false);
         }
-        /// <returns>A <see cref="Stream"/></returns>
+        /// <returns>A <see cref="global::Filer.ApiClient.Generated.Models.UpdateFolderResponse"/></returns>
         /// <param name="body">The request body</param>
         /// <param name="cancellationToken">Cancellation token to use when cancelling requests</param>
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
+        /// <exception cref="global::Filer.ApiClient.Generated.Models.ProblemDetails">When receiving a 400 status code</exception>
+        /// <exception cref="global::Filer.ApiClient.Generated.Models.ProblemDetails">When receiving a 401 status code</exception>
+        /// <exception cref="global::Filer.ApiClient.Generated.Models.ProblemDetails">When receiving a 404 status code</exception>
+        /// <exception cref="global::Filer.ApiClient.Generated.Models.ProblemDetails">When receiving a 409 status code</exception>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public async Task<Stream?> PatchAsync(global::Filer.ApiClient.Generated.Models.UpdateFolderRequest body, Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<global::Filer.ApiClient.Generated.Models.UpdateFolderResponse?> PatchAsync(global::Filer.ApiClient.Generated.Models.UpdateFolderRequest body, Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #nullable restore
 #else
-        public async Task<Stream> PatchAsync(global::Filer.ApiClient.Generated.Models.UpdateFolderRequest body, Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<global::Filer.ApiClient.Generated.Models.UpdateFolderResponse> PatchAsync(global::Filer.ApiClient.Generated.Models.UpdateFolderRequest body, Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #endif
             if(ReferenceEquals(body, null)) throw new ArgumentNullException(nameof(body));
             var requestInfo = ToPatchRequestInformation(body, requestConfiguration);
-            return await RequestAdapter.SendPrimitiveAsync<Stream>(requestInfo, default, cancellationToken).ConfigureAwait(false);
+            var errorMapping = new Dictionary<string, ParsableFactory<IParsable>>
+            {
+                { "400", global::Filer.ApiClient.Generated.Models.ProblemDetails.CreateFromDiscriminatorValue },
+                { "401", global::Filer.ApiClient.Generated.Models.ProblemDetails.CreateFromDiscriminatorValue },
+                { "404", global::Filer.ApiClient.Generated.Models.ProblemDetails.CreateFromDiscriminatorValue },
+                { "409", global::Filer.ApiClient.Generated.Models.ProblemDetails.CreateFromDiscriminatorValue },
+            };
+            return await RequestAdapter.SendAsync<global::Filer.ApiClient.Generated.Models.UpdateFolderResponse>(requestInfo, global::Filer.ApiClient.Generated.Models.UpdateFolderResponse.CreateFromDiscriminatorValue, errorMapping, cancellationToken).ConfigureAwait(false);
         }
         /// <returns>A <see cref="RequestInformation"/></returns>
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
@@ -93,6 +119,7 @@ namespace Filer.ApiClient.Generated.Api.V1.Folders.Item
 #endif
             var requestInfo = new RequestInformation(Method.DELETE, UrlTemplate, PathParameters);
             requestInfo.Configure(requestConfiguration);
+            requestInfo.Headers.TryAdd("Accept", "application/problem+json");
             return requestInfo;
         }
         /// <returns>A <see cref="RequestInformation"/></returns>
@@ -108,6 +135,7 @@ namespace Filer.ApiClient.Generated.Api.V1.Folders.Item
 #endif
             var requestInfo = new RequestInformation(Method.GET, UrlTemplate, PathParameters);
             requestInfo.Configure(requestConfiguration);
+            requestInfo.Headers.TryAdd("Accept", "application/json");
             return requestInfo;
         }
         /// <returns>A <see cref="RequestInformation"/></returns>
@@ -125,6 +153,7 @@ namespace Filer.ApiClient.Generated.Api.V1.Folders.Item
             if(ReferenceEquals(body, null)) throw new ArgumentNullException(nameof(body));
             var requestInfo = new RequestInformation(Method.PATCH, UrlTemplate, PathParameters);
             requestInfo.Configure(requestConfiguration);
+            requestInfo.Headers.TryAdd("Accept", "application/json");
             requestInfo.SetContentFromParsable(RequestAdapter, "application/json", body);
             return requestInfo;
         }

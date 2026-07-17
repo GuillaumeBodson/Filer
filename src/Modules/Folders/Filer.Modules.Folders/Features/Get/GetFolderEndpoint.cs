@@ -25,6 +25,9 @@ public static class GetFolderEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("GetFolder")
+        .Produces<GetFolderResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization();
     }
 }

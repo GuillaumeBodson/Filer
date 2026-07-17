@@ -28,6 +28,7 @@ public static class MeEndpoint
         })
         .WithName("Me")
         .Produces<MeResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
         .RequireAuthorization();
     }
 }

@@ -22,6 +22,9 @@ public static class GetDocumentAnalysisEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("GetDocumentAnalysis")
+        .Produces<DocumentAnalysisResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization();
     }
 }

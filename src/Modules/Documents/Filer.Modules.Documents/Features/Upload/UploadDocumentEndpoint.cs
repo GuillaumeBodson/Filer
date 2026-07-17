@@ -56,6 +56,12 @@ public static class UploadDocumentEndpoint
             return Results.Created($"{DocumentsRoutes.BasePath}/{document.Id}", document);
         })
         .WithName("UploadDocument")
+        .Produces<UploadDocumentResponse>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
+        .ProducesProblem(StatusCodes.Status415UnsupportedMediaType)
         // Bearer-token API with no cookie authentication: CSRF does not apply, and
         // antiforgery tokens are unobtainable for non-browser clients (05-security.md
         // scopes auth to JWTs). Without this, minimal APIs reject IFormFile binding.

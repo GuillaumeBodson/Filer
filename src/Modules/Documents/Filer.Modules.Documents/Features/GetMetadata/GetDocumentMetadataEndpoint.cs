@@ -22,6 +22,9 @@ public static class GetDocumentMetadataEndpoint
                 : result.Error!.ToHttpResult();
         })
         .WithName("GetDocumentMetadata")
+        .Produces<DocumentMetadataResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .RequireAuthorization();
     }
 }
