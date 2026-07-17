@@ -57,7 +57,7 @@ public sealed class FoldersPageTests : BunitContext
         cut.WaitForAssertion(() =>
         {
             _service.Creates.Should().ContainSingle().Which.Should().Be(("Contracts", (Guid?)null));
-            cut.Find(".folders-notice").TextContent.Should().Contain("Contracts");
+            cut.Find(".action-notice").TextContent.Should().Contain("Contracts");
         });
     }
 

@@ -19,8 +19,10 @@ public sealed record ProblemDetailsView
 
     /// <summary>
     /// Machine-readable error code from the <c>code</c> extension member
-    /// (03-api-specification.md, #169) — e.g. <c>invalid_credentials</c>. UI logic
-    /// branches on this, never on <see cref="Title"/> or <see cref="Detail"/>.
+    /// (03-api-specification.md, #169) — e.g. <c>invalid_credentials</c>. When UI
+    /// logic needs to branch on a failure, it must key off this, never off
+    /// <see cref="Title"/> or <see cref="Detail"/> (today's screens render problems
+    /// verbatim and don't branch yet).
     /// </summary>
     public string? Code { get; init; }
 

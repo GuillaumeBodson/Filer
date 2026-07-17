@@ -108,7 +108,7 @@ else if (_document is not null)
 
     @if (_actionNotice is not null)
     {
-        <p class="detail-notice" role="status" aria-live="polite">@_actionNotice</p>
+        <p class="action-notice" role="status" aria-live="polite">@_actionNotice</p>
     }
     @if (_actionProblem is not null)
     {
@@ -162,13 +162,13 @@ else if (_document is not null)
 
     private async Task RenameAsync()
     {
-        if (string.IsNullOrWhiteSpace(_renameInput) || _renameInput == _document?.FileName)
-        {
-            return;
-        }
-
         await RunActionAsync(async () =>
         {
+            if (string.IsNullOrWhiteSpace(_renameInput) || _renameInput == _document?.FileName)
+            {
+                return;
+            }
+
             DocumentUpdateResult result = await DocumentsApi.UpdateAsync(
                 Id, new DocumentUpdate { NewFileName = _renameInput!.Trim() });
             if (result.Problem is not null)
@@ -184,14 +184,14 @@ else if (_document is not null)
 
     private async Task MoveAsync()
     {
-        Guid? target = Guid.TryParse(_moveTarget, out Guid parsed) ? parsed : null;
-        if (target == _document?.FolderId)
-        {
-            return;
-        }
-
         await RunActionAsync(async () =>
         {
+            Guid? target = Guid.TryParse(_moveTarget, out Guid parsed) ? parsed : null;
+            if (target == _document?.FolderId)
+            {
+                return;
+            }
+
             DocumentUpdateResult result = await DocumentsApi.UpdateAsync(
                 Id, new DocumentUpdate { MoveFolder = true, TargetFolderId = target });
             if (result.Problem is not null)
@@ -235,10 +235,10 @@ else if (_document is not null)
         await RunActionAsync(async () =>
         {
             ProblemDetailsView? problem = await DocumentsApi.DeleteAsync(Id);
+            _confirmingDelete = false;
             if (problem is not null)
             {
                 _actionProblem = problem;
-                _confirmingDelete = false;
                 return;
             }
 

@@ -876,6 +876,15 @@ in `src/Clients/Filer.ApiClient/README.md`):
   it without dragging in Razor/UI dependencies; the RCL (`Filer.Ui`) consumes it
   like any other host.
 
+### Addendum (FE-M2, #146/#135)
+
+The API serializes JSON with **`JsonNumberHandling.Strict`** (`Program.cs`).
+The ASP.NET web default (`AllowReadingFromString`) made the OpenAPI generator
+describe every number as an `["integer","string"]` union, which Kiota can only
+map to `UntypedNode` — un-typing the paged envelope and sizes in the generated
+client. Client quality depends on contract quality, so the contract says
+numbers are numbers.
+
 ---
 
 ## ADR-012 — Frontend development: start in parallel after the core API, web-first
@@ -1350,3 +1359,11 @@ dependency.
 * **Wait for Fluent UI Blazor v5** — indefinite (no GA date) and it would
   still impose the Fluent 2 look; its own move to native primitives is better
   consumed directly.
+
+### Status at the FE-M2 review (#132)
+
+Held. The "Registre" identity (#178) landed on the token contract as planned;
+every FE-M2 screen shipped on tokens + native primitives with no component
+library. The `15-frontend-architecture.md` conventions doc promised here and in
+ADR-012 is still unwritten — tracked as a follow-up issue from the FE-M2
+milestone review.

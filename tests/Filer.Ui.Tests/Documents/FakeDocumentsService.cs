@@ -107,10 +107,4 @@ internal sealed class FakeDocumentsService : IDocumentsService
         TagRemovals.Add((documentId, tagId));
         return Task.FromResult(NextRemoveTagResult);
     }
-
-    public Task<DocumentTagsResult> ReplaceTagsAsync(
-        Guid documentId, IReadOnlyList<Guid> tagIds, CancellationToken cancellationToken = default) =>
-        Task.FromResult(TagsResults.Count > 0
-            ? TagsResults.Dequeue()
-            : throw new InvalidOperationException("No scripted tags result."));
 }

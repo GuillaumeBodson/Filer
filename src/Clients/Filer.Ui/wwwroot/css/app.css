@@ -43,7 +43,8 @@ a:hover {
 
 /* --- Forms & buttons (shared element styling, token-driven) --- */
 
-label {
+label,
+.action-label {
     display: block;
     font-weight: 600;
     margin-bottom: var(--space-1);
@@ -54,6 +55,15 @@ input[type="email"],
 input[type="password"],
 input[type="search"] {
     width: 100%;
+    padding: var(--space-2) var(--space-3);
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+}
+
+select {
     padding: var(--space-2) var(--space-3);
     font: inherit;
     color: var(--color-text);
@@ -100,4 +110,44 @@ input:focus-visible {
 
 .btn-primary:hover:not(:disabled) {
     background: var(--color-primary-hover);
+}
+
+.btn-danger {
+    background: var(--color-danger);
+    border-color: transparent;
+    color: var(--color-primary-contrast);
+}
+
+/* Success confirmation line under an action (role=status). */
+.action-notice {
+    color: var(--color-success);
+    font-weight: 600;
+}
+
+/* Sign-in / register card, shared by the two auth pages. */
+.auth-card {
+    max-width: 24rem;
+    margin: var(--space-5) auto 0;
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.auth-card h1 {
+    margin-top: 0;
+}
+
+.auth-card .error {
+    margin-bottom: var(--space-3);
+}
+
+.field {
+    margin-bottom: var(--space-3);
+}
+
+.auth-alt {
+    margin: var(--space-3) 0 0;
+    color: var(--color-text-muted);
 }

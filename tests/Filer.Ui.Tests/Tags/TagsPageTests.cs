@@ -47,7 +47,7 @@ public sealed class TagsPageTests : BunitContext
         cut.WaitForAssertion(() =>
         {
             _service.Creates.Should().ContainSingle().Which.Should().Be("taxes");
-            cut.Find(".tags-notice").TextContent.Should().Contain("taxes");
+            cut.Find(".action-notice").TextContent.Should().Contain("taxes");
         });
     }
 
