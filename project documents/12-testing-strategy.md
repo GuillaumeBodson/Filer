@@ -131,9 +131,9 @@ test obligations:
 * **Naming**: `MethodOrFeature_StateUnderTest_ExpectedOutcome`, e.g.
   `HandleAsync_WhenEmailUnknown_ReturnsUnauthorized`. One logical assertion per
   test where practical; arrange/act/assert structure.
-* **Frameworks**: xUnit as the runner; an assertion library
-  (e.g. FluentAssertions or `Shouldly`) for readable failures; `NSubstitute` or
-  `Moq` for mocks; `Testcontainers` for Postgres; `WebApplicationFactory` for
+* **Frameworks** (recorded as ADR-015): xUnit v3 as the runner;
+  `FluentAssertions` for readable failures; `Moq` for mocks at the designed
+  seams; `Testcontainers` for Postgres; `WebApplicationFactory` for
   integration host bootstrapping; `bUnit` for rendering Razor components in
   `Filer.Ui.Tests`. Versions are pinned centrally in
   `Directory.Packages.props` (`10`).
@@ -190,8 +190,6 @@ command and recovery steps live in `src/Clients/Filer.ApiClient/README.md`.
 
 ## Open Items
 
-* Final choice of assertion and mocking libraries (record as a short ADR in `09`
-  once picked, then pin in `Directory.Packages.props`).
 * Whether to add a nightly job that runs the full integration suite against a
   matrix of provider configs once more `IAIAnalysisProvider` adapters exist.
 * Mutation testing (e.g. Stryker.NET) as a later quality ratchet — deferred, noted
