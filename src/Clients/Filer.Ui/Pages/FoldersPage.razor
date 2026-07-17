@@ -1,0 +1,327 @@
+@namespace Filer.Ui.Pages
+@page "/folders"
+@using Filer.ApiClient.Generated.Models
+@using Filer.Ui.Folders
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IFoldersService FoldersApi
+
+<PageTitle>Folders — Filer</PageTitle>
+
+<h1>Folders</h1>
+
+@if (_loading)
+{
+    <LoadingIndicator Message="Loading folders…" />
+}
+else if (_loadProblem is not null)
+{
+    <ErrorState Problem="_loadProblem" OnRetry="LoadAsync" />
+}
+else
+{
+    <div class="folders-layout">
+        <section class="folders-tree-panel" aria-label="Folder tree">
+            <form class="folders-create" @onsubmit="CreateRootAsync">
+                <label for="new-folder">New folder</label>
+                <div class="folders-row">
+                    <input id="new-folder" type="text" placeholder="Folder name" @bind="_newRootName" />
+                    <button type="submit" class="btn btn-primary" disabled="@_busy">Create</button>
+                </div>
+            </form>
+
+            @if (_tree.Count == 0)
+            {
+                <EmptyState Title="No folders yet"
+                            Description="Folders you create will organise your documents." />
+            }
+            else
+            {
+                <ul class="folder-tree" role="tree">
+                    @foreach (FolderNode node in _tree)
+                    {
+                        @RenderNode(node)
+                    }
+                </ul>
+            }
+        </section>
+
+        @if (Selected is not null)
+        {
+            <section class="folder-actions" aria-label="Actions for @Selected.Name">
+                <h2>@Selected.Name</h2>
+                <p><a href="documents?folderId=@Selected.Id">View this folder's documents</a></p>
+
+                <form class="action" @onsubmit="CreateChildAsync">
+                    <label for="new-subfolder">New subfolder</label>
+                    <div class="folders-row">
+                        <input id="new-subfolder" type="text" placeholder="Subfolder name" @bind="_newChildName" />
+                        <button type="submit" class="btn btn-primary" disabled="@_busy">Create</button>
+                    </div>
+                </form>
+
+                <form class="action" @onsubmit="RenameAsync">
+                    <label for="rename-folder">Rename</label>
+                    <div class="folders-row">
+                        <input id="rename-folder" type="text" @bind="_renameInput" />
+                        <button type="submit" class="btn btn-primary" disabled="@_busy">Rename</button>
+                    </div>
+                </form>
+
+                <form class="action" @onsubmit="MoveAsync">
+                    <label for="move-parent">Move under</label>
+                    <div class="folders-row">
+                        <select id="move-parent" @bind="_moveTarget">
+                            <option value="">(Root)</option>
+                            @foreach (FolderListItemResponse folder in MoveTargets())
+                            {
+                                <option value="@folder.Id">@folder.Name</option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-primary" disabled="@_busy">Move</button>
+                    </div>
+                </form>
+
+                <div class="action">
+                    <span class="action-label">Danger zone</span>
+                    @if (!_confirmingDelete)
+                    {
+                        <button type="button" class="btn btn-danger" disabled="@_busy"
+                                @onclick="() => _confirmingDelete = true">Delete</button>
+                    }
+                    else
+                    {
+                        <div class="folders-confirm">
+                            <span class="folders-confirm-text">Delete “@Selected.Name”?</span>
+                            <label class="folders-cascade">
+                                <input type="checkbox" @bind="_cascadeDelete" />
+                                Also delete everything inside it
+                            </label>
+                            <div class="folders-row">
+                                <button type="button" class="btn btn-danger folders-confirm-yes" disabled="@_busy"
+                                        @onclick="DeleteAsync">Yes, delete</button>
+                                <button type="button" class="btn" disabled="@_busy"
+                                        @onclick="() => _confirmingDelete = false">Cancel</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+
+    @if (_actionNotice is not null)
+    {
+        <p class="folders-notice" role="status" aria-live="polite">@_actionNotice</p>
+    }
+    @if (_actionProblem is not null)
+    {
+        <ErrorState Problem="_actionProblem"
+                    NotFoundTitle="Folder not found"
+                    NotFoundDescription="This folder doesn't exist or isn't yours." />
+    }
+}
+
+@code {
+    private IReadOnlyList<FolderListItemResponse> _folders = [];
+    private IReadOnlyList<FolderNode> _tree = [];
+    private ProblemDetailsView? _loadProblem;
+    private ProblemDetailsView? _actionProblem;
+    private string? _actionNotice;
+    private bool _loading = true;
+    private bool _busy;
+    private bool _confirmingDelete;
+    private bool _cascadeDelete;
+    private Guid? _selectedId;
+    private string? _newRootName;
+    private string? _newChildName;
+    private string? _renameInput;
+    private string _moveTarget = "";
+
+    private FolderListItemResponse? Selected =>
+        _folders.FirstOrDefault(f => f.Id == _selectedId);
+
+    private RenderFragment RenderNode(FolderNode node) => @<li role="treeitem"
+        aria-selected="@(node.Id == _selectedId ? "true" : "false")">
+        <button type="button"
+                class="folder-name @(node.Id == _selectedId ? "selected" : null)"
+                @onclick="() => Select(node.Id)">@node.Name</button>
+        @if (node.Children.Count > 0)
+        {
+            <ul role="group">
+                @foreach (FolderNode child in node.Children)
+                {
+                    @RenderNode(child)
+                }
+            </ul>
+        }
+    </li>;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _loadProblem = null;
+        try
+        {
+            FoldersListResult result = await FoldersApi.ListAsync();
+            _folders = result.Folders ?? [];
+            _loadProblem = result.Problem;
+            _tree = FolderTree.Build(_folders);
+            if (Selected is null)
+            {
+                _selectedId = null;
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void Select(Guid id)
+    {
+        _selectedId = id;
+        _renameInput = Selected?.Name;
+        _moveTarget = Selected?.ParentId?.ToString() ?? "";
+        _newChildName = null;
+        _confirmingDelete = false;
+        _actionProblem = null;
+        _actionNotice = null;
+    }
+
+    // Cycle safety, client half: a folder can't move under itself or its own
+    // descendants, so those never appear as targets. The server still guards (409).
+    private IEnumerable<FolderListItemResponse> MoveTargets()
+    {
+        if (Selected?.Id is not Guid selected)
+        {
+            return [];
+        }
+
+        IReadOnlySet<Guid> excluded = FolderTree.DescendantIds(_folders, selected);
+        return _folders.Where(f => f.Id is Guid id && id != selected && !excluded.Contains(id));
+    }
+
+    private Task CreateRootAsync() => RunActionAsync(async () =>
+    {
+        if (string.IsNullOrWhiteSpace(_newRootName))
+        {
+            return;
+        }
+
+        FolderCreateResult result = await FoldersApi.CreateAsync(_newRootName.Trim(), parentId: null);
+        if (result.Problem is not null)
+        {
+            _actionProblem = result.Problem;
+            return;
+        }
+
+        _newRootName = null;
+        _actionNotice = $"Created “{result.Folder!.Name}”.";
+        await LoadAsync();
+    });
+
+    private Task CreateChildAsync() => RunActionAsync(async () =>
+    {
+        if (string.IsNullOrWhiteSpace(_newChildName) || Selected?.Id is not Guid parent)
+        {
+            return;
+        }
+
+        FolderCreateResult result = await FoldersApi.CreateAsync(_newChildName.Trim(), parent);
+        if (result.Problem is not null)
+        {
+            _actionProblem = result.Problem;
+            return;
+        }
+
+        _newChildName = null;
+        _actionNotice = $"Created “{result.Folder!.Name}”.";
+        await LoadAsync();
+    });
+
+    private Task RenameAsync() => RunActionAsync(async () =>
+    {
+        if (string.IsNullOrWhiteSpace(_renameInput) || Selected?.Id is not Guid id
+            || _renameInput == Selected.Name)
+        {
+            return;
+        }
+
+        FolderUpdateResult result = await FoldersApi.UpdateAsync(
+            id, new FolderUpdate { NewName = _renameInput.Trim() });
+        if (result.Problem is not null)
+        {
+            _actionProblem = result.Problem;
+            return;
+        }
+
+        _actionNotice = $"Renamed to “{result.Folder!.Name}”.";
+        await LoadAsync();
+    });
+
+    private Task MoveAsync() => RunActionAsync(async () =>
+    {
+        if (Selected?.Id is not Guid id)
+        {
+            return;
+        }
+
+        Guid? target = Guid.TryParse(_moveTarget, out Guid parsed) ? parsed : null;
+        if (target == Selected.ParentId)
+        {
+            return;
+        }
+
+        FolderUpdateResult result = await FoldersApi.UpdateAsync(
+            id, new FolderUpdate { MoveParent = true, TargetParentId = target });
+        if (result.Problem is not null)
+        {
+            _actionProblem = result.Problem;
+            return;
+        }
+
+        _actionNotice = "Folder moved.";
+        await LoadAsync();
+    });
+
+    private Task DeleteAsync() => RunActionAsync(async () =>
+    {
+        if (Selected?.Id is not Guid id)
+        {
+            return;
+        }
+
+        ProblemDetailsView? problem = await FoldersApi.DeleteAsync(id, _cascadeDelete);
+        _confirmingDelete = false;
+        if (problem is not null)
+        {
+            // The ADR-007 default: a non-empty folder is rejected (409
+            // folder_not_empty) unless the cascade checkbox opted in.
+            _actionProblem = problem;
+            return;
+        }
+
+        _actionNotice = $"Deleted “{Selected?.Name}”.";
+        _selectedId = null;
+        _cascadeDelete = false;
+        await LoadAsync();
+    });
+
+    private async Task RunActionAsync(Func<Task> action)
+    {
+        _busy = true;
+        _actionProblem = null;
+        _actionNotice = null;
+        try
+        {
+            await action();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}
