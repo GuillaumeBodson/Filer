@@ -41,7 +41,12 @@ public static class FilerApiClientServiceCollectionExtensions
         // 401 and retry), so Kiota's own auth provider stays anonymous.
         services.AddSingleton<IAuthenticationProvider, AnonymousAuthenticationProvider>();
 
-        services.AddTransient<BearerTokenHandler>();
+        // Factory registration so the handler knows the API origin: it only attaches
+        // the bearer token to requests targeting that origin (#168).
+        services.AddTransient(sp => new BearerTokenHandler(
+            sp.GetRequiredService<ITokenStore>(),
+            sp.GetRequiredService<ITokenRefresher>(),
+            baseAddress));
 
         // Singleton, not scoped (#166): the refresher is resolved both from the app
         // scope and from IHttpClientFactory's handler scope. Its single-flight gate
