@@ -45,8 +45,15 @@ public sealed class DocumentsService(FilerApiClient api) : IDocumentsService
     {
         try
         {
+            // Kiota's MultipartBody serializes with a synchronous Stream.CopyTo, which
+            // Blazor's BrowserFileStream rejects (async-only). Buffer first — uploads
+            // are capped at UploadRules.MaxSizeBytes, so this stays bounded.
+            using var buffered = new MemoryStream();
+            await upload.Content.CopyToAsync(buffered, cancellationToken).ConfigureAwait(false);
+            buffered.Position = 0;
+
             var body = new MultipartBody();
-            body.AddOrReplacePart("file", upload.ContentType, upload.Content, upload.FileName);
+            body.AddOrReplacePart("file", upload.ContentType, (Stream)buffered, upload.FileName);
 
             UploadDocumentResponse? created = await _api.Api.V1.Documents.PostAsync(
                 body, cancellationToken: cancellationToken).ConfigureAwait(false);
