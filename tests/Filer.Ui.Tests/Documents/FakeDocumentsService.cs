@@ -77,4 +77,40 @@ internal sealed class FakeDocumentsService : IDocumentsService
         Deletes.Add(documentId);
         return Task.FromResult(NextDeleteResult);
     }
+
+    public Queue<DocumentTagsResult> TagsResults { get; } = new();
+    public List<(Guid DocumentId, Guid TagId)> TagAdds { get; } = [];
+    public List<(Guid DocumentId, Guid TagId)> TagRemovals { get; } = [];
+    public ProblemDetailsView? NextRemoveTagResult { get; set; }
+
+    public Task<DocumentTagsResult> GetTagsAsync(
+        Guid documentId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(TagsResults.Count > 0
+            ? TagsResults.Dequeue()
+            // Reads default to an empty set so tests not about tags stay quiet.
+            : new DocumentTagsResult(
+                new Filer.ApiClient.Generated.Models.DocumentTagsResponse { DocumentId = documentId, Tags = [] },
+                null));
+
+    public Task<DocumentTagsResult> AddTagAsync(
+        Guid documentId, Guid tagId, CancellationToken cancellationToken = default)
+    {
+        TagAdds.Add((documentId, tagId));
+        return Task.FromResult(TagsResults.Count > 0
+            ? TagsResults.Dequeue()
+            : throw new InvalidOperationException("No scripted tags result."));
+    }
+
+    public Task<ProblemDetailsView?> RemoveTagAsync(
+        Guid documentId, Guid tagId, CancellationToken cancellationToken = default)
+    {
+        TagRemovals.Add((documentId, tagId));
+        return Task.FromResult(NextRemoveTagResult);
+    }
+
+    public Task<DocumentTagsResult> ReplaceTagsAsync(
+        Guid documentId, IReadOnlyList<Guid> tagIds, CancellationToken cancellationToken = default) =>
+        Task.FromResult(TagsResults.Count > 0
+            ? TagsResults.Dequeue()
+            : throw new InvalidOperationException("No scripted tags result."));
 }

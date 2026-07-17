@@ -23,6 +23,7 @@ public sealed class DocumentDetailPageTests : BunitContext
     {
         Services.AddSingleton<IDocumentsService>(_service);
         Services.AddSingleton<IFoldersService>(_folders);
+        Services.AddSingleton<Filer.Ui.Tags.ITagsService>(new Filer.Ui.Tests.Tags.FakeTagsService());
     }
 
     private static DocumentMetadataResult Doc(string name = "invoice.pdf", Guid? folderId = null) =>

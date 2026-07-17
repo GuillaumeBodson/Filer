@@ -139,6 +139,7 @@ ADR-007 (`09`).
 | POST   | `/api/v1/tags`                         | Create a tag                 |
 | PATCH  | `/api/v1/tags/{id}`                    | Rename a tag                 |
 | DELETE | `/api/v1/tags/{id}`                    | Delete a tag                 |
+| GET    | `/api/v1/documents/{id}/tags`          | Get a document's tag set (with `source`) |
 | PUT    | `/api/v1/documents/{id}/tags`          | Replace a document's tag set |
 | POST   | `/api/v1/documents/{id}/tags/{tagId}`  | Add a tag to a document      |
 | DELETE | `/api/v1/documents/{id}/tags/{tagId}`  | Remove a tag from a document |

@@ -1,0 +1,172 @@
+@namespace Filer.Ui.Components
+@using Filer.ApiClient.Generated.Models
+@using Filer.Ui.Documents
+@using Filer.Ui.Models
+@using Filer.Ui.Tags
+@inject IDocumentsService DocumentsApi
+@inject ITagsService TagsApi
+
+@* The document's tag set (#139). AI-suggested associations are visually distinct
+   from user-applied ones (02-data-model.md, DocumentTag.Source); adding a suggested
+   tag again promotes it to User server-side. *@
+<section class="doc-tags" aria-label="Tags">
+    <h2>Tags</h2>
+
+    @if (_loading)
+    {
+        <LoadingIndicator Message="Loading tags…" />
+    }
+    else if (_loadProblem is not null)
+    {
+        <ErrorState Problem="_loadProblem" OnRetry="LoadAsync" />
+    }
+    else
+    {
+        @if (_applied.Count == 0)
+        {
+            <p class="doc-tags-empty">No tags yet.</p>
+        }
+        else
+        {
+            <ul class="doc-tags-list">
+                @foreach (DocumentTagItem item in _applied)
+                {
+                    <li class="doc-tag @(item.Source == "AiSuggested" ? "suggested" : null)">
+                        <span class="doc-tag-name">@NameOf(item.TagId)</span>
+                        @if (item.Source == "AiSuggested")
+                        {
+                            <span class="doc-tag-source">suggested</span>
+                        }
+                        <button type="button" class="doc-tag-remove" disabled="@_busy"
+                                aria-label="Remove tag @NameOf(item.TagId)"
+                                @onclick="() => RemoveAsync(item.TagId!.Value)">✕</button>
+                    </li>
+                }
+            </ul>
+        }
+
+        @if (Available().Any())
+        {
+            <form class="doc-tags-add" @onsubmit="AddAsync">
+                <label for="add-tag">Add a tag</label>
+                <div class="doc-tags-row">
+                    <select id="add-tag" @bind="_addTarget">
+                        <option value="">Choose a tag…</option>
+                        @foreach (TagListItemResponse tag in Available())
+                        {
+                            <option value="@tag.Id">@tag.Name</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-primary" disabled="@_busy">Add</button>
+                </div>
+            </form>
+        }
+        else if (_allTags.Count == 0)
+        {
+            <p class="doc-tags-empty">Create tags on the <a href="tags">Tags page</a> to apply them here.</p>
+        }
+
+        @if (_actionProblem is not null)
+        {
+            <ErrorState Problem="_actionProblem"
+                        NotFoundTitle="Not found"
+                        NotFoundDescription="The document or tag doesn't exist or isn't yours." />
+        }
+    }
+</section>
+
+@code {
+    private IReadOnlyList<DocumentTagItem> _applied = [];
+    private IReadOnlyList<TagListItemResponse> _allTags = [];
+    private ProblemDetailsView? _loadProblem;
+    private ProblemDetailsView? _actionProblem;
+    private bool _loading = true;
+    private bool _busy;
+    private string _addTarget = "";
+
+    /// <summary>The document whose tags this panel manages.</summary>
+    [Parameter, EditorRequired] public Guid DocumentId { get; set; }
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _loadProblem = null;
+        try
+        {
+            DocumentTagsResult applied = await DocumentsApi.GetTagsAsync(DocumentId);
+            if (applied.Problem is not null)
+            {
+                _loadProblem = applied.Problem;
+                return;
+            }
+
+            _applied = applied.Tags!.Tags ?? [];
+
+            TagsListResult all = await TagsApi.ListAsync();
+            _allTags = all.Tags ?? [];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string NameOf(Guid? tagId) =>
+        _allTags.FirstOrDefault(t => t.Id == tagId)?.Name ?? tagId?.ToString() ?? "?";
+
+    private IEnumerable<TagListItemResponse> Available()
+    {
+        HashSet<Guid> applied = [.. _applied.Where(a => a.TagId is not null).Select(a => a.TagId!.Value)];
+        return _allTags.Where(t => t.Id is Guid id && !applied.Contains(id));
+    }
+
+    private async Task AddAsync()
+    {
+        if (!Guid.TryParse(_addTarget, out Guid tagId))
+        {
+            return;
+        }
+
+        _busy = true;
+        _actionProblem = null;
+        try
+        {
+            DocumentTagsResult result = await DocumentsApi.AddTagAsync(DocumentId, tagId);
+            if (result.Problem is not null)
+            {
+                _actionProblem = result.Problem;
+                return;
+            }
+
+            _applied = result.Tags!.Tags ?? [];
+            _addTarget = "";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task RemoveAsync(Guid tagId)
+    {
+        _busy = true;
+        _actionProblem = null;
+        try
+        {
+            ProblemDetailsView? problem = await DocumentsApi.RemoveTagAsync(DocumentId, tagId);
+            if (problem is not null)
+            {
+                _actionProblem = problem;
+                return;
+            }
+
+            _applied = [.. _applied.Where(a => a.TagId != tagId)];
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}
