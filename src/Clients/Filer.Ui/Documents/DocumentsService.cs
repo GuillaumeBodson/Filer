@@ -39,4 +39,55 @@ public sealed class DocumentsService(FilerApiClient api) : IDocumentsService
             return new DocumentsPageResult(null, ex.ToProblemView());
         }
     }
+
+    public async Task<DocumentUploadResult> UploadAsync(
+        DocumentUploadRequest upload, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var body = new MultipartBody();
+            body.AddOrReplacePart("file", upload.ContentType, upload.Content, upload.FileName);
+
+            UploadDocumentResponse? created = await _api.Api.V1.Documents.PostAsync(
+                body, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return created is null
+                ? new DocumentUploadResult(null, new ProblemDetailsView
+                {
+                    Title = "Upload failed",
+                    Detail = "The server returned an empty response. Try again.",
+                })
+                : new DocumentUploadResult(created, null);
+        }
+        catch (ApiException ex)
+        {
+            // The duplicate-content 409 carries the existing document's id (03).
+            Guid? duplicateOf = Guid.TryParse(ex.GetExtensionString("existingDocumentId"), out Guid id)
+                ? id
+                : null;
+            return new DocumentUploadResult(null, ex.ToProblemView(), duplicateOf);
+        }
+    }
+
+    public async Task<DocumentMetadataResult> GetMetadataAsync(
+        Guid documentId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            DocumentMetadataResponse? document = await _api.Api.V1.Documents[documentId]
+                .GetAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return document is null
+                ? new DocumentMetadataResult(null, new ProblemDetailsView
+                {
+                    Title = "Document unavailable",
+                    Detail = "The server returned an empty response. Try again.",
+                })
+                : new DocumentMetadataResult(document, null);
+        }
+        catch (ApiException ex)
+        {
+            return new DocumentMetadataResult(null, ex.ToProblemView());
+        }
+    }
 }

@@ -77,6 +77,80 @@ public sealed class DocumentsServiceTests
     }
 
     [Fact]
+    public async Task Upload_posts_multipart_and_maps_the_created_document()
+    {
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.Created, """
+        { "id": "11111111-1111-1111-1111-111111111111", "fileName": "invoice.pdf",
+          "contentType": "application/pdf", "sizeBytes": 8, "status": "Uploaded",
+          "createdAt": "2026-07-17T10:00:00+00:00" }
+        """);
+        DocumentsService service = CreateService(inner);
+        using var content = new MemoryStream("%PDF-1.7"u8.ToArray());
+
+        DocumentUploadResult result = await service.UploadAsync(
+            new DocumentUploadRequest(content, "invoice.pdf", "application/pdf"),
+            TestContext.Current.CancellationToken);
+
+        result.Problem.Should().BeNull();
+        result.Document!.Status.Should().Be("Uploaded");
+
+        var request = inner.Requests.Should().ContainSingle().Which;
+        request.RequestUri!.AbsolutePath.Should().Be("/api/v1/documents");
+        request.ContentType.Should().StartWith("multipart/form-data");
+        System.Text.Encoding.UTF8.GetString(request.Body!).Should()
+            .Contain("%PDF-1.7").And.Contain("filename=\"invoice.pdf\"");
+    }
+
+    [Fact]
+    public async Task The_duplicate_409_carries_the_existing_document_id()
+    {
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.Conflict, """
+        {
+          "type": "https://docs/errors/duplicate_content",
+          "title": "Conflict",
+          "status": 409,
+          "detail": "A document with identical content already exists.",
+          "code": "duplicate_content",
+          "existingDocumentId": "22222222-2222-2222-2222-222222222222"
+        }
+        """);
+        DocumentsService service = CreateService(inner);
+        using var content = new MemoryStream("%PDF-1.7"u8.ToArray());
+
+        DocumentUploadResult result = await service.UploadAsync(
+            new DocumentUploadRequest(content, "copy.pdf", "application/pdf"),
+            TestContext.Current.CancellationToken);
+
+        result.Document.Should().BeNull();
+        result.Problem!.Code.Should().Be("duplicate_content");
+        result.DuplicateOfDocumentId.Should().Be(Guid.Parse("22222222-2222-2222-2222-222222222222"));
+    }
+
+    [Fact]
+    public async Task Metadata_maps_the_document_and_a_404_stays_a_problem()
+    {
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inner = new StubHttpMessageHandler()
+            .Enqueue(HttpStatusCode.OK, """
+            { "id": "11111111-1111-1111-1111-111111111111", "fileName": "invoice.pdf",
+              "contentType": "application/pdf", "sizeBytes": 8, "status": "Ready" }
+            """)
+            .Enqueue(HttpStatusCode.NotFound, """
+            { "type": "https://docs/errors/document_not_found", "title": "Resource not found",
+              "status": 404, "detail": "Document not found.", "code": "document_not_found" }
+            """);
+        DocumentsService service = CreateService(inner);
+
+        DocumentMetadataResult found = await service.GetMetadataAsync(docId, TestContext.Current.CancellationToken);
+        DocumentMetadataResult missing = await service.GetMetadataAsync(docId, TestContext.Current.CancellationToken);
+
+        found.Document!.Status.Should().Be("Ready");
+        missing.Problem!.IsNotFound.Should().BeTrue();
+        inner.Requests.Should().HaveCount(2);
+        inner.Requests[0].RequestUri!.AbsolutePath.Should().Be($"/api/v1/documents/{docId}");
+    }
+
+    [Fact]
     public async Task A_declared_400_surfaces_the_problem_with_its_code()
     {
         var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.BadRequest, """

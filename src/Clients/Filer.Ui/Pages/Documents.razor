@@ -12,6 +12,8 @@
 
 <h1>Documents</h1>
 
+<DocumentUpload OnUploaded="ReloadAsync" />
+
 @* The URL is the single source of truth for filters and paging: shareable,
    back-button friendly, and folder/tag views (#138/#139) deep-link into it. *@
 <form class="filters" @onsubmit="ApplySearch">
@@ -155,6 +157,9 @@ else if (_page is not null)
             _loading = false;
         }
     }
+
+    /// <summary>Refreshes the current page in place (e.g. after an upload).</summary>
+    private Task ReloadAsync() => LoadAsync();
 
     private void ApplySearch() =>
         NavigateWith(text: _searchInput, page: 1);
