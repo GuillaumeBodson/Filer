@@ -8,7 +8,7 @@ namespace Filer.Ui.Tests.Auth;
 /// </summary>
 internal sealed class StubHttpMessageHandler : HttpMessageHandler
 {
-    private readonly Queue<Func<HttpRequestMessage, HttpResponseMessage>> _responders = new();
+    private readonly Queue<Func<HttpRequestMessage, Task<HttpResponseMessage>>> _responders = new();
 
     public List<RecordedRequest> Requests { get; } = [];
 
@@ -22,8 +22,15 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
                 response.Content = new StringContent(jsonBody, System.Text.Encoding.UTF8, "application/json");
             }
 
-            return response;
+            return Task.FromResult(response);
         });
+        return this;
+    }
+
+    /// <summary>Queues an async responder, e.g. one gated on a TaskCompletionSource.</summary>
+    public StubHttpMessageHandler Enqueue(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder)
+    {
+        _responders.Enqueue(responder);
         return this;
     }
 
@@ -38,19 +45,21 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
             request.Method,
             request.RequestUri,
             request.Headers.Authorization?.Parameter,
-            body));
+            body,
+            request.Content?.Headers.ContentType?.ToString()));
 
         if (_responders.Count == 0)
         {
             throw new InvalidOperationException("StubHttpMessageHandler received an unexpected request.");
         }
 
-        return _responders.Dequeue()(request);
+        return await _responders.Dequeue()(request).ConfigureAwait(false);
     }
 
     internal sealed record RecordedRequest(
         HttpMethod Method,
         Uri? RequestUri,
         string? BearerToken,
-        byte[]? Body);
+        byte[]? Body,
+        string? ContentType);
 }

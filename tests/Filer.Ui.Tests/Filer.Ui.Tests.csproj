@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Clients\Filer.Ui\Filer.Ui.csproj" />
+    <!-- For the internal LocalStorageTokenStore (InternalsVisibleTo in Filer.Web). -->
+    <ProjectReference Include="..\..\src\Clients\Filer.Web\Filer.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -9,6 +9,8 @@ namespace Filer.Ui.Tests.Auth;
 
 public sealed class FilerAuthenticationStateProviderTests
 {
+    private static readonly string[] Roles = ["admin", "user"];
+
     [Fact]
     public async Task Reports_anonymous_when_no_tokens()
     {
@@ -47,6 +49,46 @@ public sealed class FilerAuthenticationStateProviderTests
         AuthenticationState state = await provider.GetAuthenticationStateAsync();
 
         state.User.Identity!.IsAuthenticated.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Maps_an_array_claim_to_one_claim_per_value()
+    {
+        string jwt = CreateJwt(new Dictionary<string, object>
+        {
+            ["email"] = "user@example.com",
+            ["role"] = Roles,
+        });
+        var store = new FakeTokenStore(new TokenPair(jwt, null, "refresh", null));
+        using var provider = new FilerAuthenticationStateProvider(store);
+
+        AuthenticationState state = await provider.GetAuthenticationStateAsync();
+
+        state.User.FindAll("role").Select(c => c.Value).Should().BeEquivalentTo("admin", "user");
+        state.User.IsInRole("admin").Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task Decodes_payloads_regardless_of_base64url_padding(int fillerLength)
+    {
+        // Varying the payload length by one byte per case walks the encoded length
+        // through every mod-4 remainder, covering each re-padding branch.
+        string jwt = CreateJwt(new Dictionary<string, object>
+        {
+            ["email"] = "user@example.com",
+            ["filler"] = new string('x', fillerLength),
+        });
+        var store = new FakeTokenStore(new TokenPair(jwt, null, "refresh", null));
+        using var provider = new FilerAuthenticationStateProvider(store);
+
+        AuthenticationState state = await provider.GetAuthenticationStateAsync();
+
+        state.User.Identity!.IsAuthenticated.Should().BeTrue();
+        state.User.Identity.Name.Should().Be("user@example.com");
     }
 
     [Fact]

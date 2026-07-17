@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using Filer.ApiClient.Auth;
 using FluentAssertions;
 using Xunit;
@@ -99,6 +100,48 @@ public sealed class BearerTokenHandlerTests
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         refresher.CallCount.Should().Be(0);
         inner.Requests.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Second_401_after_a_successful_refresh_returns_401_without_another_refresh()
+    {
+        var store = new FakeTokenStore(Tokens());
+        var refresher = new FakeTokenRefresher(store, succeeds: true, rotatedAccessToken: "access-2");
+        var inner = new StubHttpMessageHandler()
+            .Enqueue(HttpStatusCode.Unauthorized)
+            .Enqueue(HttpStatusCode.Unauthorized);
+
+        using var handler = new BearerTokenHandler(store, refresher);
+        var response = await SendAsync(handler, inner, Request());
+
+        // The "no infinite loop" guarantee: one refresh, one retry, then the 401 surfaces.
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        refresher.CallCount.Should().Be(1);
+        inner.Requests.Should().HaveCount(2);
+        inner.Requests[1].BearerToken.Should().Be("access-2");
+    }
+
+    [Fact]
+    public async Task Retry_after_refresh_preserves_the_request_body_and_content_headers()
+    {
+        var store = new FakeTokenStore(Tokens());
+        var refresher = new FakeTokenRefresher(store, succeeds: true, rotatedAccessToken: "access-2");
+        var inner = new StubHttpMessageHandler()
+            .Enqueue(HttpStatusCode.Unauthorized)
+            .Enqueue(HttpStatusCode.OK);
+        var request = new HttpRequestMessage(HttpMethod.Post, "https://api.test/api/v1/folders")
+        {
+            Content = new StringContent("""{ "name": "Taxes" }""", Encoding.UTF8, "application/json"),
+        };
+
+        using var handler = new BearerTokenHandler(store, refresher);
+        var response = await SendAsync(handler, inner, request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        inner.Requests.Should().HaveCount(2);
+        inner.Requests[1].Body.Should().Equal(inner.Requests[0].Body);
+        inner.Requests[1].ContentType.Should().Be(inner.Requests[0].ContentType).And.NotBeNull();
+        inner.Requests[1].BearerToken.Should().Be("access-2");
     }
 
     [Fact]
