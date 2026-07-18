@@ -120,9 +120,12 @@ Tracing instrumentation (#159): ASP.NET Core (one span per request; `/health/*`
 filtered out as noise) and `HttpClient` (provider calls such as Ollama surface
 as timed child spans). Health endpoints: `/health/live` is process-up only;
 `/health/ready` checks PostgreSQL and storage-root writability — each module
-contributes its own readiness check (Storage does; the broker check arrives
-with #75). The local viewer is the standalone Aspire dashboard behind the
-`observability` Compose profile (`07`).
+contributes its own readiness check. With RabbitMQ dispatch active (#75) the
+BackgroundJobs module adds a broker check that reports **Degraded**, not
+Unhealthy: broker-down still processes via the sweeper (ADR-008), so readiness
+stays green while the state remains visible to monitoring. The local viewer is
+the standalone Aspire dashboard behind the `observability` Compose profile
+(`07`).
 
 Exported meters (#60): `Filer.BackgroundJobs` (queue depth, job duration,
 success/failure/retry/cancel counters — the module has emitted these since

@@ -495,7 +495,10 @@ cascade.**
 ## ADR-008 — Job dispatch: adopt RabbitMQ, keep PostgreSQL as the durable outbox
 
 * **Date:** 2026-06-06
-* **Status:** Accepted (implementation deferred until after M3)
+* **Status:** Implemented (#75, M7): configuration-selected dispatch
+  (`BackgroundJobs:Queue` = `Db` | `RabbitMq`, default `Db`), consumer re-runs
+  the shared claim, polling loop retained as the sweeper, `traceparent` message
+  header per ADR-013.
 
 ### Context
 
