@@ -127,6 +127,14 @@ stays green while the state remains visible to monitoring. The local viewer is
 the standalone Aspire dashboard behind the `observability` Compose profile
 (`07`).
 
+Exported meters (#60): `Filer.BackgroundJobs` (queue depth, job duration,
+success/failure/retry/cancel counters — the module has emitted these since
+#53) plus the built-in `Microsoft.AspNetCore.Hosting`,
+`Microsoft.AspNetCore.Server.Kestrel` and `System.Net.Http` meters, which
+cover request latency/error rates, connection health and outbound-call timing
+without any module code. Metric points carry the exemplar trace context where
+the runtime provides it, correlating spikes back to traces (ADR-013).
+
 ---
 
 ## Portability & Deployment
