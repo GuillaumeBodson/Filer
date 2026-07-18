@@ -108,8 +108,8 @@ internal static partial class AnalysisJobWorkerLog
     [LoggerMessage(Level = LogLevel.Information, Message = "Analysis job worker is disabled by configuration.")]
     public static partial void WorkerDisabled(this ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Analysis job worker started (poll interval {PollInterval}).")]
-    public static partial void WorkerStarted(this ILogger logger, TimeSpan pollInterval);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Analysis job worker started (idle interval {IdleInterval}).")]
+    public static partial void WorkerStarted(this ILogger logger, TimeSpan idleInterval);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Analysis job worker stopped.")]
     public static partial void WorkerStopped(this ILogger logger);

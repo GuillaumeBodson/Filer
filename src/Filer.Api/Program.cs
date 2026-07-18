@@ -102,8 +102,8 @@ builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
 // Readiness covers the host's hard dependencies (04-non-functional.md): one DB
 // check against the shared Postgres (every module context rides the same server
-// and connection string); the Storage module contributes its own check inside
-// AddStorageModule. Broker/provider checks arrive with #75.
+// and connection string). Modules contribute their own checks — Storage inside
+// AddStorageModule, BackgroundJobs when RabbitMQ dispatch is active (ADR-008).
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AuthDbContext>("postgres", tags: ["ready"]);
 
