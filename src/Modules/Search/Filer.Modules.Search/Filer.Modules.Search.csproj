@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Search module implementation. Private to the module; the host references
+       it only to register it (10-solution-structure.md). A thin API module: it
+       owns the /search HTTP contract and consumes the searchable data strictly
+       through Documents' Contracts (IOwnerDocumentSearch) — no DbContext, no
+       migrations, like Storage. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Filer.Modules.Search.Contracts\Filer.Modules.Search.Contracts.csproj" />
+    <ProjectReference Include="..\..\Documents\Filer.Modules.Documents.Contracts\Filer.Modules.Documents.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Filer.SharedKernel\Filer.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\Filer.WebKernel\Filer.WebKernel.csproj" />
+  </ItemGroup>
+
+  <!-- The module exposes its routes to the host via IEndpointRouteBuilder. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- The validator is a slice internal; its unit tests assert it directly
+       (12-testing-strategy.md). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Filer.Modules.Search.Tests" />
+  </ItemGroup>
+
+</Project>

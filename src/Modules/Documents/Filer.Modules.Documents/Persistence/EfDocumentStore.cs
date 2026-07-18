@@ -50,7 +50,10 @@ public sealed class EfDocumentStore(DocumentsDbContext db, IFolderOwnershipCheck
         {
             // Case-insensitive contains on the file name (ILIKE), with LIKE
             // metacharacters escaped so user input is matched literally.
-            // Upgraded to tsvector/GIN full-text in M6 (#56) behind this seam.
+            // Deliberately NOT full-text (#57 decision): the list's ?q= is a
+            // navigation filter — substring, intra-word matches, date order —
+            // while ranked full-text search lives behind IOwnerDocumentSearch
+            // and GET /api/v1/search.
             string pattern = $"%{EscapeLikePattern(searchTerm)}%";
             query = query.Where(d => EF.Functions.ILike(d.FileName, pattern, "\\"));
         }

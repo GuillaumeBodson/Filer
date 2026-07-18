@@ -23,6 +23,7 @@
     <ProjectReference Include="..\Modules\BackgroundJobs\Filer.Modules.BackgroundJobs\Filer.Modules.BackgroundJobs.csproj" />
     <ProjectReference Include="..\Modules\Documents\Filer.Modules.Documents\Filer.Modules.Documents.csproj" />
     <ProjectReference Include="..\Modules\Folders\Filer.Modules.Folders\Filer.Modules.Folders.csproj" />
+    <ProjectReference Include="..\Modules\Search\Filer.Modules.Search\Filer.Modules.Search.csproj" />
     <ProjectReference Include="..\Modules\Storage\Filer.Modules.Storage\Filer.Modules.Storage.csproj" />
     <ProjectReference Include="..\Modules\Tags\Filer.Modules.Tags\Filer.Modules.Tags.csproj" />
   </ItemGroup>

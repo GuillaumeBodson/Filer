@@ -1367,3 +1367,61 @@ every FE-M2 screen shipped on tokens + native primitives with no component
 library. The `15-frontend-architecture.md` conventions doc promised here and in
 ADR-012 was authored just after the review (#194), capturing the
 component-authoring and token rules as built.
+
+---
+
+## ADR-017 — Search: thin API module over a Documents-owned query contract
+
+* **Date:** 2026-07-18
+* **Status:** Accepted
+
+### Context
+
+M6 delivers `GET /api/v1/search` (#57): ranked full-text over the caller's
+documents, backed by a generated `tsvector` column with a GIN index (`02`).
+`10-solution-structure.md` reserves a `Filer.Modules.Search` module and `03`
+lists Search as its own endpoint group — but the searchable rows, and therefore
+the tsvector column, live in the Documents module's `documents` schema, and a
+module may not touch another module's DbContext or schema (ADR-003/004). Three
+placements were possible: a search slice inside Documents serving a route
+outside its own prefix; a Search module with its own DbContext mapping a SQL
+view over the `documents` schema; or a thin Search module consuming a query
+contract implemented by Documents.
+
+### Decision
+
+**Search is a thin API module; the searchable data stays owned by Documents.**
+
+* `Filer.Modules.Documents.Contracts` exposes `IOwnerDocumentSearch`
+  (owner-scoped query in, ranked page of hits out). The EF implementation —
+  tsvector matching, `ts_rank` ordering, the tsquery strategy — lives in
+  Documents, which owns the column, the GIN index, and the migration. The
+  precedent is `IFolderContentLookup`/`IFolderDocumentRemover`: a narrow
+  contract owned by the module that owns the rows.
+* `Filer.Modules.Search` owns the HTTP contract only: the `/api/v1/search`
+  slice (validation, error codes, response DTO with the opaque `score`). Like
+  Storage, it has **no DbContext and no migrations**.
+* The `SearchVector` column is a **shadow property**: a persistence concern the
+  `Document` entity never sees.
+
+### Rationale
+
+* **The migration follows the table.** A generated column on
+  `documents.Documents` can only be owned by `DocumentsDbContext` — any other
+  owner would split the schema's migration history.
+* **The module map stays honest**: `10`'s reserved Search module exists and
+  serves its own route prefix, and NetArchTest keeps the dependency direction
+  (Search → Documents.Contracts only) enforced.
+* **The seam is where semantic search lands** (RM-04): a pgvector sibling adds
+  a second implementation or a second contract behind the same thin HTTP
+  module, and the opaque `score` (deliberately not specified as `ts_rank`,
+  `03`) absorbs it without a client-breaking change.
+
+### Trade-offs accepted
+
+* Two small projects whose V1 content is one slice and one error-code class —
+  accepted to keep the reserved module map and the future semantic seam real.
+* Ranked search and the list's substring `?q=` filter deliberately coexist as
+  two semantics (`03`): the list filter keeps intra-word matching for
+  navigation; `/search` ranks. The `EfDocumentStore` seam comment records the
+  decision not to upgrade the list filter.

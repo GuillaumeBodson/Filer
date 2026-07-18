@@ -160,9 +160,25 @@ explicit `DELETE`.
 |--------|------------------------|--------------------------------------------------|
 | GET    | `/api/v1/search`       | Full-text search across owned documents (`?q=`)  |
 
-V1 search is backed by PostgreSQL full-text (`tsvector`/GIN). Semantic search
-(pgvector) is a later addition exposed under the same endpoint or a sibling
-route; the contract is designed to absorb it without breaking clients.
+`GET /api/v1/search?q=<term>&page=&pageSize=` (#57) returns the standard paged
+envelope of search hits, most relevant first. `q` is required (missing, blank,
+or > 255 chars → 400 `search_term_invalid`); paging shares the list bounds and
+codes (`page_invalid`, `page_size_invalid`). A term that yields no usable
+lexeme (punctuation only) returns an empty page, not an error.
+
+A hit mirrors the document list item (`id`, `folderId`, `fileName`,
+`contentType`, `sizeBytes`, `status`, `createdAt`, `updatedAt`) plus `score`:
+an **opaque relevance value** — higher is more relevant, comparable only within
+a single response. It is deliberately not specified as `ts_rank` output.
+
+V1 search is backed by PostgreSQL full-text (`tsvector`/GIN, exact definition
+in `02`). Plain-word terms match the last token by prefix (search-as-you-type);
+quoted phrases, `OR`, and leading-`-` exclusion follow `websearch_to_tsquery`
+semantics. Semantic search (pgvector) is a later addition exposed under the
+same endpoint or a sibling route; the opaque `score` and the envelope are what
+let it land without breaking clients (ADR-017). The list's `/documents?q=`
+filter deliberately stays a substring (ILIKE) navigation filter — the two
+search semantics coexist.
 
 ---
 

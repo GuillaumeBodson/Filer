@@ -104,6 +104,10 @@ public static class DocumentsModule
         // mid-analysis (#119); internal behind the Contracts interface.
         services.AddScoped<IFolderContentLookup, FolderContentLookup>();
 
+        // Public surface for the Search module (#57): ranked full-text over the
+        // caller's documents; internal behind the Contracts interface.
+        services.AddScoped<IOwnerDocumentSearch, EfOwnerDocumentSearch>();
+
         // Feature services (vertical slices).
         services.AddScoped<UploadDocumentService>();
         services.AddScoped<DownloadDocumentContentService>();
