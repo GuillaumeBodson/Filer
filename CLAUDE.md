@@ -38,6 +38,10 @@ dotnet run --project src/Filer.Api          # http://localhost:5232 (profil http
 # Tout en Docker (API sur http://localhost:8080)
 docker compose up --build
 
+# Profils compose optionnels : dashboard Aspire (télémétrie, UI :18888) et RabbitMQ
+docker compose --profile observability up -d aspire-dashboard
+docker compose --profile mq up -d rabbitmq   # + BackgroundJobs__Queue=RabbitMq
+
 # Client web (Blazor WASM) — base API : src/Clients/Filer.Web/wwwroot/appsettings.json
 dotnet run --project src/Clients/Filer.Web
 
