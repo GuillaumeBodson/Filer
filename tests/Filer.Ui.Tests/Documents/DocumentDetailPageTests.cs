@@ -190,6 +190,55 @@ public sealed class DocumentDetailPageTests : BunitContext
     }
 
     [Fact]
+    public void The_analysis_panel_renders_on_the_detail_page()
+    {
+        _service.MetadataResults.Enqueue(Doc());
+        _service.AnalysisResults.Enqueue(new DocumentAnalysisResult(
+            new DocumentAnalysisResponse { DocumentId = DocId, Status = "None" }, null));
+
+        var cut = RenderPage();
+
+        cut.WaitForAssertion(() =>
+        {
+            cut.Find(".doc-analysis h2").TextContent.Should().Be("AI suggestions");
+            _service.AnalysisCalls.Should().ContainSingle().Which.Should().Be(DocId);
+        });
+    }
+
+    [Fact]
+    public void Applying_suggestions_reloads_the_metadata_and_the_tags()
+    {
+        _service.MetadataResults.Enqueue(Doc());
+        _service.AnalysisResults.Enqueue(new DocumentAnalysisResult(
+            new DocumentAnalysisResponse
+            {
+                DocumentId = DocId,
+                Status = "Succeeded",
+                Suggestions = new DocumentAnalysisSuggestionsResponse
+                {
+                    SuggestedFolder = null,
+                    SuggestedTags = [new AnalysisTagSuggestionResponse { Name = "facture", Confidence = 0.9 }],
+                },
+            }, null));
+        _service.ApplyResults.Enqueue(new ApplyAnalysisResult(
+            new ApplyDocumentAnalysisResponse { DocumentId = DocId, FolderApplied = false, Tags = [] },
+            null));
+        // The reload triggered by OnApplied (folder may have changed, tags did).
+        _service.MetadataResults.Enqueue(Doc());
+
+        var cut = RenderPage();
+        cut.WaitForElements(".doc-analysis-item input");
+        cut.FindAll(".doc-analysis-item input")[0].Change(true);
+        cut.Find(".doc-analysis-form").Submit();
+
+        cut.WaitForAssertion(() =>
+        {
+            _service.Applies.Should().ContainSingle();
+            _service.MetadataCalls.Should().HaveCount(2, "the page reloads after an apply");
+        });
+    }
+
+    [Fact]
     public void A_failed_action_renders_the_problem_and_stays()
     {
         _service.MetadataResults.Enqueue(Doc());

@@ -107,4 +107,35 @@ internal sealed class FakeDocumentsService : IDocumentsService
         TagRemovals.Add((documentId, tagId));
         return Task.FromResult(NextRemoveTagResult);
     }
+
+    public Queue<DocumentAnalysisResult> AnalysisResults { get; } = new();
+    public List<Guid> AnalysisCalls { get; } = [];
+    public Queue<ApplyAnalysisResult> ApplyResults { get; } = new();
+    public List<(Guid DocumentId, bool ApplyFolder, IReadOnlyList<string> Tags)> Applies { get; } = [];
+
+    public Task<DocumentAnalysisResult> GetAnalysisAsync(
+        Guid documentId, CancellationToken cancellationToken = default)
+    {
+        AnalysisCalls.Add(documentId);
+        return Task.FromResult(AnalysisResults.Count > 0
+            ? AnalysisResults.Dequeue()
+            // Reads default to "no analysis" so tests not about analysis stay quiet.
+            : new DocumentAnalysisResult(
+                new Filer.ApiClient.Generated.Models.DocumentAnalysisResponse
+                {
+                    DocumentId = documentId,
+                    Status = "None",
+                },
+                null));
+    }
+
+    public Task<ApplyAnalysisResult> ApplyAnalysisAsync(
+        Guid documentId, bool applyFolder, IReadOnlyList<string> tags,
+        CancellationToken cancellationToken = default)
+    {
+        Applies.Add((documentId, applyFolder, [.. tags]));
+        return Task.FromResult(ApplyResults.Count > 0
+            ? ApplyResults.Dequeue()
+            : throw new InvalidOperationException("No scripted apply result."));
+    }
 }

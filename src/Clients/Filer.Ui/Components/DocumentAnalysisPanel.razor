@@ -1,0 +1,229 @@
+@namespace Filer.Ui.Components
+@using Filer.ApiClient.Generated.Models
+@using Filer.Ui.Documents
+@using Filer.Ui.Models
+@inject IDocumentsService DocumentsApi
+
+@* AI analysis suggestions for the document (#141, 06-ai-analysis-pipeline.md):
+   status first, then — on success — a review form where the user confirms all,
+   some, or none of the suggested folder/tags. A failed or missing analysis never
+   blocks the document. While the analysis is pending the user refreshes manually;
+   automatic polling is a deliberate future improvement (FE-M3 review). *@
+<section class="doc-analysis" aria-label="AI suggestions">
+    <h2>AI suggestions</h2>
+
+    @if (_loading)
+    {
+        <LoadingIndicator Message="Loading the analysis…" />
+    }
+    else if (_loadProblem is not null)
+    {
+        <ErrorState Problem="_loadProblem"
+                    NotFoundTitle="Analysis not found"
+                    NotFoundDescription="This document doesn't exist or isn't yours."
+                    OnRetry="LoadAsync" />
+    }
+    else if (_analysis is null || _analysis.Status == "None")
+    {
+        <p class="doc-analysis-empty">No analysis for this document.</p>
+    }
+    else if (_analysis.Status is "Queued" or "Running")
+    {
+        <div class="doc-analysis-pending">
+            <p role="status" aria-live="polite">Analysis in progress…</p>
+            <button type="button" class="btn doc-analysis-refresh" disabled="@_busy" @onclick="LoadAsync">
+                Refresh
+            </button>
+        </div>
+    }
+    else if (_analysis.Status == "Failed")
+    {
+        @* Failure is analysis-unavailable, never a blocker (06, Failure Handling). *@
+        <p class="doc-analysis-empty">Analysis unavailable for this document.</p>
+    }
+    else if (Suggestions() is not { } suggestions)
+    {
+        <p class="doc-analysis-empty">The analysis produced no suggestions.</p>
+    }
+    else
+    {
+        <form class="doc-analysis-form" @onsubmit="ApplyAsync">
+            @if (suggestions.SuggestedFolder is { } folder)
+            {
+                <fieldset class="doc-analysis-group">
+                    <legend>Suggested folder</legend>
+                    <label class="doc-analysis-item">
+                        <input type="checkbox"
+                               checked="@_applyFolder"
+                               disabled="@(folder.ExistingFolderId is null || _busy)"
+                               @onchange="e => _applyFolder = (bool)e.Value!" />
+                        <span class="doc-analysis-name">@folder.Name</span>
+                        <span class="doc-analysis-confidence">@Percent(folder.Confidence)</span>
+                    </label>
+                    @if (folder.ExistingFolderId is null)
+                    {
+                        @* A proposed NEW folder can't be applied in V1 (06,
+                           proposed_folder_not_supported): create it, then move. *@
+                        <p class="doc-analysis-note">
+                            This folder doesn't exist yet — create it on the
+                            <a href="folders">Folders page</a>, then move the document.
+                        </p>
+                    }
+                </fieldset>
+            }
+
+            @if (suggestions.SuggestedTags is { Count: > 0 } tags)
+            {
+                <fieldset class="doc-analysis-group">
+                    <legend>Suggested tags</legend>
+                    @foreach (AnalysisTagSuggestionResponse tag in tags)
+                    {
+                        <label class="doc-analysis-item">
+                            <input type="checkbox"
+                                   checked="@(tag.Name is not null && _selectedTags.Contains(tag.Name))"
+                                   disabled="@_busy"
+                                   @onchange="() => ToggleTag(tag.Name)" />
+                            <span class="doc-analysis-name">@tag.Name</span>
+                            <span class="doc-analysis-confidence">@Percent(tag.Confidence)</span>
+                        </label>
+                    }
+                    <div class="doc-analysis-bulk">
+                        <button type="button" class="btn" disabled="@_busy" @onclick="() => SelectAll(tags)">
+                            Select all
+                        </button>
+                        <button type="button" class="btn" disabled="@_busy" @onclick="ClearSelection">
+                            Clear
+                        </button>
+                    </div>
+                </fieldset>
+            }
+
+            <div class="doc-analysis-actions">
+                <button type="submit" class="btn btn-primary doc-analysis-apply"
+                        disabled="@(_busy || !HasSelection)">
+                    Apply selected
+                </button>
+            </div>
+        </form>
+
+        @if (_actionNotice is not null)
+        {
+            <p class="doc-analysis-notice" role="status" aria-live="polite">@_actionNotice</p>
+        }
+        @if (_actionProblem is not null)
+        {
+            <ErrorState Problem="_actionProblem"
+                        NotFoundTitle="Not found"
+                        NotFoundDescription="The document or its analysis doesn't exist or isn't yours." />
+        }
+    }
+</section>
+
+@code {
+    private DocumentAnalysisResponse? _analysis;
+    private ProblemDetailsView? _loadProblem;
+    private ProblemDetailsView? _actionProblem;
+    private string? _actionNotice;
+    private bool _loading = true;
+    private bool _busy;
+    private bool _applyFolder;
+    private readonly HashSet<string> _selectedTags = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The document whose analysis this panel reviews.</summary>
+    [Parameter, EditorRequired] public Guid DocumentId { get; set; }
+
+    /// <summary>Raised after suggestions were applied, so the page can refresh tags/metadata.</summary>
+    [Parameter] public EventCallback OnApplied { get; set; }
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _loadProblem = null;
+        _actionProblem = null;
+        _actionNotice = null;
+        try
+        {
+            DocumentAnalysisResult result = await DocumentsApi.GetAnalysisAsync(DocumentId);
+            _analysis = result.Analysis;
+            _loadProblem = result.Problem;
+            _applyFolder = false;
+            _selectedTags.Clear();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private DocumentAnalysisSuggestionsResponse? Suggestions() => _analysis?.Suggestions;
+
+    private bool HasSelection => _applyFolder || _selectedTags.Count > 0;
+
+    private static string Percent(double? confidence) =>
+        confidence is double value ? $"{Math.Round(value * 100)}%" : "";
+
+    private void ToggleTag(string? name)
+    {
+        if (name is null)
+        {
+            return;
+        }
+
+        if (!_selectedTags.Remove(name))
+        {
+            _selectedTags.Add(name);
+        }
+    }
+
+    private void SelectAll(IEnumerable<AnalysisTagSuggestionResponse> tags)
+    {
+        foreach (AnalysisTagSuggestionResponse tag in tags)
+        {
+            if (tag.Name is not null)
+            {
+                _selectedTags.Add(tag.Name);
+            }
+        }
+    }
+
+    private void ClearSelection()
+    {
+        _selectedTags.Clear();
+        _applyFolder = false;
+    }
+
+    private async Task ApplyAsync()
+    {
+        // "Apply none" is simply not calling the endpoint (06): the button is
+        // disabled without a selection, and this guard keeps it that way.
+        if (!HasSelection || _busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _actionProblem = null;
+        _actionNotice = null;
+        try
+        {
+            ApplyAnalysisResult result = await DocumentsApi.ApplyAnalysisAsync(
+                DocumentId, _applyFolder, [.. _selectedTags]);
+            if (result.Problem is not null)
+            {
+                _actionProblem = result.Problem;
+                return;
+            }
+
+            _actionNotice = "Suggestions applied.";
+            _applyFolder = false;
+            _selectedTags.Clear();
+            await OnApplied.InvokeAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

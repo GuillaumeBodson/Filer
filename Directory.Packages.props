@@ -64,5 +64,9 @@
     <!-- Blazor component tests (12-testing-strategy.md). bUnit 2.x is test-framework
          agnostic and pairs with the repo's xunit.v3. -->
     <PackageVersion Include="bunit" Version="2.7.2" />
+    <!-- Pin bunit's transitive AngleSharp to a patched version: 1.4.0 carries
+         GHSA-pgww-w46g-26qg (moderate), which fails restore under NuGet
+         audit-as-errors in CI - same pattern as the Microsoft.OpenApi pin above. -->
+    <PackageVersion Include="AngleSharp" Version="1.5.2" />
   </ItemGroup>
 </Project>

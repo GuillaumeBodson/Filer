@@ -17,10 +17,10 @@ namespace Filer.ApiClient.Generated.Models
         /// <summary>The suggestedFolder property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse.DocumentAnalysisSuggestionsResponse_suggestedFolder? SuggestedFolder { get; set; }
+        public global::Filer.ApiClient.Generated.Models.AnalysisFolderSuggestionResponse? SuggestedFolder { get; set; }
 #nullable restore
 #else
-        public global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse.DocumentAnalysisSuggestionsResponse_suggestedFolder SuggestedFolder { get; set; }
+        public global::Filer.ApiClient.Generated.Models.AnalysisFolderSuggestionResponse SuggestedFolder { get; set; }
 #endif
         /// <summary>The suggestedTags property</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
@@ -55,7 +55,7 @@ namespace Filer.ApiClient.Generated.Models
         {
             return new Dictionary<string, Action<IParseNode>>
             {
-                { "suggestedFolder", n => { SuggestedFolder = n.GetObjectValue<global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse.DocumentAnalysisSuggestionsResponse_suggestedFolder>(global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse.DocumentAnalysisSuggestionsResponse_suggestedFolder.CreateFromDiscriminatorValue); } },
+                { "suggestedFolder", n => { SuggestedFolder = n.GetObjectValue<global::Filer.ApiClient.Generated.Models.AnalysisFolderSuggestionResponse>(global::Filer.ApiClient.Generated.Models.AnalysisFolderSuggestionResponse.CreateFromDiscriminatorValue); } },
                 { "suggestedTags", n => { SuggestedTags = n.GetCollectionOfObjectValues<global::Filer.ApiClient.Generated.Models.AnalysisTagSuggestionResponse>(global::Filer.ApiClient.Generated.Models.AnalysisTagSuggestionResponse.CreateFromDiscriminatorValue)?.AsList(); } },
             };
         }
@@ -66,80 +66,9 @@ namespace Filer.ApiClient.Generated.Models
         public virtual void Serialize(ISerializationWriter writer)
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
-            writer.WriteObjectValue<global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse.DocumentAnalysisSuggestionsResponse_suggestedFolder>("suggestedFolder", SuggestedFolder);
+            writer.WriteObjectValue<global::Filer.ApiClient.Generated.Models.AnalysisFolderSuggestionResponse>("suggestedFolder", SuggestedFolder);
             writer.WriteCollectionOfObjectValues<global::Filer.ApiClient.Generated.Models.AnalysisTagSuggestionResponse>("suggestedTags", SuggestedTags);
             writer.WriteAdditionalData(AdditionalData);
-        }
-        /// <summary>
-        /// Composed type wrapper for classes <see cref="global::Filer.ApiClient.Generated.Models.AnalysisFolderSuggestionResponse"/>, <see cref="global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse_suggestedFolderMember1"/>
-        /// </summary>
-        [global::System.CodeDom.Compiler.GeneratedCode("Kiota", "1.0.0")]
-        public partial class DocumentAnalysisSuggestionsResponse_suggestedFolder : IComposedTypeWrapper, IParsable
-        {
-            /// <summary>Composed type representation for type <see cref="global::Filer.ApiClient.Generated.Models.AnalysisFolderSuggestionResponse"/></summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-            public global::Filer.ApiClient.Generated.Models.AnalysisFolderSuggestionResponse? AnalysisFolderSuggestionResponse { get; set; }
-#nullable restore
-#else
-            public global::Filer.ApiClient.Generated.Models.AnalysisFolderSuggestionResponse AnalysisFolderSuggestionResponse { get; set; }
-#endif
-            /// <summary>Composed type representation for type <see cref="global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse_suggestedFolderMember1"/></summary>
-#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-#nullable enable
-            public global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse_suggestedFolderMember1? DocumentAnalysisSuggestionsResponseSuggestedFolderMember1 { get; set; }
-#nullable restore
-#else
-            public global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse_suggestedFolderMember1 DocumentAnalysisSuggestionsResponseSuggestedFolderMember1 { get; set; }
-#endif
-            /// <summary>
-            /// Creates a new instance of the appropriate class based on discriminator value
-            /// </summary>
-            /// <returns>A <see cref="global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse.DocumentAnalysisSuggestionsResponse_suggestedFolder"/></returns>
-            /// <param name="parseNode">The parse node to use to read the discriminator value and create the object</param>
-            public static global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse.DocumentAnalysisSuggestionsResponse_suggestedFolder CreateFromDiscriminatorValue(IParseNode parseNode)
-            {
-                if(ReferenceEquals(parseNode, null)) throw new ArgumentNullException(nameof(parseNode));
-                var mappingValue = parseNode.GetChildNode("")?.GetStringValue();
-                var result = new global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse.DocumentAnalysisSuggestionsResponse_suggestedFolder();
-                if("AnalysisFolderSuggestionResponse".Equals(mappingValue, StringComparison.OrdinalIgnoreCase))
-                {
-                    result.AnalysisFolderSuggestionResponse = new global::Filer.ApiClient.Generated.Models.AnalysisFolderSuggestionResponse();
-                }
-                return result;
-            }
-            /// <summary>
-            /// The deserialization information for the current model
-            /// </summary>
-            /// <returns>A IDictionary&lt;string, Action&lt;IParseNode&gt;&gt;</returns>
-            public virtual IDictionary<string, Action<IParseNode>> GetFieldDeserializers()
-            {
-                if(AnalysisFolderSuggestionResponse != null)
-                {
-                    return AnalysisFolderSuggestionResponse.GetFieldDeserializers();
-                }
-                else if(DocumentAnalysisSuggestionsResponseSuggestedFolderMember1 != null)
-                {
-                    return DocumentAnalysisSuggestionsResponseSuggestedFolderMember1.GetFieldDeserializers();
-                }
-                return new Dictionary<string, Action<IParseNode>>();
-            }
-            /// <summary>
-            /// Serializes information the current object
-            /// </summary>
-            /// <param name="writer">Serialization writer to use to serialize this model</param>
-            public virtual void Serialize(ISerializationWriter writer)
-            {
-                if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
-                if(AnalysisFolderSuggestionResponse != null)
-                {
-                    writer.WriteObjectValue<global::Filer.ApiClient.Generated.Models.AnalysisFolderSuggestionResponse>(null, AnalysisFolderSuggestionResponse);
-                }
-                else if(DocumentAnalysisSuggestionsResponseSuggestedFolderMember1 != null)
-                {
-                    writer.WriteObjectValue<global::Filer.ApiClient.Generated.Models.DocumentAnalysisSuggestionsResponse_suggestedFolderMember1>(null, DocumentAnalysisSuggestionsResponseSuggestedFolderMember1);
-                }
-            }
         }
     }
 }

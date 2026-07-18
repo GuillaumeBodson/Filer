@@ -230,6 +230,59 @@ public sealed class DocumentsService(FilerApiClient api) : IDocumentsService
         }
     }
 
+    public async Task<DocumentAnalysisResult> GetAnalysisAsync(
+        Guid documentId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            DocumentAnalysisResponse? analysis = await _api.Api.V1.Documents[documentId].Analysis
+                .GetAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return analysis is null
+                ? new DocumentAnalysisResult(null, new ProblemDetailsView
+                {
+                    Title = "Analysis unavailable",
+                    Detail = "The server returned an empty response. Try again.",
+                })
+                : new DocumentAnalysisResult(analysis, null);
+        }
+        catch (ApiException ex)
+        {
+            return new DocumentAnalysisResult(null, ex.ToProblemView());
+        }
+    }
+
+    public async Task<ApplyAnalysisResult> ApplyAnalysisAsync(
+        Guid documentId, bool applyFolder, IReadOnlyList<string> tags,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Tags is always sent, even empty: a null list is a malformed request
+            // server-side (analysis_tags_invalid), an empty one means "no tags".
+            var body = new ApplyDocumentAnalysisRequest
+            {
+                ApplyFolder = applyFolder,
+                Tags = [.. tags],
+            };
+
+            ApplyDocumentAnalysisResponse? applied = await _api.Api.V1.Documents[documentId].Analysis.Apply
+                .PostAsync(body, cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            return applied is null
+                ? new ApplyAnalysisResult(null, new ProblemDetailsView
+                {
+                    Title = "Apply failed",
+                    Detail = "The server returned an empty response. Try again.",
+                })
+                : new ApplyAnalysisResult(applied, null);
+        }
+        catch (ApiException ex)
+        {
+            return new ApplyAnalysisResult(null, ex.ToProblemView());
+        }
+    }
+
     private static DocumentTagsResult ToTagsResult(DocumentTagsResponse? tags) =>
         tags is null
             ? new DocumentTagsResult(null, new ProblemDetailsView

@@ -3,6 +3,7 @@
 using Filer.ApiClient.Generated.Api.V1.Auth;
 using Filer.ApiClient.Generated.Api.V1.Documents;
 using Filer.ApiClient.Generated.Api.V1.Folders;
+using Filer.ApiClient.Generated.Api.V1.Search;
 using Filer.ApiClient.Generated.Api.V1.Tags;
 using Microsoft.Kiota.Abstractions.Extensions;
 using Microsoft.Kiota.Abstractions;
@@ -32,6 +33,11 @@ namespace Filer.ApiClient.Generated.Api.V1
         public global::Filer.ApiClient.Generated.Api.V1.Folders.FoldersRequestBuilder Folders
         {
             get => new global::Filer.ApiClient.Generated.Api.V1.Folders.FoldersRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The search property</summary>
+        public global::Filer.ApiClient.Generated.Api.V1.Search.SearchRequestBuilder Search
+        {
+            get => new global::Filer.ApiClient.Generated.Api.V1.Search.SearchRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>The tags property</summary>
         public global::Filer.ApiClient.Generated.Api.V1.Tags.TagsRequestBuilder Tags

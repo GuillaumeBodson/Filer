@@ -43,6 +43,22 @@ public interface IDocumentsService
 
     /// <summary>Detaches a tag from the document. Returns <c>null</c> on success.</summary>
     Task<ProblemDetailsView?> RemoveTagAsync(Guid documentId, Guid tagId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The document's analysis status and, when it succeeded, its stored
+    /// suggestions (#141, 06-ai-analysis-pipeline.md). Status is one of
+    /// <c>None</c>, <c>Queued</c>, <c>Running</c>, <c>Succeeded</c>, <c>Failed</c>;
+    /// suggestions are present only on <c>Succeeded</c>.
+    /// </summary>
+    Task<DocumentAnalysisResult> GetAnalysisAsync(Guid documentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Applies confirmed suggestions — the folder and/or a subset of the suggested
+    /// tag names; an empty selection is legitimate server-side but callers avoid
+    /// the no-op call. Applied tags come back with <c>Source=AiSuggested</c> (06).
+    /// </summary>
+    Task<ApplyAnalysisResult> ApplyAnalysisAsync(
+        Guid documentId, bool applyFolder, IReadOnlyList<string> tags, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Outcome of a tag read/mutation: exactly one side is set.</summary>
@@ -101,4 +117,14 @@ public sealed record DocumentsQuery(
 /// <summary>Outcome of a list call: exactly one side is set.</summary>
 public sealed record DocumentsPageResult(
     PagedResultOfDocumentListItemResponse? Page,
+    ProblemDetailsView? Problem);
+
+/// <summary>Outcome of an analysis read: exactly one side is set.</summary>
+public sealed record DocumentAnalysisResult(
+    DocumentAnalysisResponse? Analysis,
+    ProblemDetailsView? Problem);
+
+/// <summary>Outcome of an apply call: exactly one side is set.</summary>
+public sealed record ApplyAnalysisResult(
+    ApplyDocumentAnalysisResponse? Applied,
     ProblemDetailsView? Problem);
