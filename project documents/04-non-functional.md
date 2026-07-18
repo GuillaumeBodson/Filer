@@ -106,8 +106,15 @@ Per `08` (background jobs must be observable):
 * **Health endpoints:** liveness and readiness (readiness checks DB and storage
   reachability).
 
-Tooling choice (e.g. OpenTelemetry) is an implementation detail; the requirement
-is that the data is emitted in an interoperable form.
+Tooling choice is an implementation detail; the requirement is that the data is
+emitted in an interoperable form. The implemented emit layer is **OpenTelemetry**
+(ADR-013), confined to the host: modules emit through the BCL primitives only
+(`ActivitySource`/`Meter`/`ILogger`), and OTLP export is opt-in via
+`Observability:Otlp:Endpoint` (unset — the default outside local compose — means
+nothing leaves the process). Because the upload→analysis hand-off is async, the
+correlation ID is the W3C `traceparent` persisted on the `AnalysisJob` row
+(`CorrelationContext`, `02`): the worker's processing span is a new root *linked*
+to the originating request trace.
 
 ---
 

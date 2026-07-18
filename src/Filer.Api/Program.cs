@@ -46,6 +46,10 @@ if (builder.Environment.IsDevelopment())
     builder.Logging.AddDebug();
 }
 
+// OpenTelemetry as the emit layer for traces, metrics and logs (ADR-013). Export
+// is opt-in via Observability:Otlp:Endpoint; unset, the pipeline stays silent.
+builder.AddFilerObservability();
+
 // Cross-cutting host services. The document transformer keeps nullable complex
 // properties out of oneOf-union territory Kiota cannot deserialize
 // (Infrastructure/NullableRefSchemaTransformer.cs, ADR-011).

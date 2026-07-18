@@ -58,7 +58,7 @@ public sealed class EfAnalysisJobStore(JobsDbContext dbContext, IClock clock) : 
         }
 
         AnalysisJob job = claimed[0];
-        return new ClaimedAnalysisJob(job.Id, job.DocumentId, job.AttemptCount);
+        return new ClaimedAnalysisJob(job.Id, job.DocumentId, job.AttemptCount, job.CorrelationContext);
     }
 
     public Task MarkSucceededAsync(Guid jobId, string? result, CancellationToken cancellationToken) =>

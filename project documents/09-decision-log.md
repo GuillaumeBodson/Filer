@@ -957,7 +957,10 @@ against the frozen core endpoints only.**
 ## ADR-013 — Observability: OpenTelemetry, with trace context persisted on the job row for cross-process continuity
 
 * **Date:** 2026-07-11
-* **Status:** Accepted (correlation foundation precedes #75; full observability build is M7)
+* **Status:** Accepted (correlation foundation precedes #75; full observability build is M7).
+  Correlation foundation implemented in #59: OTel pipeline in the host,
+  `AnalysisJob.CorrelationContext` stamped at enqueue and link-resumed by the
+  worker's processing span.
 
 ### Context
 

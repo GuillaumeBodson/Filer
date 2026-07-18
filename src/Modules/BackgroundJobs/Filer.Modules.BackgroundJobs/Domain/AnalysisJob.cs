@@ -40,4 +40,12 @@ public sealed class AnalysisJob : BaseEntity
     /// the claim query respects (06, Reliability). Null = due immediately.
     /// </summary>
     public DateTimeOffset? NextAttemptAt { get; set; }
+
+    /// <summary>
+    /// W3C traceparent of the enqueueing request (ADR-013): stamped on insert,
+    /// read on claim so the worker links its processing span back to the
+    /// originating trace. Null when nothing was being traced at enqueue time.
+    /// The row — never a broker message — is the authoritative carrier.
+    /// </summary>
+    public string? CorrelationContext { get; set; }
 }
