@@ -89,6 +89,17 @@
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
+    /// <summary>
+    /// Reloads the tag set on demand — the detail page calls this (via <c>@@ref</c>)
+    /// after applying analysis suggestions, which adds AiSuggested rows outside
+    /// this panel (#141). External call, so re-rendering is explicit.
+    /// </summary>
+    public async Task ReloadAsync()
+    {
+        await LoadAsync();
+        StateHasChanged();
+    }
+
     private async Task LoadAsync()
     {
         _loading = true;

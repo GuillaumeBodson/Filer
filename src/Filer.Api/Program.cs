@@ -46,8 +46,10 @@ if (builder.Environment.IsDevelopment())
     builder.Logging.AddDebug();
 }
 
-// Cross-cutting host services.
-builder.Services.AddOpenApi();
+// Cross-cutting host services. The document transformer keeps nullable complex
+// properties out of oneOf-union territory Kiota cannot deserialize
+// (Infrastructure/NullableRefSchemaTransformer.cs, ADR-011).
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer<NullableRefSchemaTransformer>());
 builder.Services.AddProblemDetails();
 
 // Strict JSON numbers. The web default (AllowReadingFromString) makes the OpenAPI

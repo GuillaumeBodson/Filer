@@ -311,4 +311,170 @@ public sealed class DocumentsServiceTests
         result.Problem!.Code.Should().Be("page_size_invalid");
         result.Problem.Title.Should().Be("Validation failed");
     }
+
+    [Fact]
+    public async Task GetAnalysis_maps_the_succeeded_payload_with_its_suggestions()
+    {
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var folderId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.OK, """
+        {
+          "documentId": "11111111-1111-1111-1111-111111111111",
+          "status": "Succeeded",
+          "jobId": "55555555-5555-5555-5555-555555555555",
+          "completedAt": "2026-07-18T10:00:00+00:00",
+          "suggestions": {
+            "suggestedFolder": { "existingFolderId": "44444444-4444-4444-4444-444444444444",
+                                 "name": "Factures", "confidence": 0.82 },
+            "suggestedTags": [
+              { "name": "facture", "confidence": 0.9 },
+              { "name": "2026", "confidence": 0.55 }
+            ]
+          }
+        }
+        """);
+        DocumentsService service = CreateService(inner);
+
+        DocumentAnalysisResult result = await service.GetAnalysisAsync(docId, TestContext.Current.CancellationToken);
+
+        result.Problem.Should().BeNull();
+        result.Analysis!.Status.Should().Be("Succeeded");
+        result.Analysis.Suggestions!.SuggestedFolder!.Name.Should().Be("Factures");
+        result.Analysis.Suggestions.SuggestedFolder.ExistingFolderId.Should().Be(folderId);
+        result.Analysis.Suggestions.SuggestedTags.Should().HaveCount(2);
+        result.Analysis.Suggestions.SuggestedTags![0].Name.Should().Be("facture");
+        result.Analysis.Suggestions.SuggestedTags[0].Confidence.Should().Be(0.9);
+        inner.Requests.Single().RequestUri!.AbsolutePath.Should().Be($"/api/v1/documents/{docId}/analysis");
+    }
+
+    [Fact]
+    public async Task GetAnalysis_maps_a_proposed_new_folder_without_an_existing_id()
+    {
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.OK, """
+        {
+          "documentId": "11111111-1111-1111-1111-111111111111",
+          "status": "Succeeded",
+          "jobId": "55555555-5555-5555-5555-555555555555",
+          "completedAt": "2026-07-18T10:00:00+00:00",
+          "suggestions": {
+            "suggestedFolder": { "existingFolderId": null, "name": "Nouveau dossier", "confidence": 0.4 },
+            "suggestedTags": []
+          }
+        }
+        """);
+        DocumentsService service = CreateService(inner);
+
+        DocumentAnalysisResult result = await service.GetAnalysisAsync(docId, TestContext.Current.CancellationToken);
+
+        result.Analysis!.Suggestions!.SuggestedFolder!.ExistingFolderId.Should().BeNull();
+        result.Analysis.Suggestions.SuggestedFolder.Name.Should().Be("Nouveau dossier");
+    }
+
+    [Fact]
+    public async Task GetAnalysis_maps_a_pending_status_without_suggestions()
+    {
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.OK, """
+        {
+          "documentId": "11111111-1111-1111-1111-111111111111",
+          "status": "Queued",
+          "jobId": "55555555-5555-5555-5555-555555555555",
+          "completedAt": null,
+          "suggestions": null
+        }
+        """);
+        DocumentsService service = CreateService(inner);
+
+        DocumentAnalysisResult result = await service.GetAnalysisAsync(docId, TestContext.Current.CancellationToken);
+
+        result.Problem.Should().BeNull();
+        result.Analysis!.Status.Should().Be("Queued");
+        result.Analysis.Suggestions.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetAnalysis_a_404_surfaces_as_not_found()
+    {
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.NotFound, """
+        { "type": "https://docs/errors/document_not_found", "title": "Resource not found",
+          "status": 404, "detail": "Document not found.", "code": "document_not_found" }
+        """);
+        DocumentsService service = CreateService(inner);
+
+        DocumentAnalysisResult result = await service.GetAnalysisAsync(docId, TestContext.Current.CancellationToken);
+
+        result.Analysis.Should().BeNull();
+        result.Problem!.IsNotFound.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Apply_posts_the_selection_and_maps_the_applied_tags()
+    {
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.OK, """
+        {
+          "documentId": "11111111-1111-1111-1111-111111111111",
+          "folderApplied": true,
+          "folderId": "44444444-4444-4444-4444-444444444444",
+          "tags": [ { "tagId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "source": "AiSuggested" } ]
+        }
+        """);
+        DocumentsService service = CreateService(inner);
+
+        ApplyAnalysisResult result = await service.ApplyAnalysisAsync(
+            docId, applyFolder: true, ["facture", "2026"], TestContext.Current.CancellationToken);
+
+        result.Problem.Should().BeNull();
+        result.Applied!.FolderApplied.Should().BeTrue();
+        result.Applied.Tags.Should().ContainSingle().Which.Source.Should().Be("AiSuggested");
+
+        var request = inner.Requests.Should().ContainSingle().Which;
+        request.Method.Method.Should().Be("POST");
+        request.RequestUri!.AbsolutePath.Should().Be($"/api/v1/documents/{docId}/analysis/apply");
+        string body = System.Text.Encoding.UTF8.GetString(request.Body!).Replace(" ", "", StringComparison.Ordinal);
+        body.Should().Contain("\"applyFolder\":true").And.Contain("\"facture\"").And.Contain("\"2026\"");
+    }
+
+    [Fact]
+    public async Task Apply_sends_an_empty_tags_array_rather_than_omitting_it()
+    {
+        // A null tags list is a malformed request server-side (analysis_tags_invalid);
+        // an empty array legitimately means "no tags" (06).
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.OK, """
+        { "documentId": "11111111-1111-1111-1111-111111111111", "folderApplied": true,
+          "folderId": "44444444-4444-4444-4444-444444444444", "tags": [] }
+        """);
+        DocumentsService service = CreateService(inner);
+
+        await service.ApplyAnalysisAsync(docId, applyFolder: true, [], TestContext.Current.CancellationToken);
+
+        string body = System.Text.Encoding.UTF8.GetString(inner.Requests.Single().Body!)
+            .Replace(" ", "", StringComparison.Ordinal);
+        body.Should().Contain("\"tags\":[]");
+    }
+
+    [Fact]
+    public async Task Apply_a_declared_400_surfaces_the_stable_code()
+    {
+        var docId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inner = new StubHttpMessageHandler().Enqueue(HttpStatusCode.BadRequest, """
+        {
+          "type": "https://docs/errors/suggested_tag_not_created",
+          "title": "Validation failed",
+          "status": 400,
+          "detail": "Create the tag first, then re-apply.",
+          "code": "suggested_tag_not_created"
+        }
+        """);
+        DocumentsService service = CreateService(inner);
+
+        ApplyAnalysisResult result = await service.ApplyAnalysisAsync(
+            docId, applyFolder: false, ["inexistant"], TestContext.Current.CancellationToken);
+
+        result.Applied.Should().BeNull();
+        result.Problem!.Code.Should().Be("suggested_tag_not_created");
+    }
 }
