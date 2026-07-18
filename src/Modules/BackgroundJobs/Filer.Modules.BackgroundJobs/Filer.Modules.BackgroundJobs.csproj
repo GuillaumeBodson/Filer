@@ -14,6 +14,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- Broker dispatch (ADR-008): publish/consume wake-ups; the table stays the outbox. -->
+    <PackageReference Include="RabbitMQ.Client" />
   </ItemGroup>
 
   <!-- Hosted-service worker and options binding come from the shared framework. -->
@@ -25,6 +27,9 @@
        it through the designed seams (12-testing-strategy.md). -->
   <ItemGroup>
     <InternalsVisibleTo Include="Filer.Modules.BackgroundJobs.Tests" />
+    <!-- Moq's proxy generator, so the tests can mock internal seams
+         (IAnalysisJobDispatcher) without widening them to public. -->
+    <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
   </ItemGroup>
 
 </Project>

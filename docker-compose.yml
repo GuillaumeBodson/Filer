@@ -74,7 +74,28 @@ services:
       - "18888:18888" # dashboard UI
       - "4317:18889"  # OTLP/gRPC ingest, exposed for an API running on the host (dotnet run)
 
+  # Broker dispatch for background jobs (ADR-008), behind the "mq" profile so a
+  # plain `docker compose up` keeps today's Db dispatch. Opt in with
+  # `docker compose --profile mq up` and BackgroundJobs__Queue=RabbitMq on the
+  # api service. Management UI on http://localhost:15672 (guest/guest, dev only).
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: filer-rabbitmq
+    profiles: ["mq"]
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - filer-rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+>>>>>>> c6f44ee (feat(jobs): RabbitMQ dispatch over the Postgres outbox (ADR-008))
+
 volumes:
   filer-pgdata:
   filer-storage:
   filer-ollama:
+  filer-rabbitmq:

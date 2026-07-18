@@ -1,4 +1,5 @@
 using Filer.Modules.BackgroundJobs.Contracts;
+using Filer.Modules.BackgroundJobs.Messaging;
 using Filer.Modules.BackgroundJobs.Persistence;
 using Filer.Modules.BackgroundJobs.Queueing;
 using Filer.Modules.BackgroundJobs.Worker;
@@ -8,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Filer.Modules.BackgroundJobs;
 
@@ -32,6 +34,9 @@ public static class BackgroundJobsModule
                 options => options.PollInterval > TimeSpan.Zero,
                 "BackgroundJobs:PollInterval must be positive.")
             .Validate(
+                options => options.SweepInterval > TimeSpan.Zero,
+                "BackgroundJobs:SweepInterval must be positive.")
+            .Validate(
                 options => options.MaxAttempts >= 1,
                 "BackgroundJobs:MaxAttempts must be at least 1.")
             .Validate(
@@ -40,6 +45,12 @@ public static class BackgroundJobsModule
             .Validate(
                 options => options.QueueDepthReportInterval > TimeSpan.Zero,
                 "BackgroundJobs:QueueDepthReportInterval must be positive.")
+            .Validate(
+                options => options.Queue != QueueDispatch.RabbitMq
+                    || (!string.IsNullOrWhiteSpace(options.RabbitMq.HostName)
+                        && options.RabbitMq.Port is >= 1 and <= 65535
+                        && !string.IsNullOrWhiteSpace(options.RabbitMq.QueueName)),
+                "BackgroundJobs:RabbitMq requires a host name, a valid port and a queue name when Queue is RabbitMq.")
             .ValidateOnStart();
 
         // The module owns its data in the 'jobs' Postgres schema.
@@ -50,8 +61,35 @@ public static class BackgroundJobsModule
             options.UseNpgsql(connectionString, npgsql =>
                 npgsql.MigrationsHistoryTable("__EFMigrationsHistory", JobsDbContext.Schema)));
 
+        // Dispatch mechanism selected by configuration, mirroring the storage
+        // provider pattern (07): eager read because the registration shape is
+        // decided while the builder is still composing.
+        BackgroundJobsOptions dispatchOptions =
+            configuration.GetSection(BackgroundJobsOptions.SectionName).Get<BackgroundJobsOptions>() ?? new();
+
         // The durable queue other modules enqueue into, and the worker's seams.
-        services.AddScoped<IBackgroundJobQueue, EfBackgroundJobQueue>();
+        services.AddScoped<EfBackgroundJobQueue>();
+        if (dispatchOptions.Queue == QueueDispatch.RabbitMq)
+        {
+            // Outbox relay (ADR-008): same insert+commit, then a broker wake-up.
+            // The consumer runs the identical claim; the polling worker degrades
+            // to the sweeper. Broker readiness is a module-owned check (#159
+            // pattern) reporting Degraded, because broker-down still processes.
+            services.AddSingleton<RabbitMqConnection>();
+            services.AddSingleton<IAnalysisJobDispatcher, RabbitMqJobPublisher>();
+            services.AddScoped<IBackgroundJobQueue>(provider => new RabbitMqBackgroundJobQueue(
+                provider.GetRequiredService<EfBackgroundJobQueue>(),
+                provider.GetRequiredService<IAnalysisJobDispatcher>(),
+                provider.GetRequiredService<ILogger<RabbitMqBackgroundJobQueue>>()));
+            services.AddHostedService<RabbitMqJobConsumer>();
+            services.AddHealthChecks().AddCheck<RabbitMqHealthCheck>("rabbitmq", tags: ["ready"]);
+        }
+        else
+        {
+            services.AddScoped<IBackgroundJobQueue>(provider =>
+                provider.GetRequiredService<EfBackgroundJobQueue>());
+        }
+
         services.AddScoped<IAnalysisJobStore, EfAnalysisJobStore>();
 
         // Public read surface for the Documents analysis slices (#54/#55): latest
@@ -69,6 +107,10 @@ public static class BackgroundJobsModule
         services.AddMetrics();
         services.AddSingleton<BackgroundJobsMetrics>();
 
+        // The claim-and-process core shared by the polling worker and the RabbitMQ
+        // consumer (ADR-008); the worker always runs — as the primary consumer
+        // under Db dispatch, as the sweeper fallback under RabbitMq.
+        services.AddSingleton<AnalysisJobProcessor>();
         services.AddHostedService<AnalysisJobWorker>();
 
         return services;
