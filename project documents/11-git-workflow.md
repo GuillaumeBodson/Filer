@@ -84,7 +84,9 @@ Every change lands through a PR, even though there is one developer.
 
 `.github/workflows/ci.yml` runs on every push to `main` and every PR:
 `dotnet tool restore` → **Kiota client drift gate** → `dotnet restore` →
-`dotnet build` (Release, warnings-as-errors) → `dotnet test`. A PostgreSQL 17
+`dotnet build` (Release, warnings-as-errors) → `dotnet test` with coverage →
+coverage report + **coverage gate** (80% line / 70% branch per module,
+`build/coverage-gate.ps1` — thresholds and scope in `12`). A PostgreSQL 17
 service mirrors `docker-compose.yml` so integration tests can run against a real
 database; `Filer.Architecture.Tests` enforce module boundaries in the same run.
 The build/test pass also covers the frontend — the Blazor WASM host and shared
@@ -92,8 +94,11 @@ RCL build under warnings-as-errors and the bUnit component tests run with the
 rest (`12`). The drift gate regenerates the typed API client from its committed
 OpenAPI snapshot and fails the build if it no longer matches the checked-in
 `Generated/` output (ADR-011; see `src/Clients/Filer.ApiClient/README.md`).
+A second job, `docker-build`, proves the deployable API image still builds
+(build-only, nothing pushed).
 
-The `build-test` check is the gate referenced by branch protection.
+The `build-test` and `docker-build` checks are the gates referenced by branch
+protection.
 
 ---
 
@@ -103,7 +108,8 @@ On `github.com/GuillaumeBodson/Filer` → **Settings → Branches → Add rule**
 `main`:
 
 * Require a pull request before merging.
-* Require status checks to pass before merging → select **`build-test`**.
+* Require status checks to pass before merging → select **`build-test`** and
+  **`docker-build`**.
 * Require branches to be up to date before merging.
 * (Optional) Allow the admin to bypass for emergencies — the value is the
   required green CI, not blocking yourself.
