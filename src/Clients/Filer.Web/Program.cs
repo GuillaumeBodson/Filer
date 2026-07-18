@@ -3,6 +3,7 @@ using Filer.ApiClient.Auth;
 using Filer.Ui.Auth;
 using Filer.Ui.Documents;
 using Filer.Ui.Folders;
+using Filer.Ui.Search;
 using Filer.Ui.Tags;
 using Filer.Web;
 using Filer.Web.Auth;
@@ -37,9 +38,11 @@ builder.Services.AddScoped<AuthenticationStateProvider, FilerAuthenticationState
 // than touching the Kiota client or the token store directly.
 builder.Services.AddScoped<IAuthSession, AuthSession>();
 
-// Document browsing (#135) and folders (#137 move picker), same seam pattern.
+// Document browsing (#135), folders (#137 move picker), and ranked search
+// (#142), same seam pattern.
 builder.Services.AddScoped<IDocumentsService, DocumentsService>();
 builder.Services.AddScoped<IFoldersService, FoldersService>();
 builder.Services.AddScoped<ITagsService, TagsService>();
+builder.Services.AddScoped<ISearchService, SearchService>();
 
 await builder.Build().RunAsync();
