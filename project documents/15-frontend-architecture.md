@@ -52,7 +52,7 @@ src/Clients/
 ├── Filer.Ui/                   # Razor Class Library — everything reusable
 │   ├── Auth/                   # IAuthSession seam, AuthenticationStateProvider
 │   ├── Components/             # shared components (states, upload, badges…)
-│   ├── Documents/ Folders/ Tags/   # one folder per API surface: seam + records
+│   ├── Documents/ Folders/ Tags/ Search/   # one folder per API surface: seam + records
 │   ├── Formatting/             # pure display helpers (ByteSize)
 │   ├── Layout/                 # MainLayout, NavMenu
 │   ├── Models/                 # ProblemDetailsView + ApiException mapping
@@ -278,9 +278,14 @@ action (`12`).
   REST-only client boundary is compiler-enforced only (`10`).
 * The in-app theme toggle that stamps `data-theme` is not built; dark mode is
   OS-driven only.
-* Test-helper records (`UploadResult`, `TagDto` shapes) are duplicated across
-  test files — consolidation tracked in #195.
-* FE-M3 (AI-suggestions review UI, search UI) is deferred until the M5/M6
-  contracts settle (ADR-012); both are additive panels on existing screens.
 * The MAUI Blazor Hybrid shell (RM-02) will consume `Filer.Ui` as-is; anything
   browser-specific added to the RCL by mistake will surface then.
+* `DocumentAnalysisPanel` refreshes a pending analysis manually; bounded
+  auto-polling is tracked in #204.
+
+Resolved along the way: the #195 test-helper consolidation shipped (PR #199),
+and FE-M3 shipped both additive panels as planned (ADR-012) — the
+analysis-suggestions review on the document detail (#141) and the ranked
+search mode on the documents list (#142). A submitted search is global
+(`/search`, opaque relevance score); a deep link combining `?q=` with a
+folder/tag keeps the browse list's substring-filter semantics.
