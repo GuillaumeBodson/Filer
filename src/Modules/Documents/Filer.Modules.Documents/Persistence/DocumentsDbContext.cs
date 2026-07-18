@@ -1,5 +1,6 @@
 using Filer.Modules.Documents.Domain;
 using Microsoft.EntityFrameworkCore;
+using NpgsqlTypes;
 
 namespace Filer.Modules.Documents.Persistence;
 
@@ -12,6 +13,13 @@ public sealed class DocumentsDbContext(DbContextOptions<DocumentsDbContext> opti
     : DbContext(options)
 {
     public const string Schema = "documents";
+
+    /// <summary>
+    /// Name of the generated full-text column on Documents (#57). Shared between
+    /// the model configuration below and <see cref="EfOwnerDocumentSearch"/>,
+    /// which reads the shadow property by name.
+    /// </summary>
+    public const string SearchVectorColumn = "SearchVector";
 
     public DbSet<Document> Documents => Set<Document>();
 
@@ -68,6 +76,25 @@ public sealed class DocumentsDbContext(DbContextOptions<DocumentsDbContext> opti
             // choose to keep both copies (03-api-specification.md, upload behavior).
             document.HasIndex(d => new { d.OwnerId, d.ContentHash })
                 .HasFilter("\"DeletedAt\" IS NULL");
+
+            // Full-text search vector (#57, 02-data-model.md): a stored generated
+            // column over the file name and the string values of the JSONB
+            // metadata, GIN-indexed. Shadow property on purpose — the vector is a
+            // persistence concern; the entity never sees it. The 'simple'
+            // regconfig keeps tokenization deterministic and language-neutral
+            // (file names are multilingual; stemming one language would degrade
+            // the others), and translate() splits '.', '_' and '-' so the parts
+            // of a name like 'facture_2024.pdf' become individual lexemes instead
+            // of one opaque file token. File-name matches are weighted above
+            // metadata matches ('A' vs 'B') so ts_rank orders them first.
+            document.Property<NpgsqlTsVector>(SearchVectorColumn)
+                .HasColumnType("tsvector")
+                .HasComputedColumnSql(
+                    "setweight(to_tsvector('simple', translate(\"FileName\", '._-', '   ')), 'A') || " +
+                    "setweight(jsonb_to_tsvector('simple', coalesce(\"Metadata\", '{}'::jsonb), '[\"string\"]'), 'B')",
+                    stored: true);
+
+            document.HasIndex(SearchVectorColumn).HasMethod("GIN");
         });
 
         modelBuilder.Entity<DocumentTag>(documentTag =>

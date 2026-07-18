@@ -8,6 +8,7 @@ using Filer.Modules.Documents;
 using Filer.Modules.Documents.Persistence;
 using Filer.Modules.Folders;
 using Filer.Modules.Folders.Persistence;
+using Filer.Modules.Search;
 using Filer.Modules.Storage;
 using Filer.Modules.Tags;
 using Filer.Modules.Tags.Persistence;
@@ -81,6 +82,7 @@ builder.Services.AddBackgroundJobsModule(builder.Configuration);
 builder.Services.AddStorageModule(builder.Configuration);
 builder.Services.AddDocumentsModule(builder.Configuration);
 builder.Services.AddFoldersModule(builder.Configuration);
+builder.Services.AddSearchModule(builder.Configuration);
 builder.Services.AddTagsModule(builder.Configuration);
 
 builder.Services.AddAuthorization();
@@ -145,6 +147,7 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapDocumentsEndpoints();
 app.MapFoldersEndpoints();
+app.MapSearchEndpoints();
 app.MapTagsEndpoints();
 
 app.Run();

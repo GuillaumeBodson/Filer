@@ -181,8 +181,15 @@ is a later enhancement layered on top, not a V1 requirement.
 
 * **JSONB** for `Document.Metadata` and `AnalysisJob.Result` — flexible without
   migrations.
-* **Full-text search** (V1): a generated `tsvector` over `FileName` and selected
-  metadata, with a GIN index, backs the V1 search feature.
+* **Full-text search** (V1): a stored generated `tsvector` column
+  (`Documents.SearchVector`, #57) with a GIN index backs `/api/v1/search`:
+  `setweight(to_tsvector('simple', translate("FileName", '._-', '   ')), 'A')
+  || setweight(jsonb_to_tsvector('simple', coalesce("Metadata", '{}'), '["string"]'), 'B')`.
+  The `'simple'` regconfig keeps tokenization language-neutral (file names are
+  multilingual; stemming is compensated by last-token prefix matching, `03`);
+  `translate` splits `.`/`_`/`-` so name parts become individual lexemes; the
+  weights rank file-name matches above metadata matches. The column is a shadow
+  property of the Documents module — the entity never sees it (ADR-017).
 * **pgvector** (future): an `embedding vector(N)` column on Document (or a
   separate `DocumentEmbedding` table) is reserved for semantic search. Not
   created in V1.
