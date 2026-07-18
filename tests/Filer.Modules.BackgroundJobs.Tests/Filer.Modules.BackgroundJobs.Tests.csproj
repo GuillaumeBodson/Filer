@@ -27,6 +27,8 @@
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Moq" />
     <PackageReference Include="FluentAssertions" />
+    <!-- FakeLogger: log-assertion tests on the worker's critical path (#59, 12). -->
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
     <PackageReference Include="coverlet.collector" />
   </ItemGroup>
 

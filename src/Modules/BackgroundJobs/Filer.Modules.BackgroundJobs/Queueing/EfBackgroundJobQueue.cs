@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Filer.Modules.BackgroundJobs.Contracts;
 using Filer.Modules.BackgroundJobs.Domain;
@@ -38,6 +39,10 @@ public sealed class EfBackgroundJobQueue(
         {
             DocumentId = documentId,
             Status = AnalysisJobStatus.Queued,
+            // Persist the caller's W3C traceparent (Activity.Id in the default W3C
+            // format) so the worker can link its span back to this trace (ADR-013).
+            // The hand-off is async, so context must ride the durable row.
+            CorrelationContext = Activity.Current?.Id,
             CreatedAt = now,
             UpdatedAt = now,
         };

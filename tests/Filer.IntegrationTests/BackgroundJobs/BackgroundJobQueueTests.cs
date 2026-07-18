@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Filer.IntegrationTests.Infrastructure;
 using Filer.Modules.BackgroundJobs.Contracts;
 using Filer.Modules.BackgroundJobs.Domain;
@@ -118,6 +119,77 @@ public sealed class BackgroundJobQueueTests(FilerApiFactory factory)
                 .SingleAsync(j => j.Id == runningJobId, TestContext.Current.CancellationToken);
             runningJob.Status.Should().Be(AnalysisJobStatus.Cancelled,
                 "a cancelled job can never be resurrected by a late worker");
+        }
+    }
+
+    [Fact]
+    public async Task EnqueueAnalysisAsync_InsideATrace_RoundTripsTheTraceparentToTheClaim()
+    {
+        await _factory.DrainQueueAsync();
+        Guid documentId = Guid.NewGuid();
+
+        // A listener is required for StartActivity to return a live activity;
+        // scoped to a test-private source so parallel tests never interfere.
+        using var source = new ActivitySource("Filer.IntegrationTests.Enqueue");
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = s => s.Name == source.Name,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        string traceparent;
+        Guid jobId;
+        using (Activity activity = source.StartActivity("upload")!)
+        {
+            traceparent = activity.Id!;
+            await using AsyncServiceScope scope = _factory.Services.CreateAsyncScope();
+            var queue = scope.ServiceProvider.GetRequiredService<IBackgroundJobQueue>();
+            jobId = (await queue.EnqueueAnalysisAsync(documentId, TestContext.Current.CancellationToken)).Value;
+        }
+
+        // The committed row carries the enqueueing trace context (ADR-013)...
+        await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<JobsDbContext>();
+            AnalysisJob job = await db.AnalysisJobs.AsNoTracking()
+                .SingleAsync(j => j.Id == jobId, TestContext.Current.CancellationToken);
+            job.CorrelationContext.Should().Be(traceparent);
+        }
+
+        // ...and the real claim (UPDATE … RETURNING *) hands it to the worker.
+        await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
+        {
+            var store = scope.ServiceProvider.GetRequiredService<IAnalysisJobStore>();
+            ClaimedAnalysisJob? claimed =
+                await store.ClaimNextAsync("TestProvider", TestContext.Current.CancellationToken);
+
+            claimed!.JobId.Should().Be(jobId);
+            claimed.CorrelationContext.Should().Be(traceparent);
+        }
+    }
+
+    [Fact]
+    public async Task EnqueueAnalysisAsync_OutsideAnyTrace_LeavesCorrelationContextNull()
+    {
+        Guid documentId = Guid.NewGuid();
+
+        Guid jobId;
+        await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
+        {
+            Activity.Current.Should().BeNull("this test asserts the no-ambient-trace path");
+            var queue = scope.ServiceProvider.GetRequiredService<IBackgroundJobQueue>();
+            jobId = (await queue.EnqueueAnalysisAsync(documentId, TestContext.Current.CancellationToken)).Value;
+        }
+
+        await using (AsyncServiceScope scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<JobsDbContext>();
+            AnalysisJob job = await db.AnalysisJobs.AsNoTracking()
+                .SingleAsync(j => j.Id == jobId, TestContext.Current.CancellationToken);
+
+            job.CorrelationContext.Should().BeNull(
+                "a job enqueued outside any trace has nothing to correlate to (ADR-013)");
         }
     }
 

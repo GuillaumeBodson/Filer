@@ -35,6 +35,10 @@ public sealed class JobsDbContext(DbContextOptions<JobsDbContext> options)
 
             job.Property(j => j.Provider).HasMaxLength(128);
 
+            // A W3C traceparent is 55 chars; the headroom leaves room for richer
+            // context (tracestate/baggage) without a schema change (ADR-013).
+            job.Property(j => j.CorrelationContext).HasMaxLength(512);
+
             // AI suggestions land as JSONB (02-data-model.md, PostgreSQL notes).
             job.Property(j => j.Result).HasColumnType("jsonb");
 
