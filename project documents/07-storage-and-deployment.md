@@ -93,6 +93,12 @@ locally:
   real environment ships it. The api service points at it unconditionally
   (`Observability__Otlp__Endpoint`); with the profile down, export batches are
   dropped silently and the app is unaffected.
+* **rabbitmq** *(optional)* — broker dispatch for background jobs (ADR-008,
+  #75), behind the Compose `mq` profile: a plain `docker compose up` keeps the
+  default Db dispatch. Opt in with `docker compose --profile mq up` **and**
+  `BackgroundJobs__Queue=RabbitMq` on the api service; connection settings come
+  from env (`05`), the compose defaults being the container's dev credentials.
+  Management UI on `http://localhost:15672` (dev only).
 
 The api container exposes `/health/live` (process up) and `/health/ready`
 (PostgreSQL + storage root writable) for orchestrators and uptime checks
