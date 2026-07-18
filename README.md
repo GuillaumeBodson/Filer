@@ -8,8 +8,9 @@ is fixed by `10-solution-structure.md` and the ADRs in `09-decision-log.md`.
 
 Milestones M1 (foundation), M2 (authentication), M3 (upload pipeline),
 M4 (folders & tags), M5 (AI analysis pipeline), M6 (search), FE-M1 (frontend
-foundation) and FE-M2 (core document workflow on the web) are complete. Eight
-modules are wired into the host, each exposing only its
+foundation), FE-M2 (core document workflow on the web) and FE-M3 (AI
+suggestions & search UI) are complete. Eight modules are wired into the host,
+each exposing only its
 `*.Contracts` project (enforced by the compiler and `Filer.Architecture.Tests`):
 
 ```
@@ -41,8 +42,9 @@ bearer-token/401-refresh plumbing — regeneration guide in
 [`src/Clients/Filer.ApiClient/README.md`](src/Clients/Filer.ApiClient/README.md)).
 The app covers register/login/profile, the documents list
 (filters + pagination), upload with async analysis status, document detail
-(rename/move/download/delete), folders and tags (FE-M2); the AI suggestions
-review arrives with FE-M3.
+(rename/move/download/delete), folders and tags (FE-M2), the AI-suggestions
+review on the document detail, and a ranked search mode on the documents list
+(FE-M3).
 
 ## Endpoints
 
@@ -206,8 +208,7 @@ mount outside Development (07-storage-and-deployment.md).
 
 ## Next steps (build order — 08-ai-development-guidelines.md)
 
-1. Frontend: AI suggestions review + search UI (FE-M3).
-2. Observability & CI (M7) — metrics, correlation ids (ADR-013), coverage +
+1. Observability & CI (M7) — metrics, correlation ids (ADR-013), coverage +
    architecture gate.
-3. Bulk operations (M8) — bulk tag add/remove, sync + capped (ADR-010).
-4. RabbitMQ job dispatch with Postgres outbox (ADR-008, deferred from M5).
+2. Bulk operations (M8) — bulk tag add/remove, sync + capped (ADR-010).
+3. RabbitMQ job dispatch with Postgres outbox (ADR-008, deferred from M5).
