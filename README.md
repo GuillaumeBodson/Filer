@@ -202,9 +202,8 @@ mount outside Development (07-storage-and-deployment.md).
 
 ## Next steps (build order — 08-ai-development-guidelines.md)
 
-1. **Search (M6)** — full-text endpoint (tsvector / GIN).
+1. Frontend: AI suggestions review + search UI (FE-M3).
 2. Observability & CI (M7) — metrics, correlation ids (ADR-013), coverage +
    architecture gate.
 3. Bulk operations (M8) — bulk tag add/remove, sync + capped (ADR-010).
 4. RabbitMQ job dispatch with Postgres outbox (ADR-008, deferred from M5).
-5. Frontend: AI suggestions review + search UI (FE-M3).
