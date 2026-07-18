@@ -84,15 +84,45 @@ jobs:
       - name: Build
         run: dotnet build Filer.slnx --configuration Release --no-restore
 
-      # Coverage is collected on every run (12-testing-strategy.md). The failing
-      # threshold is staged: it is enabled in the PR that introduces the first
-      # module's tests, so it never blocks an empty baseline.
+      # Coverage is collected on every run (12-testing-strategy.md); the gate
+      # below turns it into a failing threshold. Architecture tests
+      # (Filer.Architecture.Tests) run in this same pass.
       - name: Test
         run: >-
           dotnet test Filer.slnx --configuration Release --no-build --verbosity normal
           --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
-      - name: Upload coverage
+      # Human-readable report (12-testing-strategy.md): HTML artifact + Markdown
+      # into the job summary. Exclusions per doc 12: EF migrations, Program.cs
+      # wiring, source-generated code.
+      - name: Coverage report
+        if: always()
+        run: >-
+          dotnet tool run reportgenerator
+          -reports:./TestResults/**/coverage.cobertura.xml
+          -targetdir:./CoverageReport
+          "-reporttypes:Html;JsonSummary;MarkdownSummaryGithub"
+          "-classfilters:-*.Migrations.*"
+          "-filefilters:-**/Program.cs;-**/*.g.cs"
+
+      - name: Coverage summary
+        if: always()
+        run: cat ./CoverageReport/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      # Per-module gate (12-testing-strategy.md): every module/kernel assembly
+      # must hold 80% line / 70% branch, on every run — same script runs locally.
+      - name: Coverage gate
+        run: pwsh ./build/coverage-gate.ps1 -SummaryPath ./CoverageReport/Summary.json
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: ./CoverageReport
+          if-no-files-found: ignore
+
+      - name: Upload raw coverage
         if: always()
         uses: actions/upload-artifact@v7
         with:
@@ -105,3 +135,15 @@ jobs:
         run: |
           dotnet list Filer.slnx package --vulnerable --include-transitive 2>&1 | tee vuln.txt
           ! grep -q "has the following vulnerable packages" vuln.txt
+
+  # The deployable artifact is a Docker image (04/07): prove it still builds on
+  # every PR. Build-only — nothing is pushed; releases publish separately.
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build API image
+        run: docker build -f src/Filer.Api/Dockerfile .

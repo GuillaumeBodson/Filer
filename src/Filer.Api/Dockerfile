@@ -18,7 +18,29 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+# Central MSBuild inputs first: Directory.Build.props carries the TargetFramework
+# and Directory.Packages.props the package versions - restore fails without them.
+# Then the full project graph of Filer.Api, so this layer only invalidates when
+# the dependency graph changes, not on every source edit.
+COPY ["Directory.Build.props", "Directory.Packages.props", "./"]
 COPY ["src/Filer.Api/Filer.Api.csproj", "src/Filer.Api/"]
+COPY ["src/Filer.SharedKernel/Filer.SharedKernel.csproj", "src/Filer.SharedKernel/"]
+COPY ["src/Modules/AiAnalysis/Filer.Modules.AiAnalysis/Filer.Modules.AiAnalysis.csproj", "src/Modules/AiAnalysis/Filer.Modules.AiAnalysis/"]
+COPY ["src/Modules/AiAnalysis/Filer.Modules.AiAnalysis.Contracts/Filer.Modules.AiAnalysis.Contracts.csproj", "src/Modules/AiAnalysis/Filer.Modules.AiAnalysis.Contracts/"]
+COPY ["src/Modules/Auth/Filer.Modules.Auth/Filer.Modules.Auth.csproj", "src/Modules/Auth/Filer.Modules.Auth/"]
+COPY ["src/Modules/Auth/Filer.Modules.Auth.Contracts/Filer.Modules.Auth.Contracts.csproj", "src/Modules/Auth/Filer.Modules.Auth.Contracts/"]
+COPY ["src/Modules/BackgroundJobs/Filer.Modules.BackgroundJobs/Filer.Modules.BackgroundJobs.csproj", "src/Modules/BackgroundJobs/Filer.Modules.BackgroundJobs/"]
+COPY ["src/Modules/BackgroundJobs/Filer.Modules.BackgroundJobs.Contracts/Filer.Modules.BackgroundJobs.Contracts.csproj", "src/Modules/BackgroundJobs/Filer.Modules.BackgroundJobs.Contracts/"]
+COPY ["src/Modules/Documents/Filer.Modules.Documents/Filer.Modules.Documents.csproj", "src/Modules/Documents/Filer.Modules.Documents/"]
+COPY ["src/Modules/Documents/Filer.Modules.Documents.Contracts/Filer.Modules.Documents.Contracts.csproj", "src/Modules/Documents/Filer.Modules.Documents.Contracts/"]
+COPY ["src/Modules/Folders/Filer.Modules.Folders/Filer.Modules.Folders.csproj", "src/Modules/Folders/Filer.Modules.Folders/"]
+COPY ["src/Modules/Folders/Filer.Modules.Folders.Contracts/Filer.Modules.Folders.Contracts.csproj", "src/Modules/Folders/Filer.Modules.Folders.Contracts/"]
+COPY ["src/Modules/Search/Filer.Modules.Search/Filer.Modules.Search.csproj", "src/Modules/Search/Filer.Modules.Search/"]
+COPY ["src/Modules/Search/Filer.Modules.Search.Contracts/Filer.Modules.Search.Contracts.csproj", "src/Modules/Search/Filer.Modules.Search.Contracts/"]
+COPY ["src/Modules/Storage/Filer.Modules.Storage/Filer.Modules.Storage.csproj", "src/Modules/Storage/Filer.Modules.Storage/"]
+COPY ["src/Modules/Storage/Filer.Modules.Storage.Contracts/Filer.Modules.Storage.Contracts.csproj", "src/Modules/Storage/Filer.Modules.Storage.Contracts/"]
+COPY ["src/Modules/Tags/Filer.Modules.Tags/Filer.Modules.Tags.csproj", "src/Modules/Tags/Filer.Modules.Tags/"]
+COPY ["src/Modules/Tags/Filer.Modules.Tags.Contracts/Filer.Modules.Tags.Contracts.csproj", "src/Modules/Tags/Filer.Modules.Tags.Contracts/"]
 RUN dotnet restore "./src/Filer.Api/Filer.Api.csproj"
 COPY . .
 WORKDIR "/src/src/Filer.Api"

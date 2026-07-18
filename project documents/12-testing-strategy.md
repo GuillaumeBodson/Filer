@@ -150,20 +150,24 @@ Coverage is a signal, not a target to game. The rules:
 
 * **Line + branch coverage is collected on every CI run** (`coverlet` via
   `dotnet test --collect:"XPlat Code Coverage"`), and a human-readable report is
-  produced as a build artifact.
-* **Gate (once the suite exists):** the `build-test` check fails if coverage of
-  the changed module drops below **80% line / 70% branch**. The gate is on the
-  module, so a thin host (`Filer.Api`) does not dilute or inflate the number.
+  produced as a build artifact (`coverage-report`, ReportGenerator HTML) plus a
+  Markdown summary on the job page.
+* **Gate (live, #61):** the `build-test` check fails if **any** gated assembly is
+  below **80% line / 70% branch**. Gated per assembly on *every* run — not by
+  diff-detecting "changed" modules, which is fragile and not reproducible
+  locally. Gated: `Filer.Modules.*` (implementations and Contracts),
+  `Filer.SharedKernel`, `Filer.WebKernel`, `Filer.Ui`. Not gated: the thin host
+  (`Filer.Api`), the generated client (`Filer.ApiClient`), the WASM bootstrap
+  (`Filer.Web`). The same script runs locally: `build/coverage-gate.ps1` (see its
+  header for the two commands before it).
 * **Generated and trivial code is excluded**: EF Core migrations
-  (`**/Migrations/*.cs`, already marked generated — `.editorconfig`), DTOs/records
-  with no logic, and `Program.cs` wiring.
+  (`-*.Migrations.*` class filter), `Program.cs` wiring and source-generated
+  files (file filters), and — implementing "DTOs/records with no logic"
+  mechanically — a **de-minimis rule**: an assembly with fewer than 10 coverable
+  lines is reported but not gated (a percentage over a handful of lines is
+  noise; an implementation module that small is essentially empty).
 * A high percentage on untested-behaviour does not count: coverage is necessary,
   not sufficient. The per-slice requirements above are the real bar.
-
-> Until the first real test suite lands, the coverage *gate* is staged: CI
-> collects and reports coverage immediately, and the failing threshold is enabled
-> in the same PR that introduces the first module's tests, so it never blocks an
-> empty baseline.
 
 ---
 
@@ -171,13 +175,16 @@ Coverage is a signal, not a target to game. The rules:
 
 The `build-test` job (`.github/workflows/ci.yml`) runs, in order:
 `tool restore` → **Kiota drift gate** → `restore` → `build` (Release,
-warnings-as-errors) → `test` with coverage collection → coverage report/threshold.
-The PostgreSQL 17 service already present in CI backs the integration tests;
-`Filer.Architecture.Tests` run in the same pass. The frontend is covered in this
-same pass: building `Filer.slnx` compiles the Blazor WASM host (`Filer.Web`) and
-the shared RCL (`Filer.Ui`) under warnings-as-errors, and `dotnet test Filer.slnx`
-runs the bUnit component tests (`Filer.Ui.Tests`) with the rest. `build-test`
-remains the single required status check for branch protection.
+warnings-as-errors) → `test` with coverage collection → coverage report
+(ReportGenerator) → **coverage gate** (`build/coverage-gate.ps1`, thresholds
+above). The PostgreSQL 17 service already present in CI backs the integration
+tests; `Filer.Architecture.Tests` run in the same pass. The frontend is covered
+in this same pass: building `Filer.slnx` compiles the Blazor WASM host
+(`Filer.Web`) and the shared RCL (`Filer.Ui`) under warnings-as-errors, and
+`dotnet test Filer.slnx` runs the bUnit component tests (`Filer.Ui.Tests`) with
+the rest. A separate `docker-build` job proves the API image still builds.
+Branch protection requires both checks: **`build-test`** and **`docker-build`**
+(`11`).
 
 The **Kiota drift gate** runs early (it needs only the committed OpenAPI snapshot —
 no API, no Postgres) so it fails fast: it regenerates the typed client from
