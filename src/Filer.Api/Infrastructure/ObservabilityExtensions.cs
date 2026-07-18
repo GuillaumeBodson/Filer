@@ -48,6 +48,16 @@ public static class ObservabilityExtensions
                 // The worker's job-processing spans, linked to the originating
                 // upload trace (ADR-013).
                 .AddSource(BackgroundJobsDiagnostics.ActivitySourceName))
+            // Metrics (#60, 04-non-functional.md): the module's pipeline meter
+            // (queue depth, job duration, outcomes — emitted since #53, exported
+            // from here) plus the built-in ASP.NET Core/Kestrel/HttpClient meters,
+            // which cover request latency/error rates and outbound-call timing
+            // with no code in the modules.
+            .WithMetrics(metrics => metrics
+                .AddMeter(BackgroundJobsMetrics.MeterName)
+                .AddMeter("Microsoft.AspNetCore.Hosting")
+                .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
+                .AddMeter("System.Net.Http"))
             // Route ILogger records through OTel alongside the JSON console: same
             // message templates, now exportable with trace correlation (ADR-005).
             .WithLogging();
