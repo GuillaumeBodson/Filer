@@ -14,6 +14,7 @@ using Filer.Modules.Tags;
 using Filer.Modules.Tags.Persistence;
 using Filer.Modules.Auth.Persistence;
 using Filer.SharedKernel.Authorization;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -99,6 +100,13 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
 
+// Readiness covers the host's hard dependencies (04-non-functional.md): one DB
+// check against the shared Postgres (every module context rides the same server
+// and connection string); the Storage module contributes its own check inside
+// AddStorageModule. Broker/provider checks arrive with #75.
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AuthDbContext>("postgres", tags: ["ready"]);
+
 var app = builder.Build();
 
 // Apply pending migrations for each module's DbContext at startup so the
@@ -148,6 +156,12 @@ if (corsOrigins.Length > 0)
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Liveness = the process answers; readiness = DB + storage reachable (04, #159).
+// Anonymous by design: they expose only up/down, sit outside the API contract
+// (03) and never enter the OpenAPI document (MapHealthChecks skips ApiExplorer).
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = r => r.Tags.Contains("ready") });
 
 // Each module assembles its routes from its own slices.
 app.MapAuthEndpoints();

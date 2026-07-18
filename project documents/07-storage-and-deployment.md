@@ -85,6 +85,18 @@ locally:
 * **ollama** *(optional)* — self-hosted LLM runtime for the no-egress AI
   provider, behind the Compose `ai` profile so a plain `docker compose up`
   never pulls it (`06`, Privacy & Provider Selection).
+* **aspire-dashboard** *(optional)* — local telemetry viewer (ADR-013): the
+  standalone Aspire dashboard container as OTLP sink for traces/metrics/logs,
+  behind the Compose `observability` profile (same pattern as `ai`). UI on
+  `http://localhost:18888`, OTLP/gRPC ingest published on host port 4317 for an
+  API run outside Compose. Runs with anonymous auth — a local-only viewer; no
+  real environment ships it. The api service points at it unconditionally
+  (`Observability__Otlp__Endpoint`); with the profile down, export batches are
+  dropped silently and the app is unaffected.
+
+The api container exposes `/health/live` (process up) and `/health/ready`
+(PostgreSQL + storage root writable) for orchestrators and uptime checks
+(`04`); both are anonymous and outside the versioned API contract (`03`).
 
 The web client (`Filer.Web`, Blazor WebAssembly) is static assets; in dev it is
 served by `dotnet run --project src/Clients/Filer.Web` (cross-origin calls to
