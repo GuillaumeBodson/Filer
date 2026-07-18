@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Filer.Modules.BackgroundJobs.Contracts;
 using Filer.Modules.BackgroundJobs.Tests.TestSupport;
@@ -6,7 +7,9 @@ using Filer.SharedKernel.Results;
 using Filer.SharedKernel.Time;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -36,7 +39,31 @@ public sealed class AnalysisJobWorkerTests
     private static ClaimedAnalysisJob NewJob(int attemptCount = 1) =>
         new(Guid.NewGuid(), Guid.NewGuid(), attemptCount);
 
-    private AnalysisJobWorker CreateSut(BackgroundJobsOptions? options = null)
+    /// <summary>
+    /// Captures activities from the module's source only: the exact-name filter
+    /// keeps concurrently running tests from leaking spans into the capture (12).
+    /// </summary>
+    private static ActivityListener CaptureModuleActivities(List<Activity> started)
+    {
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == BackgroundJobsDiagnostics.ActivitySourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStarted = activity =>
+            {
+                lock (started)
+                {
+                    started.Add(activity);
+                }
+            },
+        };
+        ActivitySource.AddActivityListener(listener);
+        return listener;
+    }
+
+    private AnalysisJobWorker CreateSut(
+        BackgroundJobsOptions? options = null,
+        ILogger<AnalysisJobWorker>? logger = null)
     {
         // Real DI scopes so the worker's scope-per-iteration behaviour is exercised.
         var services = new ServiceCollection();
@@ -50,7 +77,7 @@ public sealed class AnalysisJobWorkerTests
             Options.Create(options ?? new BackgroundJobsOptions()),
             _clock,
             new BackgroundJobsMetrics(provider.GetRequiredService<IMeterFactory>()),
-            NullLogger<AnalysisJobWorker>.Instance);
+            logger ?? NullLogger<AnalysisJobWorker>.Instance);
     }
 
     [Fact]
@@ -378,6 +405,104 @@ public sealed class AnalysisJobWorkerTests
 
         // The worker polled while running and stopped when asked — no hang, no throw.
         _store.ClaimCount.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_StartsAProcessingSpanLinkedToThePersistedTraceContext()
+    {
+        const string traceparent = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+        var job = new ClaimedAnalysisJob(Guid.NewGuid(), Guid.NewGuid(), AttemptCount: 1, traceparent);
+        _store.Enqueue(job);
+        _handler
+            .Setup(h => h.HandleAsync(job, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<string?>(null));
+        var started = new List<Activity>();
+        using ActivityListener listener = CaptureModuleActivities(started);
+
+        await CreateSut().ProcessNextAsync(CancellationToken.None);
+
+        // The correlation genuinely flows request → job → worker (ADR-013): the
+        // processing span carries a link to the exact persisted trace context.
+        Activity span = started.Should().ContainSingle().Subject;
+        span.OperationName.Should().Be("analysisjob.process");
+        span.Kind.Should().Be(ActivityKind.Consumer);
+        span.Parent.Should().BeNull("the enqueueing request ended long ago — a link, not a parent (ADR-013)");
+        ActivityLink link = span.Links.Should().ContainSingle().Subject;
+        link.Context.TraceId.ToHexString().Should().Be("0af7651916cd43dd8448eb211c80319c");
+        link.Context.SpanId.ToHexString().Should().Be("b7ad6b7169203331");
+        span.GetTagItem("filer.job.id").Should().Be(job.JobId);
+        span.GetTagItem("filer.document.id").Should().Be(job.DocumentId);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not-a-traceparent")]
+    public async Task ProcessNextAsync_WithoutAUsableTraceContext_ProcessesWithAnUnlinkedSpan(
+        string? correlationContext)
+    {
+        var job = new ClaimedAnalysisJob(Guid.NewGuid(), Guid.NewGuid(), AttemptCount: 1, correlationContext);
+        _store.Enqueue(job);
+        _handler
+            .Setup(h => h.HandleAsync(job, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<string?>(null));
+        var started = new List<Activity>();
+        using ActivityListener listener = CaptureModuleActivities(started);
+
+        await CreateSut().ProcessNextAsync(CancellationToken.None);
+
+        // A job enqueued outside any trace (or carrying garbage) still processes;
+        // the span simply has nothing to link to — degrade, never throw (ADR-013).
+        Activity span = started.Should().ContainSingle().Subject;
+        span.Links.Should().BeEmpty();
+        _store.Succeeded.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_WhenTheAttemptFails_MarksTheProcessingSpanAsError()
+    {
+        ClaimedAnalysisJob job = NewJob();
+        _store.Enqueue(job);
+        _handler
+            .Setup(h => h.HandleAsync(job, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<string?>(
+                Error.Unexpected("provider unavailable", "ai.provider_unavailable")));
+        var started = new List<Activity>();
+        using ActivityListener listener = CaptureModuleActivities(started);
+
+        await CreateSut().ProcessNextAsync(CancellationToken.None);
+
+        // A failed attempt is a visibly red span (#159) carrying the error code
+        // only — message content never lands on telemetry (05-security.md).
+        Activity span = started.Should().ContainSingle().Subject;
+        span.Status.Should().Be(ActivityStatusCode.Error);
+        span.StatusDescription.Should().Be("ai.provider_unavailable");
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_LogsTheClaimWithMessageTemplateAndJobScope()
+    {
+        ClaimedAnalysisJob job = NewJob();
+        _store.Enqueue(job);
+        _handler
+            .Setup(h => h.HandleAsync(job, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<string?>(null));
+        var logger = new FakeLogger<AnalysisJobWorker>();
+
+        await CreateSut(logger: logger).ProcessNextAsync(CancellationToken.None);
+
+        // Message-template logging on the critical path (#59, ADR-005): the claim
+        // entry renders the template and carries AttemptCount as structured state...
+        FakeLogRecord claimed = logger.Collector.GetSnapshot()
+            .Should().ContainSingle(r => r.Message == "Claimed analysis job (attempt 1).").Subject;
+        claimed.Level.Should().Be(LogLevel.Information);
+        claimed.StructuredState.Should().Contain(pair => pair.Key == "AttemptCount" && pair.Value == "1");
+
+        // ...and the per-job scope ties the entry to its job and document — ids
+        // only, content never (05-security.md).
+        claimed.Scopes.Should().ContainSingle()
+            .Which.Should().BeAssignableTo<IEnumerable<KeyValuePair<string, object>>>()
+            .Which.Should().Contain(new KeyValuePair<string, object>("JobId", job.JobId))
+            .And.Contain(new KeyValuePair<string, object>("DocumentId", job.DocumentId));
     }
 
     /// <summary>Settable <see cref="IClock"/> so backoff/report timing is deterministic (12-testing-strategy.md).</summary>

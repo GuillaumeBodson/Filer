@@ -104,6 +104,19 @@ public sealed class AnalysisJobWorker(
             return false;
         }
 
+        // Resume the correlation persisted at enqueue (ADR-013): the processing
+        // span is a new root *linked* to the originating request trace — a link,
+        // not a parent, because that request completed long before this attempt
+        // runs. A missing or malformed context degrades to an unlinked span.
+        ActivityLink[] links =
+            ActivityContext.TryParse(job.CorrelationContext, null, isRemote: true, out ActivityContext enqueueContext)
+                ? [new ActivityLink(enqueueContext)]
+                : [];
+        using Activity? activity = BackgroundJobsDiagnostics.ActivitySource.StartActivity(
+            "analysisjob.process", ActivityKind.Consumer, parentContext: default, tags: null, links);
+        activity?.SetTag("filer.job.id", job.JobId);
+        activity?.SetTag("filer.document.id", job.DocumentId);
+
         // Correlate everything the job does with its id and document (04-non-functional.md).
         using IDisposable? logScope = logger.BeginScope(new Dictionary<string, object>
         {
@@ -124,6 +137,7 @@ public sealed class AnalysisJobWorker(
                 await store.MarkSucceededAsync(job.JobId, result.Value, cancellationToken);
                 metrics.JobSucceeded(duration);
                 logger.JobSucceeded(duration.TotalMilliseconds);
+                activity?.SetStatus(ActivityStatusCode.Ok);
             }
             else if (string.Equals(result.Error!.Code, BackgroundJobsErrorCodes.DocumentGone, StringComparison.Ordinal))
             {
@@ -131,12 +145,15 @@ public sealed class AnalysisJobWorker(
                 await store.MarkCancelledAsync(job.JobId, cancellationToken);
                 metrics.JobCancelled(duration);
                 logger.JobCancelledDocumentGone();
+                activity?.SetStatus(ActivityStatusCode.Ok);
             }
             else
             {
                 logger.JobAttemptFailed(result.Error.Code, job.AttemptCount);
                 await RecordFailureAsync(
                     store, job, $"{result.Error.Code}: {result.Error.Message}", duration, cancellationToken);
+                // A failed attempt is a visibly red span (#159): code only, never content.
+                activity?.SetStatus(ActivityStatusCode.Error, result.Error.Code);
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -154,6 +171,7 @@ public sealed class AnalysisJobWorker(
             TimeSpan duration = Stopwatch.GetElapsedTime(startTimestamp);
             logger.HandlerThrew(ex);
             await RecordFailureAsync(store, job, ex.Message, duration, cancellationToken);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
         }
 
         return true;

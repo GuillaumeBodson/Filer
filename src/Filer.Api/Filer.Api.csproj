@@ -15,6 +15,9 @@
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <!-- EF Core tooling so `dotnet ef`/Package Manager can build migrations with this as the startup project. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+    <!-- OpenTelemetry emit layer (ADR-013): SDK bootstrap lives in this host only. -->
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
   </ItemGroup>
 
   <ItemGroup>

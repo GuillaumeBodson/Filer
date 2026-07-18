@@ -139,6 +139,7 @@ Tracks asynchronous AI processing of a document (see upload flow in `01`).
 | Provider       | text          | Which `IAIAnalysisProvider` ran it; stamped at claim on every attempt, NULL until the first run starts |
 | AttemptCount   | int           | For retry/backoff                              |
 | NextAttemptAt  | timestamptz NULL | Earliest next attempt after a retryable failure; the claim query skips rows scheduled in the future |
+| CorrelationContext | varchar(512) NULL | W3C `traceparent` of the enqueueing request (ADR-013): stamped on insert, read at claim so the worker links its span to the originating trace; NULL when nothing was traced at enqueue |
 | Error          | text NULL     | Last failure detail (worker-internal; never exposed to clients) |
 | Result         | jsonb NULL    | Suggested folders/tags                         |
 | CreatedAt      | timestamptz   |                                                |
