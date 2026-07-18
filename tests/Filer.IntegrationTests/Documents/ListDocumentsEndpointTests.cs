@@ -231,7 +231,4 @@ public sealed class ListDocumentsEndpointTests(FilerApiFactory factory)
 
     /// <summary>The slice of a list item these tests need.</summary>
     private sealed record DocumentItem(Guid Id, Guid? FolderId, string FileName);
-
-    /// <summary>The slice of the upload response these tests need.</summary>
-    private sealed record UploadResult(Guid Id);
 }

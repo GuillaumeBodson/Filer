@@ -161,10 +161,6 @@ public sealed class RemoveDocumentTagEndpointTests(FilerApiFactory factory)
     }
 
     /// <summary>The slices of the contracts these tests need, restated independently.</summary>
-    private sealed record TagDto(Guid Id, string Name, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
-
-    private sealed record UploadResult(Guid Id);
-
     private sealed record DocumentListItem(Guid Id);
 
     private sealed record PagedDocuments(IReadOnlyList<DocumentListItem> Items, long TotalCount);

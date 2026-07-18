@@ -256,7 +256,4 @@ public sealed class DeleteFolderEndpointTests(FilerApiFactory factory)
 
     /// <summary>The slice of the folder response these tests need.</summary>
     private sealed record FolderDto(Guid Id);
-
-    /// <summary>The slice of the upload response these tests need.</summary>
-    private sealed record UploadResult(Guid Id);
 }

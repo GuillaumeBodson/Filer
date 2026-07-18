@@ -119,7 +119,4 @@ public sealed class RenameTagEndpointTests(FilerApiFactory factory)
         TagDto created = (await response.Content.ReadFromJsonAsync<TagDto>(Ct))!;
         return created.Id;
     }
-
-    /// <summary>The slice of the contract these tests need, restated independently.</summary>
-    private sealed record TagDto(Guid Id, string Name, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 }

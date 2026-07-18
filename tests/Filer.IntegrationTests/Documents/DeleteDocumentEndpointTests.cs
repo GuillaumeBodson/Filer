@@ -180,9 +180,6 @@ public sealed class DeleteDocumentEndpointTests(FilerApiFactory factory)
         return (await response.Content.ReadFromJsonAsync<UploadResult>(Ct))!.Id;
     }
 
-    /// <summary>The slice of the upload response these tests need.</summary>
-    private sealed record UploadResult(Guid Id);
-
     /// <summary>The slice of the list response these tests need.</summary>
     private sealed record DocumentList(List<DocumentListItem> Items);
 

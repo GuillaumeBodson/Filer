@@ -187,11 +187,7 @@ public sealed class ApplyDocumentAnalysisEndpointTests(FilerApiFactory factory)
     }
 
     /// <summary>The slices of the contracts these tests need, restated independently.</summary>
-    private sealed record UploadResult(Guid Id);
-
     private sealed record FolderDto(Guid Id);
-
-    private sealed record TagDto(Guid Id, string Name);
 
     private sealed record ApplyResultDto(
         Guid DocumentId, bool FolderApplied, Guid? FolderId, IReadOnlyList<TagItemDto> Tags);

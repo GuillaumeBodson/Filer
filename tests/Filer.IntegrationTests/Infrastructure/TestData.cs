@@ -38,3 +38,9 @@ public sealed record RefreshResult(
     DateTimeOffset RefreshTokenExpiresAt, string TokenType);
 
 public sealed record MeResult(Guid Id, string Email);
+
+/// <summary>The slice of the upload response most arrange steps need: the created id.</summary>
+public sealed record UploadResult(Guid Id);
+
+/// <summary>The tag response contract, restated independently of the module's DTO.</summary>
+public sealed record TagDto(Guid Id, string Name, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);

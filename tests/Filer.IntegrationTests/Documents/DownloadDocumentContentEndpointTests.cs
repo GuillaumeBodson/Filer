@@ -139,7 +139,4 @@ public sealed class DownloadDocumentContentEndpointTests(FilerApiFactory factory
     /// <summary>Unique per call so tests sharing one database never collide on the dedupe index.</summary>
     private static byte[] UniquePdfBytes() =>
         Encoding.ASCII.GetBytes($"%PDF-1.7 download test content {Guid.NewGuid():N}");
-
-    /// <summary>The slice of the upload response these tests need.</summary>
-    private sealed record UploadResult(Guid Id);
 }

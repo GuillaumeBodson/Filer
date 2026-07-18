@@ -123,9 +123,6 @@ public sealed class FolderContentLookupTests(FilerApiFactory factory)
         return documentId;
     }
 
-    /// <summary>The slice of the upload response these tests need.</summary>
-    private sealed record UploadResult(Guid Id);
-
     /// <summary>The slice of the create-folder response these tests need.</summary>
     private sealed record CreatedFolder(Guid Id);
 }
