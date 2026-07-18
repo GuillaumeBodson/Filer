@@ -75,7 +75,4 @@ public sealed class OwnershipTests(FilerApiFactory factory)
 
         return (await response.Content.ReadFromJsonAsync<UploadResult>(Ct))!.Id;
     }
-
-    /// <summary>The slice of the upload response this test needs.</summary>
-    private sealed record UploadResult(Guid Id);
 }

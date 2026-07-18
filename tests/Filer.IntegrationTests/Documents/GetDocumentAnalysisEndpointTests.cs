@@ -163,8 +163,6 @@ public sealed class GetDocumentAnalysisEndpointTests(FilerApiFactory factory)
     }
 
     /// <summary>The slices of the contracts these tests need, restated independently.</summary>
-    private sealed record UploadResult(Guid Id);
-
     private sealed record AnalysisDto(
         Guid DocumentId, string Status, Guid? JobId, DateTimeOffset? CompletedAt, SuggestionsDto? Suggestions);
 

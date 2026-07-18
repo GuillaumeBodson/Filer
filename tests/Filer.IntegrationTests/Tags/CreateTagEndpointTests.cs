@@ -124,14 +124,4 @@ public sealed class CreateTagEndpointTests(FilerApiFactory factory)
         TagDto created = (await response.Content.ReadFromJsonAsync<TagDto>(Ct))!;
         return created.Id;
     }
-
-    /// <summary>
-    /// The response contract restated independently of the module's DTO, so a
-    /// breaking change surfaces as a failing test (12-testing-strategy.md).
-    /// </summary>
-    private sealed record TagDto(
-        Guid Id,
-        string Name,
-        DateTimeOffset CreatedAt,
-        DateTimeOffset UpdatedAt);
 }

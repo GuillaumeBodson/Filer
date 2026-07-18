@@ -148,10 +148,6 @@ public sealed class AddDocumentTagEndpointTests(FilerApiFactory factory)
     }
 
     /// <summary>The slices of the contracts these tests need, restated independently.</summary>
-    private sealed record TagDto(Guid Id, string Name, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
-
-    private sealed record UploadResult(Guid Id);
-
     private sealed record DocumentTagsDto(Guid DocumentId, IReadOnlyList<DocumentTagItemDto> Tags);
 
     private sealed record DocumentTagItemDto(Guid TagId, string Source);

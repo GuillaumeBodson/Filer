@@ -156,7 +156,4 @@ public sealed class GetDocumentMetadataEndpointTests(FilerApiFactory factory)
         string Status,
         DateTimeOffset CreatedAt,
         DateTimeOffset UpdatedAt);
-
-    /// <summary>The slice of the upload response these tests need.</summary>
-    private sealed record UploadResult(Guid Id);
 }
