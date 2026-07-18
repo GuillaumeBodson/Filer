@@ -86,8 +86,9 @@ Common statuses: 400 validation, 401 unauthenticated, 404 not found / not owned,
 | GET    | `/api/v1/documents/{id}/analysis`       | Get AI analysis job status + result           |
 | POST   | `/api/v1/documents/{id}/analysis/apply` | Apply confirmed AI suggestions                |
 
-List filters: `?folderId=`, `?tagId=`, `?q=` (case-insensitive file-name match;
-full-text search arrives with M6, `/api/v1/search`), plus pagination.
+List filters: `?folderId=`, `?tagId=`, `?q=` (case-insensitive substring match
+on the file name; ranked full-text lives at `/api/v1/search` — see Search),
+plus pagination.
 
 Apply semantics (V1, see `06`): the request confirms a subset of the *stored*
 suggestions; a tag name the user has not created yet is rejected with `400`

@@ -7,8 +7,9 @@ is fixed by `10-solution-structure.md` and the ADRs in `09-decision-log.md`.
 ## Current state
 
 Milestones M1 (foundation), M2 (authentication), M3 (upload pipeline),
-M4 (folders & tags), M5 (AI analysis pipeline), FE-M1 (frontend foundation)
-and FE-M2 (core document workflow on the web) are complete. Seven modules are wired into the host, each exposing only its
+M4 (folders & tags), M5 (AI analysis pipeline), M6 (search), FE-M1 (frontend
+foundation) and FE-M2 (core document workflow on the web) are complete. Eight
+modules are wired into the host, each exposing only its
 `*.Contracts` project (enforced by the compiler and `Filer.Architecture.Tests`):
 
 ```
@@ -17,6 +18,8 @@ Filer.Api (host)
  ├─▶ Filer.Modules.Documents       async upload, SHA-256 dedupe, CRUD, document-tags
  ├─▶ Filer.Modules.Folders         folder hierarchy, cycle-safe moves (ADR-007)
  ├─▶ Filer.Modules.Tags            per-owner tags, cascade delete (ADR-009)
+ ├─▶ Filer.Modules.Search          ranked full-text at /search, thin module over
+                                   Documents' IOwnerDocumentSearch (ADR-017)
  ├─▶ Filer.Modules.Storage         IFileStorageProvider (local filesystem in V1)
  ├─▶ Filer.Modules.BackgroundJobs  IBackgroundJobQueue, DB-backed queue + worker
  └─▶ Filer.Modules.AiAnalysis      IAIAnalysisProvider: Fake (default), Ollama
@@ -71,6 +74,7 @@ review arrives with FE-M3.
 | GET    | `/api/v1/tags`           | Yes  | List the caller's tags                     |
 | PATCH  | `/api/v1/tags/{id}`      | Yes  | Rename a tag                               |
 | DELETE | `/api/v1/tags/{id}`      | Yes  | Hard-delete; cascades associations (ADR-009) |
+| GET    | `/api/v1/search`         | Yes  | Ranked full-text over owned documents (`?q=`) |
 
 Cross-owner access to any owned resource is a uniform **404, never 403**
 (05-security.md). Upload validates against an allow-list with mandatory content sniffing
@@ -202,9 +206,8 @@ mount outside Development (07-storage-and-deployment.md).
 
 ## Next steps (build order — 08-ai-development-guidelines.md)
 
-1. **Search (M6)** — full-text endpoint (tsvector / GIN).
+1. Frontend: AI suggestions review + search UI (FE-M3).
 2. Observability & CI (M7) — metrics, correlation ids (ADR-013), coverage +
    architecture gate.
 3. Bulk operations (M8) — bulk tag add/remove, sync + capped (ADR-010).
 4. RabbitMQ job dispatch with Postgres outbox (ADR-008, deferred from M5).
-5. Frontend: AI suggestions review + search UI (FE-M3).
