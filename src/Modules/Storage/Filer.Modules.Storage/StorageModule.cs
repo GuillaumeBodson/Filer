@@ -36,6 +36,12 @@ public static class StorageModule
                     $"Unknown storage provider '{options.Provider}'. Supported providers: '{StorageOptions.LocalProviderName}'.");
         }
 
+        // The module owns its readiness signal (#159): /health/ready reflects
+        // whether the configured blob root is writable. AddHealthChecks is
+        // additive, so each module contributes checks independently.
+        services.AddHealthChecks()
+            .AddCheck<StorageHealthCheck>("storage", tags: ["ready"]);
+
         return services;
     }
 }

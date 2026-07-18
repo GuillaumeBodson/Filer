@@ -1,6 +1,7 @@
 using Filer.Modules.BackgroundJobs.Worker;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace Filer.Api.Infrastructure;
 
@@ -36,9 +37,17 @@ public static class ObservabilityExtensions
                 options.ServiceName,
                 serviceVersion: typeof(ObservabilityExtensions).Assembly.GetName().Version?.ToString(),
                 serviceInstanceId: Environment.MachineName))
-            // The worker's job-processing spans, linked to the originating upload
-            // trace (ADR-013). ASP.NET Core/HttpClient instrumentation lands with #159.
-            .WithTracing(tracing => tracing.AddSource(BackgroundJobsDiagnostics.ActivitySourceName))
+            .WithTracing(tracing => tracing
+                // One span per request (#159); health probes are polled constantly
+                // and their spans are pure noise, so they are filtered out.
+                .AddAspNetCoreInstrumentation(options =>
+                    options.Filter = context => !context.Request.Path.StartsWithSegments("/health"))
+                // Outbound HTTP as timed child spans — an Ollama call that times
+                // out is a visibly red span, no psql needed (#159).
+                .AddHttpClientInstrumentation()
+                // The worker's job-processing spans, linked to the originating
+                // upload trace (ADR-013).
+                .AddSource(BackgroundJobsDiagnostics.ActivitySourceName))
             // Route ILogger records through OTel alongside the JSON console: same
             // message templates, now exportable with trace correlation (ADR-005).
             .WithLogging();

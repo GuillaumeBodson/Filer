@@ -37,6 +37,10 @@ services:
       Jwt__AccessTokenMinutes: "15"
       # Blob root inside the container; backed by the named volume below (07-storage-and-deployment.md).
       Storage__RootPath: "/data/storage"
+      # OTLP sink = the aspire-dashboard service (ADR-013). Set unconditionally:
+      # when the observability profile is down, the exporter drops batches
+      # silently in the background - the app is unaffected.
+      Observability__Otlp__Endpoint: "http://aspire-dashboard:18889"
     ports:
       - "8080:8080"
     volumes:
@@ -54,6 +58,21 @@ services:
       - "11434:11434"
     volumes:
       - filer-ollama:/root/.ollama
+
+  # Local telemetry viewer (ADR-013): the standalone Aspire dashboard as OTLP
+  # sink - NOT the Aspire AppHost/orchestration model. Behind the
+  # "observability" profile so a plain `docker compose up` never starts it:
+  # `docker compose --profile observability up`. UI on http://localhost:18888.
+  # Anonymous auth is for this local-only viewer; no real environment ships it (07).
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.5
+    container_name: filer-aspire-dashboard
+    profiles: ["observability"]
+    environment:
+      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    ports:
+      - "18888:18888" # dashboard UI
+      - "4317:18889"  # OTLP/gRPC ingest, exposed for an API running on the host (dotnet run)
 
 volumes:
   filer-pgdata:

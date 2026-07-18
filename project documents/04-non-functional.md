@@ -116,6 +116,14 @@ correlation ID is the W3C `traceparent` persisted on the `AnalysisJob` row
 (`CorrelationContext`, `02`): the worker's processing span is a new root *linked*
 to the originating request trace.
 
+Tracing instrumentation (#159): ASP.NET Core (one span per request; `/health/*`
+filtered out as noise) and `HttpClient` (provider calls such as Ollama surface
+as timed child spans). Health endpoints: `/health/live` is process-up only;
+`/health/ready` checks PostgreSQL and storage-root writability — each module
+contributes its own readiness check (Storage does; the broker check arrives
+with #75). The local viewer is the standalone Aspire dashboard behind the
+`observability` Compose profile (`07`).
+
 ---
 
 ## Portability & Deployment

@@ -25,6 +25,12 @@
          (ActivitySource/Meter/ILogger) and never see the OTel SDK. -->
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
+    <!-- Health endpoints (#159): first-party checks only. The EF Core check
+         reuses the exact DbContext/connection the app runs on; the HealthChecks
+         base stack itself ships in the ASP.NET Core shared framework. -->
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.9" />
   </ItemGroup>
 
   <!-- Frontend (Blazor clients, src/Clients). The shared RCL (Filer.Ui) and the
