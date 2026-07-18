@@ -102,12 +102,18 @@ public interface IAIAnalysisProvider
 
 * A background worker (hosted service in the modular monolith for V1, separately
   deployable later — ADR-003) consumes queued jobs.
-* The queue is durable so a crash loses no work; for V1 the persisted
-  `AnalysisJob` table itself acts as the work source (poll/claim with row
-  locking). **RabbitMQ is adopted for dispatch after the upload pipeline
-  milestone (ADR-008):** the table remains the durable outbox and job-state
-  record; the broker replaces polling as the wake-up signal, with the polling
-  loop retained as a fallback sweeper.
+* The queue is durable so a crash loses no work; the persisted `AnalysisJob`
+  table itself acts as the work source (poll/claim with row locking).
+  **RabbitMQ dispatch is implemented (ADR-008, #75)**, selected by
+  `BackgroundJobs:Queue` (`Db` — the default — or `RabbitMq`): the table
+  remains the durable outbox and job-state record; enqueue commits the row
+  then publishes a bare "job ready" wake-up (publisher confirms, `traceparent`
+  header per ADR-013 — the row stays the authoritative context carrier). The
+  consumer re-runs the same claim, so single-claim stays database-enforced and
+  duplicate/redelivered messages are harmless no-ops. The polling loop is
+  retained as the fallback sweeper (`BackgroundJobs:SweepInterval`): a broker
+  outage degrades to Db-dispatch behaviour — enqueue still succeeds (the
+  publish failure is logged and swallowed) and no work is lost.
 * Workers are horizontally scalable independent of the API (`04`).
 * Job claiming must be safe under concurrency (no two workers run the same job).
 
@@ -177,9 +183,9 @@ Per `08` (background jobs must support these):
 
 ## Future Evolution
 
-* ~~Dedicated message broker for the queue at scale.~~ Decided: RabbitMQ for
-  dispatch over the Postgres outbox (ADR-008), sequenced after the upload
-  pipeline milestone.
+* ~~Dedicated message broker for the queue at scale.~~ Implemented: RabbitMQ for
+  dispatch over the Postgres outbox (ADR-008, #75), configuration-selected
+  (`BackgroundJobs:Queue`), default unchanged (`Db`).
 * Embedding generation feeding pgvector for semantic search (`02`) — the
   prerequisite for AI chat over documents (`14`, RM-04).
 * Summarization and AI chat capabilities layer on the same provider abstraction;
