@@ -14,11 +14,11 @@
     <PackageVersion Include="Microsoft.OpenApi" Version="2.7.5" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
     <!-- Identity + authentication -->
-    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
     <!-- EF Core + PostgreSQL -->
-    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <!-- Observability (ADR-013): OpenTelemetry as the emit layer, referenced by
          the host only — modules keep emitting via the BCL primitives
@@ -30,7 +30,7 @@
     <!-- Health endpoints (#159): first-party checks only. The EF Core check
          reuses the exact DbContext/connection the app runs on; the HealthChecks
          base stack itself ships in the ASP.NET Core shared framework. -->
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.10" />
     <!-- Broker dispatch for background jobs (ADR-008): RabbitMQ wake-ups over the
          Postgres outbox; referenced by the BackgroundJobs module only. -->
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.1" />
@@ -42,15 +42,15 @@
   <ItemGroup>
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.9" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" />
     <!-- Typed API client (ADR-011): Kiota Bundle pulls abstractions + HTTP adapter +
          all default serializers (json/text/form/multipart, needed for the upload
          endpoint). DI.Abstractions lets Filer.ApiClient expose AddFilerApiClient. -->
     <PackageVersion Include="Microsoft.Kiota.Bundle" Version="2.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
     <!-- Auth plumbing (#128): IHttpClientFactory for the bearer/refresh handler chain
          (Filer.ApiClient); AuthenticationStateProvider/AuthorizeRouteView (Filer.Ui). -->
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.9" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.10" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.9" />
   </ItemGroup>
 
@@ -61,7 +61,7 @@
        If this ever becomes commercial, a paid licence (or staying on 7.x) is
        required. -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Moq" Version="4.20.72" />
