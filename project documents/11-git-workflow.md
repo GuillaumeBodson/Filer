@@ -120,10 +120,25 @@ This makes it impossible to push broken code straight to `main`.
 
 ## Releases & tagging
 
-* Tag meaningful points with SemVer: `v0.1.0`, `v0.2.0`, …
-* Tags give deployment references and rollback points for the API.
-* Optionally use GitHub Releases with auto-generated notes (Conventional Commit
-  history makes these clean).
+Policy adopted 2026-07-31; baseline **`v0.10.0`** = V1 scope complete
+(M1–M7 + FE-M1–FE-M3).
+
+* **One annotated tag per closed milestone**, on the merge commit of that
+  milestone's review/cleanup PR — the moment the milestone's code is fully on
+  `main`. Bump **minor** per milestone (`v0.11.0`, `v0.12.0`, …), whichever
+  track (M-x or FE-M-x) closes; tagging is a checkbox on the milestone-review
+  issue so it can't be forgotten.
+* Tag numbers do **not** mirror milestone numbers (two tracks close in
+  arbitrary order). The mapping lives in the tag message:
+  `git tag -a v0.11.0 -m "M8 — Bulk operations"`.
+* **Patch** bumps only for a fix on top of an already-tagged state.
+* Tags are the milestone-review diff anchor (`git diff <previous-tag>..HEAD`)
+  and deployment/rollback references for the API.
+* **`v1.0.0` is a product decision, not a milestone counter** — cut it when
+  Filer is functionally a 1.0. Until then everything stays 0.x.
+* **GitHub Releases are deliberately not used** while the project has no
+  external consumers (solo development, nothing deploys from releases).
+  Revisit when versions gain an audience.
 
 ---
 
@@ -156,6 +171,6 @@ gh pr create --title "feat(storage): add async upload endpoint" \
   --body "... Closes #77"
 # let CI run, squash-merge, delete branch, VERIFY #77 closed
 
-# Tag a release
-git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0
+# Tag a milestone close (minor bump; message names the milestone)
+git tag -a v0.11.0 -m "M8 — Bulk operations" && git push origin v0.11.0
 ```
