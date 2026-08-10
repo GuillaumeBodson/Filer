@@ -179,6 +179,42 @@ Per `08` (background jobs must support these):
   boundaries: `09-decision-log.md`, note "Agentic provider pulls owner-scoped
   data mid-analysis".
 
+### Model expectations
+
+The adapter must drive the runtime explicitly rather than inherit its defaults —
+two of them are actively harmful:
+
+* **Reasoning must be switched off.** A hybrid-reasoning model emits a long
+  chain of thought before the JSON, which classification does not use. Measured
+  on the deployment node: **~3 s per document with reasoning off, 30–104 s with
+  it on** — the difference between a usable queue and an unusable one.
+* **The context window must be set, not assumed.** A runtime default below the
+  adapter's own prompt budget (`MaxPromptChars`, plus the rendered folder tree)
+  truncates silently: no error, just degraded suggestions.
+
+Both are properties of the *request*, not of the deployment, so a correct
+adapter carries them; neither can be fixed by configuring the host. Measurements
+and the runtime comparison behind the current choice:
+`deploy/choix-runtime-llm.md`, and `09-decision-log.md`, note "LLM runtime".
+
+### Reaching a host-native runtime from a container
+
+In the self-hosted V1 topology the runtime runs natively on the host — one
+runtime per GPU (`07`). A container reaching it needs **two** settings that are
+easy to mistake for one:
+
+1. **Name resolution** to the container gateway (Compose's `extra_hosts` /
+   `host-gateway`) — this only resolves a name.
+2. **The runtime bound to that gateway address.** Left on its loopback default it
+   is not listening where the container connects, and the result is a refused
+   connection.
+
+A host firewall then has to allow the container subnets to that port, or the
+connection **times out** while the same request from the host itself succeeds —
+a symptom that reliably misdirects diagnosis toward the runtime. Binding to the
+gateway rather than to all interfaces is deliberate: these runtimes have no
+authentication, and binding wide publishes them to the whole local network.
+
 ---
 
 ## Future Evolution

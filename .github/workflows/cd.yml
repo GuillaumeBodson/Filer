@@ -1,0 +1,130 @@
+name: CD
+
+# Deploy a published image to the self-hosted node (ADR-018).
+#
+# The unit of deployment is a release tag, not a commit: pushing `v*` builds and
+# publishes the image in ci.yml, and this workflow points the server at it.
+# `workflow_dispatch` exists for the case that matters most — rolling back to a
+# tag that already exists, without inventing a new one.
+#
+# The node has no inbound ports and never will (`11-git-workflow.md`): the
+# runner joins the tailnet as a short-lived node and leaves. Nothing about this
+# workflow requires anything to be reachable from the internet.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag to deploy (e.g. v0.3.1 or sha-a1b2c3d). Use a previous tag to roll back."
+        required: true
+        type: string
+
+# One deploy at a time, and never cancel one midway: an interrupted `up -d`
+# can leave the stack half-swapped.
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    # The box is a home server on Wi-Fi and is sometimes simply off. Fail fast
+    # and legibly rather than holding a runner for six hours.
+    timeout-minutes: 20
+
+    env:
+      IMAGE: ${{ vars.FILER_IMAGE || 'ghcr.io/guillaumebodson/filer-api' }}
+      TAG: ${{ inputs.tag || github.ref_name }}
+
+    steps:
+      # Verify the image exists BEFORE touching the server. On a tag push this
+      # also serves as the wait for ci.yml's publish job: the two workflows are
+      # triggered by the same event and race otherwise. Polling the registry is
+      # deliberately preferred over `workflow_run` chaining — it states the real
+      # precondition (the image is pullable) instead of a proxy for it, and it
+      # works identically for a manual rollback, where the image already exists
+      # and the loop returns on the first attempt.
+      - name: Wait for the image to be published
+        run: |
+          for attempt in $(seq 1 60); do
+            if docker buildx imagetools inspect "${IMAGE}:${TAG}" >/dev/null 2>&1; then
+              echo "::notice::${IMAGE}:${TAG} is available"
+              exit 0
+            fi
+            echo "attempt ${attempt}/60 — ${IMAGE}:${TAG} not published yet, waiting 15s"
+            sleep 15
+          done
+          echo "::error::${IMAGE}:${TAG} never appeared. Did the CI build fail?"
+          exit 1
+
+      # Ephemeral, tagged node: the ACL grants tag:ci SSH to the deploy host and
+      # nothing else, so a leaked OAuth secret buys an SSH attempt against one
+      # machine — not tailnet-wide access. The node is reaped when the job ends.
+      - name: Join the tailnet
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      # Tailscale SSH: authentication is the tailnet identity governed by the
+      # ACL, so no long-lived private key is stored in this public repo's
+      # secrets. Revoking access is an ACL edit, not an SSH session to a box
+      # that may be down.
+      - name: Deploy
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        run: |
+          tailscale ssh "${DEPLOY_USER}@${DEPLOY_HOST}" bash -euo pipefail <<EOF
+            cd /srv/filer
+
+            # Pin the tag first: .env is the record of what is deployed, and the
+            # rollback path reads it. Writing it before the pull means a failed
+            # pull leaves an obviously-wrong .env rather than a silent mismatch
+            # between the file and the running container.
+            sed -i 's|^FILER_IMAGE_TAG=.*|FILER_IMAGE_TAG=${TAG}|' .env
+            grep '^FILER_IMAGE_TAG=' .env
+
+            docker compose -f docker-compose.prod.yml --env-file .env pull
+            docker compose -f docker-compose.prod.yml --env-file .env up -d
+          EOF
+
+      # The API publishes on 127.0.0.1 only — deliberately, so it is not exposed
+      # on the LAN or the tailnet (deploy/README.md). The readiness probe
+      # therefore runs on the host, through the SSH session, not from here.
+      #
+      # /health/ready covers PostgreSQL reachability and a writable blob root
+      # (`04`), which is what actually distinguishes "container started" from
+      # "deployment worked".
+      - name: Wait for readiness
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        run: |
+          tailscale ssh "${DEPLOY_USER}@${DEPLOY_HOST}" bash -euo pipefail <<'EOF'
+            for attempt in $(seq 1 40); do
+              status=$(docker inspect -f '{{.State.Health.Status}}' filer-api 2>/dev/null || echo missing)
+              [ "$status" = healthy ] && { echo "filer-api healthy"; exit 0; }
+              echo "attempt ${attempt}/40 — filer-api is ${status}"
+              sleep 10
+            done
+            echo "filer-api never became healthy; last 80 log lines:"
+            docker logs --tail 80 filer-api || true
+            exit 1
+          EOF
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Deploy \`${TAG}\` — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Image: \`${IMAGE}:${TAG}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "To roll back: re-run this workflow with the previous tag." >> "$GITHUB_STEP_SUMMARY"

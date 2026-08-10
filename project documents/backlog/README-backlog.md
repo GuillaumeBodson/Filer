@@ -15,6 +15,7 @@ Each ticket carries acceptance criteria drawn from the docs — ownership→404
 | `create-github-issues.sh` | Creates all labels, milestones, and 45 **backend** issues via the `gh` CLI. |
 | `issues.csv` | The same 45 backend tickets as a spreadsheet (Title, Milestone, Labels, Body). |
 | `create-frontend-issues.sh` | Creates the `module:web` label, 3 frontend milestones, and 16 **frontend** issues. |
+| `create-ops-issues.sh` | Creates 2 `OPS-M*` milestones and 15 **deployment/operations** issues. |
 | `README-backlog.md` | This file. |
 
 ## What gets created
@@ -40,6 +41,32 @@ backend M5 analysis (#54/#55) and M6 search contracts freeze. The search UI is
 kept agnostic to full-text vs semantic backing so RM-04 (`14`) can slot in later.
 The MAUI mobile shell is **not** in this backlog — it belongs to RM-02.
 
+## Ops backlog (`create-ops-issues.sh`)
+
+Deployment and operations of the self-hosted node, per ADR-018.
+`create-ops-issues.sh` creates:
+
+- **2 milestones** — `OPS-M1 Self-hosted deployment & CD`,
+  `OPS-M2 Operability: backups & runtime hardening`.
+- **0 new labels** — reuses `epic`, `type:*`, `module:platform`, `module:ci`,
+  `module:ai`.
+- **13 issues** — 2 epics + 11 slices. Per milestone: OPS-M1 8, OPS-M2 5.
+
+**No script creates the milestone-review issues**, this one included. Creating a
+milestone fires `.github/workflows/milestone-review.yml`, which opens one from
+`.github/ISSUE_TEMPLATE/milestone-review.md` — so every milestone gets the same
+checklist. Adding them to a generator produces duplicates.
+
+`OPS-` is its own prefix rather than a continuation of `M*` because this is a
+**parallel track**, not a sequel: it blocks no feature milestone and is blocked
+by none. Numbering it `M12` would falsely imply it queues behind semantic search.
+
+Two OPS-M1 tickets are not infrastructure at all — they are defects in the Ollama
+adapter that the first real deployment exposed (reasoning left enabled, context
+window left to the runtime default). They sit here because the deployed system is
+not usable without them, and they are the reason the milestone is not purely
+`type:infra`.
+
 ## Run it
 
 Prerequisites: [`gh`](https://cli.github.com/) installed and authenticated (`gh auth login`), run from inside the repo.
@@ -48,12 +75,13 @@ Prerequisites: [`gh`](https://cli.github.com/) installed and authenticated (`gh 
 # from the repo root (auto-detects the repo)
 bash "project documents/backlog/create-github-issues.sh"      # 45 backend issues
 bash "project documents/backlog/create-frontend-issues.sh"    # 16 frontend issues
+bash "project documents/backlog/create-ops-issues.sh"         # 15 ops issues
 
 # or target an explicit repo
 REPO=GuillaumeBodson/Filer bash "project documents/backlog/create-github-issues.sh"
 ```
 
-Both scripts are safe to re-run for labels/milestones (labels use `--force`,
+All three scripts are safe to re-run for labels/milestones (labels use `--force`,
 milestones are skipped if they already exist). **Issues are *not* deduplicated** —
 running a script twice creates duplicates. Run each once.
 
