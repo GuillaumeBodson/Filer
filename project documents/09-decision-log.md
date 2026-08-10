@@ -1431,3 +1431,124 @@ contract implemented by Documents.
   two semantics (`03`): the list filter keeps intra-word matching for
   navigation; `/search` ranks. The `EfDocumentStore` seam comment records the
   decision not to upgrade the list filter.
+
+---
+
+## ADR-018 — Deployment: publish an image, pin it, deliver it over the tailnet
+
+* **Date:** 2026-08-10
+* **Status:** Accepted
+
+### Context
+
+Filer now runs on a real target: a single self-hosted Linux node with a local
+Ollama runtime, deployed by hand and validated end to end (register → upload →
+`AnalysisJob` → suggestions). That exercise turned "Production (V1): single-node
+container deployment" (`07`) from an intention into a set of concrete facts, and
+exposed three gaps.
+
+* **The server compiled the application.** The production compose built the
+  image from a git clone on the box. A .NET SDK build competed for CPU with the
+  LLM runtime sharing that machine, and "what is running" was identified by
+  whatever the working tree happened to contain — not by anything nameable.
+* **The deployment assets lived outside the repository**, deliberately, to avoid
+  committing operational files into Filer. That was right while deployment was a
+  manual act; it is wrong once a pipeline needs a versioned compose file that
+  moves in lockstep with the image contract.
+* **The node has no inbound ports and will not get any** (`11`). It sits behind a
+  domestic router on a wireless link, so neither a public SSH port nor a
+  self-hosted runner is available — the latter doubly so, since this repository
+  is public and a self-hosted runner would execute fork-PR code on the host.
+
+### Decision
+
+**The deployable artifact is a published, pinned image; delivery reaches the node
+through an ephemeral tailnet membership.**
+
+* **The image is built once, by CI, and published to GHCR**
+  (`ghcr.io/guillaumebodson/filer-api`). The server never builds. The existing
+  `docker-build` job gains the push; it keeps its id because branch protection
+  names it as a required check.
+* **No floating tag is published** — `latest` is explicitly disabled. The
+  deployed version is a pinned tag in `/srv/filer/.env`, which makes that file
+  the record of what is running and makes rollback a one-line edit.
+* **`deploy/` joins the repository**: production compose, `.env` template,
+  backup script, and a machine-agnostic runbook. Host build logs — BIOS,
+  partitioning, driver, network — stay out: they describe one machine, carry
+  MAC addresses and LAN topology, and this repository is public.
+* **Delivery is `cd.yml`**, triggered by a `v*` release tag or dispatched
+  manually for rollback. The runner joins the tailnet as a short-lived node
+  tagged `tag:ci`, reaches the host over Tailscale SSH, repins the tag, pulls,
+  and brings the stack up.
+* **Success is the container healthcheck, not the exit status of `up -d`.** The
+  api service gains a `HEALTHCHECK` against `/health/ready` — which already
+  proves PostgreSQL reachability and a writable blob root (`04`) — and the
+  deploy job waits for `healthy`.
+
+### Rationale
+
+* **A tag is an identity; a working tree is not.** Pinning is what makes "roll
+  back" a defined operation rather than a `git checkout` and a rebuild, and
+  migrations running at startup make a defined rollback necessary rather than
+  nice to have.
+* **Tailscale was already the node's administration path**, and using it for
+  delivery adds no exposure: an ACL scopes `tag:ci` to SSH on the deploy host
+  alone, so a leaked CI credential buys one SSH attempt against one machine.
+  Tailscale SSH additionally removes the need to store a long-lived private key
+  in a public repository's secret store — revocation becomes an ACL edit rather
+  than an SSH session to a box that may be offline.
+* **Readiness is already specified** (`04`, `07`); the healthcheck only makes an
+  existing guarantee observable to an orchestrator. Without it, a container
+  looping on a failed migration reports `Up`.
+* **The registry is a seam, not a commitment.** Nothing in the pipeline assumes
+  GHCR beyond an image reference; the scale-out topology in `07` inherits the
+  artifact unchanged.
+
+### Trade-offs accepted
+
+* **The image is public** because the repository is. That is the reason the
+  server needs no registry credential; it also means the runtime image is world
+  readable. Acceptable — it contains no secrets, all configuration is injected
+  (`05`) — but a move to a private repository would require a `read:packages`
+  token on the host, and that is the only thing such a move would break.
+* **CD depends on a third-party control plane.** If Tailscale is unreachable the
+  pipeline cannot deploy; the manual path in `deploy/README.md` remains, and the
+  LAN route is unaffected. Self-hosting the control plane is possible and not
+  currently justified.
+* **`cd.yml` polls the registry** for the image rather than chaining on the CI
+  workflow. It states the real precondition — the image is pullable — instead of
+  a proxy for it, and behaves identically for a manual rollback where the image
+  already exists. The cost is a poll loop where an event would do.
+* **Deployment is single-node with a restart gap.** `up -d` replaces the
+  container; there is no zero-downtime story and V1 does not claim one (`04`:
+  best-effort, no SLA).
+
+---
+
+## Note - LLM runtime: Ollama stays, and reasoning must be switched off (#TBD)
+
+Measured on the deployment node (2026-08-10), same `qwen3:30b-a3b` GGUF, fresh
+prompt per call — the production case, since every document is unique:
+
+| | Ollama | llama.cpp |
+|---|---|---|
+| Prompt eval | ~360 tok/s | ~350 tok/s |
+| Generation | 37.6 tok/s | **51 tok/s (+36%)** |
+| **Latency / document** | ~3.2 s | ~3.1 s |
+
+llama.cpp generates materially faster, but Filer's analysis output is ~100
+tokens, so the end-to-end gain is ~0.4 s per document. That does not justify the
+`OpenAiCompatibleAnalysisProvider` a switch would require, and **Ollama stays the
+runtime**. The question reopens if usage moves to long outputs — the agentic
+two-pass variant (#119), summarisation, verbose extraction — where a 36%
+generation gap compounds. Comparison, tuning traps, and the migration playbook:
+`deploy/choix-runtime-llm.md`.
+
+The measurement also surfaced a defect in the shipped adapter, independent of any
+runtime choice: **`OllamaChatRequest` sends no `think` field**, so a
+hybrid-reasoning model emits a long reasoning chain before the JSON — **30–104 s
+per document instead of ~3 s**. A second gap sits beside it: `num_ctx` is never
+sent either, so Ollama's 4096-token default silently truncates prompts that
+`MaxPromptChars` (8000 chars, plus the rendered folder tree) is allowed to
+approach. Both are tracked under OPS-M1.
+

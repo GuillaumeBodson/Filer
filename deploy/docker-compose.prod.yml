@@ -1,0 +1,126 @@
+# Composition de PRODUCTION pour Filer — fichier autonome, à déployer dans /srv/filer/.
+#
+# ⚠️ NE PAS combiner avec le docker-compose.yml du dépôt (`-f a.yml -f b.yml`) :
+#    Compose *concatène* les listes `ports`, donc le "8080:8080" du fichier de base
+#    survivrait à côté du "127.0.0.1:8080:8080" d'ici → double publication, dont une
+#    sur 0.0.0.0. Le fichier de base est un fichier de développement ; on ne le
+#    surcharge pas, on le remplace.
+#
+# ⚠️ Et surtout : `docker compose up` dans le dépôt charge AUTOMATIQUEMENT
+#    docker-compose.override.yml, qui est un overlay Visual Studio/Windows
+#    (${APPDATA}, HTTPS 8081 sans certificat). Sur Linux il casse le démarrage.
+#    → Toujours invoquer ce fichier explicitement avec -f, jamais `docker compose up` nu.
+#
+# Usage :
+#   cd /srv/filer
+#   docker compose -f docker-compose.prod.yml --env-file .env pull
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d
+#   docker compose -f docker-compose.prod.yml --env-file .env ps
+#   docker compose -f docker-compose.prod.yml --env-file .env logs -f filer.api
+#
+# ⚠️ Plus de `--build` : depuis ADR-018 l'artefact déployé est une image publiée
+#    sur GHCR par la CI, pas un build local. Le serveur ne compile plus rien —
+#    il tire un tag. Voir README.md (« Déployer » et « Revenir en arrière »).
+
+name: filer
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: filer-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB manquant}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER manquant}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant}
+      # Sous-répertoire délibéré : si /srv/pgdata devient un jour un point de
+      # montage dédié, initdb refuse de démarrer sur un répertoire contenant
+      # lost+found. Pointer PGDATA un cran plus bas rend le montage indifférent.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - /srv/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # Aucun `ports:` — volontaire. La base n'est jointe que par le réseau Compose.
+    # Le "5432:5432" du fichier de dev publiait PostgreSQL sur 0.0.0.0, donc sur
+    # tout le LAN, et UFW ne l'aurait pas bloqué (Docker écrit ses règles en amont).
+
+  filer.api:
+    # ADR-018 : l'artefact déployable est l'image publiée par la CI, jamais un
+    # build sur le serveur (le SDK .NET disputerait le CPU au runtime LLM, et
+    # « ce qui tourne » cesserait d'être identifiable par un tag).
+    #
+    # FILER_IMAGE_TAG est OBLIGATOIRE et doit être une version figée (v1.4.2,
+    # sha-a1b2c3d) — jamais `latest`. C'est ce pin qui rend le retour arrière
+    # possible : remettre le tag précédent dans .env, `pull`, `up -d`.
+    image: ${FILER_IMAGE:-ghcr.io/guillaumebodson/filer-api}:${FILER_IMAGE_TAG:?FILER_IMAGE_TAG manquant — figer un tag précis, jamais latest}
+    container_name: filer-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+
+      Jwt__Issuer: "filer-api"
+      Jwt__Audience: "filer-clients"
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?JWT_SIGNING_KEY manquant — openssl rand -base64 48}
+      Jwt__AccessTokenMinutes: "15"
+
+      Storage__Provider: "Local"
+      Storage__RootPath: "/data/storage"
+
+      # Ollama tourne en natif sur l'hôte (stade 7), pas dans un conteneur :
+      # un seul runtime pour les 8 Go de VRAM.
+      #
+      # ⚠️ `extra_hosts: host-gateway` ne fait que RÉSOUDRE un nom vers l'IP de
+      # la passerelle Docker (172.17.0.1) — il ne rend pas joignable un service
+      # écoutant sur 127.0.0.1. Ollama DOIT être lié à cette passerelle :
+      #     OLLAMA_HOST=172.17.0.1:11434
+      # Laissé sur son défaut 127.0.0.1, la connexion échouera en ECONNREFUSED.
+      #
+      # ⚠️ ET une règle UFW est indispensable (vérifié 2026-08-10) : UFW bloque
+      # le trafic conteneur → hôte:11434 (timeout, AnalysisJob en échec). Ajouter :
+      #     sudo ufw allow from 172.16.0.0/12 to any port 11434 proto tcp
+      #     sudo ufw reload
+      # (n'expose PAS le LAN ; couvre docker0 + le réseau projet filer_default).
+      AiAnalysis__Provider: "Ollama"
+      AiAnalysis__Ollama__BaseUrl: "http://host.docker.internal:11434"
+      AiAnalysis__Ollama__Model: ${OLLAMA_MODEL:-llama3.2:3b}
+      AiAnalysis__Ollama__TimeoutSeconds: "300"
+
+      # CORS : à n'activer QUE si le client Blazor WASM est servi sur une autre
+      # origine. Derrière un reverse proxy same-origin, laisser désactivé.
+      # Une entrée vide ferait échouer WithOrigins("") au démarrage — décommenter
+      # seulement avec une vraie valeur.
+      # Cors__AllowedOrigins__0: "https://filer.mon-domaine.lan"
+
+    # /health/ready vérifie PostgreSQL ET l'écriture de la racine des blobs (`04`).
+    # Sans ce healthcheck, `docker compose ps` dit « Up » dès que le process
+    # démarre — un conteneur qui boucle sur une migration ratée passerait pour
+    # déployé. Le job CD attend `healthy`, pas `running`.
+    #
+    # start_period couvre l'application des migrations au démarrage : les échecs
+    # pendant cette fenêtre ne comptent pas comme des tentatives ratées.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      # Boucle locale uniquement. Pour exposer au LAN, passer par un reverse
+      # proxy sur l'hôte (soumis à UFW) plutôt que d'élargir cette publication.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      # Le conteneur tourne en UID 1654 (USER $APP_UID du Dockerfile) : le
+      # répertoire hôte doit lui appartenir, sinon /health/ready échoue —
+      # le module Storage teste l'écriture de la racine des blobs.
+      - /srv/data/filer/blobs:/data/storage

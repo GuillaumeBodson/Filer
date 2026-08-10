@@ -94,8 +94,16 @@ RCL build under warnings-as-errors and the bUnit component tests run with the
 rest (`12`). The drift gate regenerates the typed API client from its committed
 OpenAPI snapshot and fails the build if it no longer matches the checked-in
 `Generated/` output (ADR-011; see `src/Clients/Filer.ApiClient/README.md`).
-A second job, `docker-build`, proves the deployable API image still builds
-(build-only, nothing pushed).
+A second job, `docker-build`, builds the deployable API image. On a pull request
+that is the whole point — proof it still builds. On `main` and on release tags
+the job also **pushes the image to GHCR** (ADR-018), and that published image is
+what the deployment node runs; it is never rebuilt on the host. No floating
+`latest` tag is published, so a deployment always names an exact version.
+
+The job keeps the id `docker-build` deliberately: it is a required status check
+below, and renaming it would leave `main` unprotected until the rule is
+re-pointed — silently, since a rule naming a check that no longer exists blocks
+nothing.
 
 The `build-test` and `docker-build` checks are the gates referenced by branch
 protection.
@@ -126,9 +134,9 @@ Policy adopted 2026-07-31; baseline **`v0.10.0`** = V1 scope complete
 * **One annotated tag per closed milestone**, on the merge commit of that
   milestone's review/cleanup PR — the moment the milestone's code is fully on
   `main`. Bump **minor** per milestone (`v0.11.0`, `v0.12.0`, …), whichever
-  track (M-x or FE-M-x) closes; tagging is a checkbox on the milestone-review
-  issue so it can't be forgotten.
-* Tag numbers do **not** mirror milestone numbers (two tracks close in
+  track (M-x, FE-M-x or OPS-M-x) closes; tagging is a checkbox on the
+  milestone-review issue so it can't be forgotten.
+* Tag numbers do **not** mirror milestone numbers (the tracks close in
   arbitrary order). The mapping lives in the tag message:
   `git tag -a v0.11.0 -m "M8 — Bulk operations"`.
 * **Patch** bumps only for a fix on top of an already-tagged state.
@@ -137,8 +145,31 @@ Policy adopted 2026-07-31; baseline **`v0.10.0`** = V1 scope complete
 * **`v1.0.0` is a product decision, not a milestone counter** — cut it when
   Filer is functionally a 1.0. Until then everything stays 0.x.
 * **GitHub Releases are deliberately not used** while the project has no
-  external consumers (solo development, nothing deploys from releases).
-  Revisit when versions gain an audience.
+  external consumers (solo development; deployment runs off the tag, not off a
+  Release). Revisit when versions gain an audience.
+
+### Tags now deploy (ADR-018)
+
+Since ADR-018 the tag is not only a reference — **pushing it is the
+deployment**. Publishing `v*` runs the full CI pipeline, publishes the image
+under that version, and triggers `cd.yml`, which points the node at it and waits
+for the container to report healthy.
+
+Two consequences of combining that with the per-milestone policy above:
+
+* **Deployment cadence is milestone cadence.** The node advances when a
+  milestone closes, not when a PR merges — a deliberate consequence of tagging
+  per milestone, not an accident of the pipeline. A fix that must reach the node
+  sooner is exactly the **patch bump** the policy already allows.
+* **The tagging checkbox on the milestone-review issue is now also a deploy
+  trigger.** Ticking it ships. That is the intended coupling — a milestone is
+  not closed until its code is running — but it means the tag is no longer a
+  bookkeeping act that can be done absent-mindedly.
+
+Rolling back is re-running `cd.yml` with an earlier tag; the deployed version is
+pinned in the node's `.env`, which is why no floating `latest` is published.
+Migrations apply at container startup, so a release carrying a bad migration
+needs a **restore**, not a re-pin — back up before deploying one (`04`).
 
 ---
 
@@ -147,6 +178,15 @@ Policy adopted 2026-07-31; baseline **`v0.10.0`** = V1 scope complete
 * **Never commit secrets.** `Jwt__SigningKey` (≥32 chars), real connection
   strings, and keys come from env or a secret store (`05-security.md`). Only the
   dev key in `appsettings.Development.json` is allowed in source control.
+* **This repository is public**, which constrains what may live in `deploy/`.
+  The deployment contract is committed; host build logs are not — they name a
+  specific machine (NIC addresses, LAN topology, hostnames) and buy an attacker
+  reconnaissance for no benefit. `.gitignore` enforces the split rather than
+  leaving it to discipline.
+* **Deployment credentials are scoped, not shared.** The CD workflow holds a
+  private-network credential that can reach exactly one host on exactly one port,
+  and no long-lived SSH key (ADR-018). Repository *variables* carry the deploy
+  host and user so the workflow file names neither.
 * `.gitignore` excludes `appsettings.*.local.json`, `secrets.json`, `.env*`, and
   IDE/user files.
 * **Enable on GitHub:** Settings → Code security → secret scanning + push
