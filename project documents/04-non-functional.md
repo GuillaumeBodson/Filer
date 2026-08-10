@@ -88,8 +88,19 @@ These are guideline SLOs to design against, not contractual SLAs.
   window precedes permanent purge (default: 30 days).
 * `ContentHash` (SHA-256) guarantees duplicate detection is content-based, not
   name-based.
-* Database backups: daily for the SaaS phase; for V1, document the manual
-  backup procedure (PostgreSQL dump + storage volume snapshot).
+* Database backups: daily for the SaaS phase. For V1 the procedure is scripted
+  and scheduled on the deployment node (`deploy/`, ADR-018): PostgreSQL dump plus
+  a copy of the blob tree.
+* **Backup ordering is part of the requirement, not an implementation detail:
+  dump first, blobs second.** A document created between the two steps leaves an
+  orphaned blob — harmless. The reverse order yields a dump referencing a
+  `StorageKey` whose bytes were never copied: a restore that fails only when it
+  is needed.
+* A backup that has never been restored does not count as a backup — a restore
+  must be exercised at least once against a throwaway database.
+* Backups must reach a destination that does not share the failure domain of the
+  source. A second disk in the same chassis survives disk failure alone, not
+  theft, fire, or a power event.
 
 ---
 

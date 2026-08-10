@@ -4,3 +4,9 @@
 # otherwise the drift gate could fail on a pure line-ending difference. The files
 # are already stored as LF, so this introduces no renormalization.
 src/Clients/Filer.ApiClient/Generated/** text eol=lf
+
+# Shell scripts run on Linux (the deployment node, and the backlog generators via
+# `bash`). A CRLF checkout makes the shebang `#!/usr/bin/env bash\r`, which fails
+# with a bare "not found" that points nowhere near the real cause. Pin LF so a
+# contributor's core.autocrlf setting cannot produce that.
+*.sh text eol=lf

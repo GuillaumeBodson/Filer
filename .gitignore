@@ -96,3 +96,13 @@ Thumbs.db
 # Kiota generation log (timestamped each run; the checked-in client + kiota-lock.json
 # are the reproducible artefacts — see src/Clients/Filer.ApiClient/README.md)
 **/.kiota.log
+
+## Deployment assets (ADR-018, deploy/). The blanket .env* rule above would
+## swallow the tracked template, so re-include it explicitly.
+!deploy/.env.example
+
+## Host build logs stay local: they carry NIC MAC addresses, LAN topology,
+## hostnames and ISP details that have no business in a public repository.
+## deploy/README.md is the sanitised, machine-agnostic runbook.
+deploy/checklist-serveur-filer.md
+deploy/bios-checklist.md

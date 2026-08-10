@@ -140,16 +140,49 @@ Distinct values per environment; all secrets rotatable without rebuilding images
 ## Environments
 
 * **Local/dev:** Docker Compose with all services and seeded config.
-* **Production (V1):** single-node container deployment with persistent volumes
-  and a documented manual backup procedure (PostgreSQL dump + volume snapshot,
-  per `04`).
+* **Production (V1):** single self-hosted node — see below.
 * **Production (SaaS phase):** orchestrated multi-replica deployment with managed
   data services.
+
+## Production (V1) — self-hosted single node
+
+Resolved by **ADR-018**. The assets live in `deploy/` (production compose, `.env`
+template, backup script, runbook); this section states the contract, the runbook
+states the procedure.
+
+* **The deployable artifact is a published image**, built once by CI and pushed
+  to a container registry. The node never builds: it pulls a tag. The running
+  version is a **pinned tag** in the host's `.env` — no floating `latest` is
+  published — so that file records what is deployed and rollback is a re-pin.
+* **The node supplies persistence, not application state**: bind mounts for the
+  PostgreSQL data directory and the blob root, and a separate destination for
+  backups. The blob root must be owned by the container's UID; the readiness
+  probe fails otherwise, which is the intended signal.
+* **PostgreSQL publishes no port.** It is reachable only over the Compose
+  network. The api publishes on the loopback interface alone; anything wider goes
+  through a reverse proxy on the host, because **Docker writes its iptables rules
+  ahead of the host firewall** — a port published on `0.0.0.0` is reachable from
+  the LAN even when the firewall is configured to deny it.
+* **The AI runtime runs natively on the host**, not in the Compose topology: one
+  runtime per GPU. Reaching it from a container needs two settings, not one — see
+  `06`, Privacy & Provider Selection.
+* **Deployment is triggered by a release tag** and delivered over the node's
+  existing private-network membership; the node exposes nothing to the internet
+  (`11`). Migrations apply at container startup, so a release is the unit of both
+  deployment and rollback.
+* **Backups follow a fixed order — database dump first, blobs second.** A
+  document created between the two leaves an orphaned blob, which is harmless;
+  the reverse order produces a dump referencing a `StorageKey` whose bytes were
+  never copied, which is a silently broken restore (`04`).
 
 ## Health & Readiness
 
 * Liveness and readiness endpoints (`04`); readiness verifies DB and storage
   reachability before a replica receives traffic.
+* The api image carries a container `HEALTHCHECK` against `/health/ready`, so an
+  orchestrator can distinguish a started process from a serving one — without it
+  a container looping on a failed migration reports as up. Deployment waits on
+  that health state rather than on the exit status of the start command.
 
 ---
 
@@ -159,5 +192,11 @@ Distinct values per environment; all secrets rotatable without rebuilding images
 * Container orchestration target for production (Compose vs Kubernetes) at the
   SaaS phase.
 * Backup automation and retention specifics for managed services.
+* Off-node backup destination for the V1 deployment: the current backup target is
+  a second disk in the same chassis, which protects against neither theft, fire,
+  nor a power event that takes the disks together (OPS-M2).
+* Production observability sink: the api exports OTLP unconditionally (ADR-013),
+  but the Aspire dashboard is a local-only viewer that no real environment ships.
+  Where production telemetry lands is undecided (OPS-M2).
 
 ---

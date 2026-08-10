@@ -51,6 +51,9 @@ dotnet run --project src/Clients/Filer.Web
 # Tests (les projets de test vivent sous tests/ — cf. 10-solution-structure.md)
 dotnet test
 
+# Déploiement mono-nœud auto-hébergé : contrat + runbook dans deploy/README.md
+# (image publiée sur GHCR par la CI, tag figé côté serveur — ADR-018)
+
 # Nouvelle migration EF (le module Auth possède ses migrations)
 dotnet ef migrations add <Name> \
   --project src/Modules/Auth/Filer.Modules.Auth \
