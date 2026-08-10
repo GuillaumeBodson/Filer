@@ -15,7 +15,7 @@ Each ticket carries acceptance criteria drawn from the docs — ownership→404
 | `create-github-issues.sh` | Creates all labels, milestones, and 45 **backend** issues via the `gh` CLI. |
 | `issues.csv` | The same 45 backend tickets as a spreadsheet (Title, Milestone, Labels, Body). |
 | `create-frontend-issues.sh` | Creates the `module:web` label, 3 frontend milestones, and 16 **frontend** issues. |
-| `create-ops-issues.sh` | Creates 2 `OPS-M*` milestones and 15 **deployment/operations** issues. |
+| `create-ops-issues.sh` | Creates 2 `OPS-M*` milestones and 13 **deployment/operations** issues. |
 | `README-backlog.md` | This file. |
 
 ## What gets created
@@ -75,7 +75,7 @@ Prerequisites: [`gh`](https://cli.github.com/) installed and authenticated (`gh 
 # from the repo root (auto-detects the repo)
 bash "project documents/backlog/create-github-issues.sh"      # 45 backend issues
 bash "project documents/backlog/create-frontend-issues.sh"    # 16 frontend issues
-bash "project documents/backlog/create-ops-issues.sh"         # 15 ops issues
+bash "project documents/backlog/create-ops-issues.sh"         # 13 ops issues
 
 # or target an explicit repo
 REPO=GuillaumeBodson/Filer bash "project documents/backlog/create-github-issues.sh"
@@ -94,19 +94,37 @@ running a script twice creates duplicates. Run each once.
 issues (the board's *+ Add item* accepts `#` search, or filter by `is:issue is:open`).
 Group the board by **Milestone** to see the phases, or by **module:** label to see workstreams.
 
-**CLI (optional):** Projects v2 lives at the user/org level.
+**Keep it filled automatically:** in the project, *⋯ → Workflows → Auto-add to
+project* with filter `is:issue,is:open`. Every issue created afterwards lands on
+the board on its own — which is what a generator script should rely on instead of
+wiring the board itself. It applies only to items created *after* it is enabled,
+so an existing backlog still needs one bulk add.
+
+**CLI (optional):** Projects v2 lives at the user/org level, so it needs a token
+scope the repo work does not: `gh auth refresh -s project`.
+
+> ⚠️ **`gh project item-add` can exit 0 without adding anything** (observed
+> 2026-08-11 against this project: the command succeeded silently, the item count
+> never moved). Do not trust its exit code in a loop — verify with
+> `gh project item-list`, or call the API, which reports real errors:
 
 ```bash
 OWNER=GuillaumeBodson
-gh project create --owner "$OWNER" --title "Filer V1"
-# note the returned project number, then add issues:
-gh project item-add <NUMBER> --owner "$OWNER" --url https://github.com/$OWNER/Filer/issues/1
-# ...repeat per issue, or script a loop over `gh issue list --json url -q '.[].url'`
+PID=$(gh api graphql -f query="{user(login:\"$OWNER\"){projectV2(number:11){id}}}" \
+        --jq '.data.user.projectV2.id')
+
+gh issue list --milestone "<milestone title or number>" --state open --limit 100 \
+     --json number --jq '.[].number' |
+while read -r n; do
+  IID=$(gh api "repos/$OWNER/Filer/issues/$n" --jq .node_id)
+  gh api graphql -f query="mutation{addProjectV2ItemById(input:{projectId:\"$PID\" contentId:\"$IID\"}){item{id}}}"
+done
 ```
 
-Recommended board setup: **group by Milestone** (your phases become swimlanes),
-filter chips per `module:` label, and let the epics act as tracking issues —
-tick their checklist as the child slices close.
+Recommended board setup: **group by Milestone** — the `M*`, `FE-M*` and `OPS-M*`
+tracks become visible as separate swimlanes — filter chips per `module:` label,
+and let the epics act as tracking issues, ticking their checklist as the child
+slices close.
 
 ## Notes / decisions to make first
 
