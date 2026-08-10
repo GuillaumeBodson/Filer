@@ -72,7 +72,9 @@ jobs:
       # nothing else, so a leaked OAuth secret buys an SSH attempt against one
       # machine — not tailnet-wide access. The node is reaped when the job ends.
       - name: Join the tailnet
-        uses: tailscale/github-action@v3
+        # v4 is a JavaScript rewrite (v3 shelled out); the three inputs used
+        # here are unchanged, and it is the first major to run on Node 24.
+        uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
