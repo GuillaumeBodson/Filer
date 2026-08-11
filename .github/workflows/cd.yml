@@ -34,6 +34,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
 
+    # contents: write is for the `deployed` marker tag in the last step — the
+    # only thing this workflow writes to the repository.
+    permissions:
+      contents: write
+
     # The box is a home server on Wi-Fi and is sometimes simply off. Fail fast
     # and legibly rather than holding a runner for six hours.
     timeout-minutes: 20
@@ -67,7 +72,9 @@ jobs:
       # nothing else, so a leaked OAuth secret buys an SSH attempt against one
       # machine — not tailnet-wide access. The node is reaped when the job ends.
       - name: Join the tailnet
-        uses: tailscale/github-action@v3
+        # v4 is a JavaScript rewrite (v3 shelled out); the three inputs used
+        # here are unchanged, and it is the first major to run on Node 24.
+        uses: tailscale/github-action@v4
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
@@ -120,11 +127,49 @@ jobs:
             exit 1
           EOF
 
+      # Move the `deployed` marker to the commit the running image was built
+      # from, so `git log deployed` and `git diff deployed..main` answer "what is
+      # live" and "what is pending" without shell access to the node (#264).
+      #
+      # The commit comes from the **image's** OCI revision label, not from the
+      # workflow trigger: on a manual rollback the two disagree, and the artifact
+      # is the one telling the truth about what is running.
+      #
+      # This runs only after readiness passed — the marker is derived from a
+      # successful deploy, never a cause of one. That is the whole reason it is a
+      # tag and not a deploy branch (`11-git-workflow.md`).
+      - name: Move the `deployed` marker
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REV=$(docker buildx imagetools inspect "${IMAGE}:${TAG}" \
+                  --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
+
+          # Anything but a full 40-char sha means the label is missing or the
+          # format changed. Warn and leave the marker alone: a marker pointing
+          # somewhere wrong is worse than one that is merely stale.
+          case "$REV" in
+            ????????????????????????????????????????) ;;
+            *) echo "::warning::No usable revision label on ${IMAGE}:${TAG} (got '${REV}') — marker not moved"; exit 0 ;;
+          esac
+
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/deployed" \
+                 -f sha="$REV" -F force=true >/dev/null 2>&1 \
+            || gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+                 -f ref="refs/tags/deployed" -f sha="$REV" >/dev/null
+          echo "::notice::deployed -> ${REV}"
+          echo "DEPLOYED_REV=${REV}" >> "$GITHUB_ENV"
+
       - name: Summary
         if: always()
         run: |
-          echo "### Deploy \`${TAG}\` — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Image: \`${IMAGE}:${TAG}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "To roll back: re-run this workflow with the previous tag." >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Deploy \`${TAG}\` — ${{ job.status }}"
+            echo ""
+            echo "Image: \`${IMAGE}:${TAG}\`"
+            if [ -n "${DEPLOYED_REV:-}" ]; then
+              echo "Commit: \`${DEPLOYED_REV}\` (\`deployed\` marker moved)"
+            fi
+            echo ""
+            echo "To roll back: re-run this workflow with the previous tag."
+          } >> "$GITHUB_STEP_SUMMARY"

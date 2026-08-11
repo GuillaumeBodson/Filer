@@ -171,6 +171,32 @@ pinned in the node's `.env`, which is why no floating `latest` is published.
 Migrations apply at container startup, so a release carrying a bad migration
 needs a **restore**, not a re-pin — back up before deploying one (`04`).
 
+### The `deployed` marker
+
+After a successful deploy, `cd.yml` moves a lightweight **`deployed`** tag to the
+commit the running image was built from, so the repo can answer two questions
+without shell access to the node:
+
+```bash
+git fetch --tags
+git log -1 deployed          # what is live
+git diff deployed..main      # what is merged but not yet deployed
+```
+
+* **It is not a release tag.** It carries no version, is **force-moved** on every
+  deploy, and is excluded from the SemVer policy above. Only the annotated `v*`
+  tags are releases.
+* **It is derived, not authoritative.** The commit comes from the deployed
+  image's OCI revision label, so it stays correct on a rollback, where the
+  workflow ref and the running image disagree. It moves only after readiness
+  passes — it records a deploy, it never causes one. That distinction is why this
+  is a tag and not a long-running deploy branch, which would contradict the
+  trunk-based principle above and add a mutable ref that could ship code.
+* ⚠️ `git describe --tags` will consider it and can report `deployed` instead of
+  the nearest release. Plain `git describe` is unaffected (it considers only
+  annotated tags, and this one is lightweight by design) — prefer it, or pass
+  `--match 'v*'`.
+
 ---
 
 ## Secrets & supply chain

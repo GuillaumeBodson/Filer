@@ -108,6 +108,24 @@ déploiement fautif, et le retour arrière est la seule manœuvre.
 > listes `ports`, donc le `8080:8080` du fichier de dev ressusciterait à côté du
 > `127.0.0.1:8080:8080` — republiant l'API, et PostgreSQL, sur `0.0.0.0`.
 
+### Savoir ce qui tourne, sans ouvrir de session
+
+Après un déploiement réussi, le workflow CD déplace un tag léger **`deployed`**
+sur le commit dont l'image déployée a été construite :
+
+```bash
+git fetch --tags
+git log -1 deployed          # ce qui tourne
+git diff deployed..main      # ce qui est mergé mais pas encore déployé
+```
+
+Le commit est lu sur l'**image** (label OCI `revision`), pas sur le déclencheur du
+workflow : après un retour arrière, les deux divergent et c'est l'image qui dit
+vrai. Le tag est déplacé **après** la vérification de santé — il constate un
+déploiement, il n'en provoque jamais. Ce n'est pas un tag de version : il est
+forcé à chaque déploiement, et seuls les `v*` annotés sont des releases
+(cf. `11-git-workflow.md`).
+
 ### Revenir en arrière
 
 C'est pour cela que `FILER_IMAGE_TAG` est figé et jamais `latest` :
