@@ -155,6 +155,11 @@ deployment**. Publishing `v*` runs the full CI pipeline, publishes the image
 under that version, and triggers `cd.yml`, which points the node at it and waits
 for the container to report healthy.
 
+What ships is the whole deployment, not just the image: `cd.yml` also writes the
+node's compose file from that same commit (#274), so a change to `deploy/` takes
+effect by being tagged like any other change — never by editing a file on the
+server, which the next deploy would silently overwrite.
+
 Two consequences of combining that with the per-milestone policy above:
 
 * **Deployment cadence is milestone cadence.** The node advances when a

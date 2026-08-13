@@ -22,6 +22,7 @@ Topologie et cycle de vie : `07-storage-and-deployment.md`.
 | | |
 |---|---|
 | Docker Engine + plugin Compose | dépôt officiel Docker, pas le paquet de la distribution |
+| `/srv/filer` **inscriptible par l'utilisateur de déploiement** | le CD y écrit le compose et le pin d'image, sans `sudo` |
 | `/srv/pgdata` | données PostgreSQL |
 | `/srv/data/filer/blobs` | blobs documents, **`chown 1654:1654`** |
 | `/srv/backup` | destination des sauvegardes |
@@ -65,10 +66,18 @@ sudo ufw reload
 
 ```bash
 sudo mkdir -p /srv/filer
-sudo cp docker-compose.prod.yml /srv/filer/
+sudo chown "$USER" /srv/filer           # le CD y écrit sans sudo
+sudo cp docker-compose.prod.yml /srv/filer/   # amorçage seulement — voir plus bas
 sudo cp .env.example            /srv/filer/.env
+sudo chown "$USER" /srv/filer/.env /srv/filer/docker-compose.prod.yml
 sudo chmod 600 /srv/filer/.env          # secrets en clair
 ```
+
+> Le `cp` du compose n'est qu'un **amorçage**, utile pour un premier démarrage à
+> la main. Ensuite le fichier est **écrit par le pipeline à chaque déploiement**,
+> depuis le commit dont l'image a été construite : ne pas l'éditer sur le
+> serveur, la modification serait écrasée au déploiement suivant — silencieusement
+> et sans erreur. Le seul fichier que le CD ne touche jamais est `.env`.
 
 Renseigner `/srv/filer/.env` :
 
@@ -85,7 +94,16 @@ correspondre à un modèle réellement tiré (`ollama list`).
 ## Déployer
 
 Le chemin normal est le workflow `cd.yml` : pousser un tag `v*` déclenche le
-déploiement. Manuellement, sur l'hôte :
+déploiement. Il livre **deux** choses issues du même commit — celui inscrit dans
+le label OCI `revision` de l'image :
+
+1. `docker-compose.prod.yml`, écrit sur le nœud depuis ce commit ;
+2. le pin `FILER_IMAGE_TAG` dans `.env`.
+
+Puis `pull`, `up -d`, et attente de l'état `healthy` du conteneur.
+
+Manuellement, sur l'hôte — chemin de secours (contrôle Tailscale indisponible,
+par exemple) :
 
 ```bash
 cd /srv/filer
@@ -94,6 +112,12 @@ docker compose -f docker-compose.prod.yml --env-file .env pull
 docker compose -f docker-compose.prod.yml --env-file .env up -d
 docker compose -f docker-compose.prod.yml --env-file .env ps      # attendre `healthy`
 ```
+
+> ⚠️ Ce chemin manuel ne déploie **que l'image** : il tourne avec le compose déjà
+> présent. Si la version visée en change un (nouveau service, nouveau digest
+> PostgreSQL, nouvelle variable), copier aussi le fichier depuis le dépôt à ce
+> commit. C'est précisément l'écart que le pipeline supprime (#274) — d'où la
+> préférence pour un `workflow_dispatch` plutôt que ces quatre lignes.
 
 Les migrations EF s'appliquent **au démarrage du conteneur** : il n'y a pas
 d'étape de migration séparée. Corollaire — une migration fautive est un
@@ -128,7 +152,11 @@ forcé à chaque déploiement, et seuls les `v*` annotés sont des releases
 
 ### Revenir en arrière
 
-C'est pour cela que `FILER_IMAGE_TAG` est figé et jamais `latest` :
+C'est pour cela que `FILER_IMAGE_TAG` est figé et jamais `latest`. Relancer
+`cd.yml` (`workflow_dispatch`) avec le tag précédent : il restaure l'image **et**
+le compose de ce commit, ce qui est le seul retour arrière complet.
+
+À la main, si le pipeline est indisponible :
 
 ```bash
 sed -i 's/^FILER_IMAGE_TAG=.*/FILER_IMAGE_TAG=<tag précédent>/' /srv/filer/.env
@@ -182,14 +210,14 @@ Dependabot surveille ce fichier et propose les montées de version en PR. Pour e
 appliquer une :
 
 ```bash
-sudo backup-filer                      # 1. sauvegarder AVANT (dump puis blobs)
-# 2. merger la PR Dependabot, puis déployer le tag correspondant
-cd /srv/filer
-docker compose -f docker-compose.prod.yml --env-file .env pull
-docker compose -f docker-compose.prod.yml --env-file .env up -d
-docker compose -f docker-compose.prod.yml --env-file .env ps       # attendre `healthy`
-docker exec filer-postgres postgres -V                              # 3. vérifier
+sudo backup-filer                                  # 1. sauvegarder AVANT (dump puis blobs)
+# 2. merger la PR Dependabot
+gh workflow run cd.yml -f tag=sha-<commit du merge> # 3. déployer : le compose part avec
+docker exec filer-postgres postgres -V             # 4. vérifier
 ```
+
+Le nouveau digest arrive **par le déploiement**, comme n'importe quel autre
+changement : il n'y a pas de copie manuelle du compose (#274).
 
 > 🔴 **Une version MAJEURE n'est pas un changement de digest.** Passer de
 > PostgreSQL 17 à 18 impose un dump/restore : le répertoire de données d'une
