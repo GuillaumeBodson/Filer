@@ -160,7 +160,8 @@ public sealed class OllamaAgenticAnalysisProvider(
             _ollama.Model,
             [new OllamaChatMessage("user", prompt)],
             Stream: false,
-            schema);
+            schema,
+            _ollama.Think);
 
         try
         {
@@ -398,11 +399,16 @@ public sealed class OllamaAgenticAnalysisProvider(
 
     // Ollama native /api/chat wire shapes. Internal to the adapter — they never
     // cross the provider seam (the Adapter pattern, 13).
+    // Same `think` handling as the plain adapter — and it matters more here: this
+    // variant makes two round trips per document, so a reasoning chain is paid twice.
     private sealed record OllamaChatRequest(
         [property: JsonPropertyName("model")] string Model,
         [property: JsonPropertyName("messages")] IReadOnlyList<OllamaChatMessage> Messages,
         [property: JsonPropertyName("stream")] bool Stream,
-        [property: JsonPropertyName("format")] JsonElement Format);
+        [property: JsonPropertyName("format")] JsonElement Format,
+        [property: JsonPropertyName("think")]
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        bool? Think);
 
     private sealed record OllamaChatMessage(
         [property: JsonPropertyName("role")] string Role,

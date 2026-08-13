@@ -181,6 +181,32 @@ public sealed class OllamaAgenticAnalysisProviderTests
         await act.Should().ThrowAsync<Exception>("an unparseable second-pass reply fails the run for retry");
     }
 
+    [Fact]
+    public async Task AnalyzeAsync_ByDefault_DisablesReasoningOnEveryPass()
+    {
+        var invoices = new ExistingFolder(Guid.NewGuid(), "Invoices");
+        DocumentAnalysisRequest request = Request(folders: [invoices]);
+        _lookup
+            .Setup(l => l.GetFolderSampleAsync(
+                request.OwnerId, invoices.Id, OllamaAgenticAnalysisProvider.FolderSampleSize, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(["facture-edf.pdf"]);
+        SequenceHandler handler = new(
+            CandidateReply(("invoices", 0.8)),
+            ConfirmationReply("invoices", 0.95));
+
+        await Provider(handler).AnalyzeAsync(request, TestContext.Current.CancellationToken);
+
+        handler.Bodies.Should().HaveCount(2, "this variant makes two round trips per document");
+        foreach (string body in handler.Bodies)
+        {
+            using JsonDocument parsed = JsonDocument.Parse(body);
+            parsed.RootElement.TryGetProperty("think", out JsonElement think)
+                .Should().BeTrue();
+            think.GetBoolean().Should().BeFalse(
+                "reasoning left on would be paid on both passes, not just one (#253)");
+        }
+    }
+
     private OllamaAgenticAnalysisProvider Provider(SequenceHandler handler)
     {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri(BaseUrl, UriKind.Absolute) };
@@ -251,6 +277,9 @@ public sealed class OllamaAgenticAnalysisProviderTests
 
         public List<string> Prompts { get; } = [];
 
+        /// <summary>Raw request bodies, for assertions about the wire shape rather than the prompt.</summary>
+        public List<string> Bodies { get; } = [];
+
         public void EnqueueRaw(HttpResponseMessage response) => _responses.Enqueue(response);
 
         protected override async Task<HttpResponseMessage> SendAsync(
@@ -261,6 +290,7 @@ public sealed class OllamaAgenticAnalysisProviderTests
             if (request.Content is not null)
             {
                 string body = await request.Content.ReadAsStringAsync(cancellationToken);
+                Bodies.Add(body);
                 using JsonDocument parsed = JsonDocument.Parse(body);
                 Prompts.Add(parsed.RootElement
                     .GetProperty("messages")[0]

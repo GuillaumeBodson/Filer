@@ -55,7 +55,8 @@ public sealed class OllamaAnalysisProvider(
             _ollama.Model,
             [new OllamaChatMessage("user", BuildPrompt(request))],
             Stream: false,
-            ResponseSchema);
+            ResponseSchema,
+            _ollama.Think);
 
         DocumentAnalysisResult result;
         try
@@ -284,11 +285,17 @@ public sealed class OllamaAnalysisProvider(
 
     // Ollama native /api/chat wire shapes. Internal to the adapter — they never
     // cross the provider seam (the Adapter pattern, 13).
+    // `think` is omitted when null so a runtime that rejects the field can still be
+    // driven; sending `false` is the default because a reasoning chain costs 10-30x
+    // the latency for output this adapter discards (OllamaOptions.Think).
     private sealed record OllamaChatRequest(
         [property: JsonPropertyName("model")] string Model,
         [property: JsonPropertyName("messages")] IReadOnlyList<OllamaChatMessage> Messages,
         [property: JsonPropertyName("stream")] bool Stream,
-        [property: JsonPropertyName("format")] JsonElement Format);
+        [property: JsonPropertyName("format")] JsonElement Format,
+        [property: JsonPropertyName("think")]
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        bool? Think);
 
     private sealed record OllamaChatMessage(
         [property: JsonPropertyName("role")] string Role,

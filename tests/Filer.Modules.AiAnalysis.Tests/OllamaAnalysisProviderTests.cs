@@ -99,6 +99,34 @@ public sealed class OllamaAnalysisProviderTests
     }
 
     [Fact]
+    public async Task AnalyzeAsync_ByDefault_DisablesModelReasoning()
+    {
+        StubHandler handler = RespondingWith(Reply("Work", 0.5, []));
+        OllamaAnalysisProvider provider = Provider(handler);
+
+        await provider.AnalyzeAsync(Request(folders: []), TestContext.Current.CancellationToken);
+
+        using JsonDocument body = JsonDocument.Parse(handler.LastRequestBody!);
+        body.RootElement.TryGetProperty("think", out JsonElement think)
+            .Should().BeTrue("a hybrid-reasoning model reasons unless told not to");
+        think.GetBoolean().Should().BeFalse(
+            "the reasoning chain is discarded by this adapter but costs 10-30x the latency (#253)");
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_WhenThinkNotConfigured_OmitsTheFieldEntirely()
+    {
+        StubHandler handler = RespondingWith(Reply("Work", 0.5, []));
+        OllamaAnalysisProvider provider = Provider(handler, think: null);
+
+        await provider.AnalyzeAsync(Request(folders: []), TestContext.Current.CancellationToken);
+
+        using JsonDocument body = JsonDocument.Parse(handler.LastRequestBody!);
+        body.RootElement.TryGetProperty("think", out _)
+            .Should().BeFalse("an explicit null omits the field, for a runtime that rejects it");
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_WithFolderTree_RendersTreeWithDocumentCountsInPrompt()
     {
         // #118: structural context — the prompt carries the owner's tree (children
@@ -179,13 +207,14 @@ public sealed class OllamaAnalysisProviderTests
             "providers honour cancellation mid-flight (06)");
     }
 
-    private static OllamaAnalysisProvider Provider(StubHandler handler, int maxPromptChars = 8_000)
+    private static OllamaAnalysisProvider Provider(
+        StubHandler handler, int maxPromptChars = 8_000, bool? think = false)
     {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri(BaseUrl, UriKind.Absolute) };
         var options = Options.Create(new AiAnalysisOptions
         {
             Provider = AiAnalysisOptions.OllamaProviderName,
-            Ollama = new OllamaOptions { MaxPromptChars = maxPromptChars },
+            Ollama = new OllamaOptions { MaxPromptChars = maxPromptChars, Think = think },
         });
 
         return new OllamaAnalysisProvider(httpClient, options, NullLogger<OllamaAnalysisProvider>.Instance);
