@@ -22,3 +22,20 @@ updates:
       day: monday
     commit-message:
       prefix: "chore(ci)"
+
+  # The production PostgreSQL image is pinned by digest (#272), so it can no
+  # longer drift into a deploy by accident - but a pin alone trades silent
+  # upgrades for silent staleness, which is worse on the container holding
+  # personal documents. Dependabot turns each bump into a PR to review and
+  # merge deliberately, with a backup taken first (deploy/README.md).
+  #
+  # Only /deploy is watched. The root docker-compose.yml is a development file
+  # and deliberately keeps a floating tag: there, a new postgres:17 breaking
+  # something should surface in a local run or CI, not on the server.
+  - package-ecosystem: docker-compose
+    directory: "/deploy"
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deploy)"
