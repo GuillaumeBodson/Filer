@@ -76,4 +76,20 @@ public sealed class OllamaOptions
     /// not a correctness limit; longer text is truncated (suggestions are advisory).
     /// </summary>
     public int MaxPromptChars { get; init; } = 8_000;
+
+    /// <summary>
+    /// Whether the model may emit a reasoning chain before its answer.
+    /// <para>
+    /// Defaults to <c>false</c>, and that default is load-bearing. A hybrid-reasoning
+    /// model (Qwen3, gpt-oss) reasons by default and produces up to ~1700 words of
+    /// thinking before the JSON — output classification discards. Measured on the
+    /// deployment node: <b>~3 s per document with reasoning off, 30–104 s with it on</b>.
+    /// </para>
+    /// <para>
+    /// Set to <c>null</c> to omit the field from the request entirely, for a runtime
+    /// that rejects it outright. <c>true</c> is available but has no known use here:
+    /// the reply is a small fixed schema, not an argument.
+    /// </para>
+    /// </summary>
+    public bool? Think { get; init; } = false;
 }

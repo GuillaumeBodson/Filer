@@ -188,6 +188,10 @@ two of them are actively harmful:
   chain of thought before the JSON, which classification does not use. Measured
   on the deployment node: **~3 s per document with reasoning off, 30–104 s with
   it on** — the difference between a usable queue and an unusable one.
+  The Ollama adapter sends `think: false` by default (`Ollama:Think`); setting
+  it to `null` omits the field for a runtime that rejects it. The agentic
+  variant carries the same setting — it makes two round trips, so a reasoning
+  chain is paid twice.
 * **The context window must be set, not assumed.** A runtime default below the
   adapter's own prompt budget (`MaxPromptChars`, plus the rendered folder tree)
   truncates silently: no error, just degraded suggestions.
