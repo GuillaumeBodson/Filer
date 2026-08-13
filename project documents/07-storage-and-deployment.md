@@ -154,6 +154,14 @@ states the procedure.
   to a container registry. The node never builds: it pulls a tag. The running
   version is a **pinned tag** in the host's `.env` — no floating `latest` is
   published — so that file records what is deployed and rollback is a re-pin.
+* **The orchestration is delivered with the image, from the same commit.** The
+  compose file on the node is written by the pipeline out of the revision the
+  image was built from; it is never edited in place. Image and composition are
+  two halves of one deployment, so "what is deployed" stays a single revision
+  and a rollback restores both. Left to be copied by hand, the composition
+  drifts from the repository silently — nothing compares them and the pipeline
+  still reports success. The host's `.env` is the deliberate exception: it holds
+  the secrets and the image pin, and no deploy overwrites it.
 * **The node supplies persistence, not application state**: bind mounts for the
   PostgreSQL data directory and the blob root, and a separate destination for
   backups. The blob root must be owned by the container's UID; the readiness

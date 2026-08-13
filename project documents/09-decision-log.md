@@ -1478,8 +1478,13 @@ through an ephemeral tailnet membership.**
   MAC addresses and LAN topology, and this repository is public.
 * **Delivery is `cd.yml`**, triggered by a `v*` release tag or dispatched
   manually for rollback. The runner joins the tailnet as a short-lived node
-  tagged `tag:ci`, reaches the host over Tailscale SSH, repins the tag, pulls,
-  and brings the stack up.
+  tagged `tag:ci`, reaches the host over Tailscale SSH, writes the compose file
+  and the tag pin, pulls, and brings the stack up.
+* **Both halves of a deployment come from one revision.** The commit is read
+  from the image's own OCI `revision` label — not from the workflow trigger,
+  which disagrees on a rollback — and that single value selects the compose file
+  delivered to the node *and* the commit the `deployed` marker lands on. The
+  host's `.env` is never delivered: it holds the secrets and the image pin.
 * **Success is the container healthcheck, not the exit status of `up -d`.** The
   api service gains a `HEALTHCHECK` against `/health/ready` — which already
   proves PostgreSQL reachability and a writable blob root (`04`) — and the
@@ -1522,6 +1527,23 @@ through an ephemeral tailnet membership.**
 * **Deployment is single-node with a restart gap.** `up -d` replaces the
   container; there is no zero-downtime story and V1 does not claim one (`04`:
   best-effort, no SLA).
+
+**Amended 2026-08-14 (#274).** As first implemented, `cd.yml` delivered only the
+image: it repinned the tag and ran `pull` / `up -d` against whatever compose file
+already sat on the node. The assets were versioned but not deployed — the
+PostgreSQL digest pin and the container healthcheck both reached the node by
+hand, and nothing ever compared the two. That failed this ADR's own claim that
+deployment needs no manual step, and it drifted invisibly: a deploy succeeded
+whatever the composition on the box said. The compose file is now written by the
+pipeline on every deploy, from the revision above.
+
+The orchestration is delivered **from the runner**, which checks out that
+revision, rather than from a clone kept on the node. A server-side clone was the
+obvious shape and the worse one — it is host state nobody tracks. The one that
+existed was shallow and half root-owned from an earlier `sudo git pull`, so that
+route would have needed a manual repair on the host before working once. The
+runner already has the repository; keeping the clone out of the path also keeps
+git off the server and out of the host contract.
 
 ---
 

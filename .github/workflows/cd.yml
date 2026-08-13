@@ -68,6 +68,55 @@ jobs:
           echo "::error::${IMAGE}:${TAG} never appeared. Did the CI build fail?"
           exit 1
 
+      # Resolve the commit the image was built from, once, and use it twice: it
+      # selects the compose file delivered to the node, and it is where the
+      # `deployed` marker lands. That single resolution is the point — image and
+      # orchestration are two halves of one deployment, and taking them from one
+      # revision is what makes it impossible for them to disagree (#274).
+      #
+      # The source is the **image's** OCI label, not the workflow trigger: on a
+      # rollback the two differ, and the artifact is the one telling the truth
+      # about what is about to run.
+      - name: Resolve the deployed commit
+        run: |
+          REV=$(docker buildx imagetools inspect "${IMAGE}:${TAG}" \
+                  --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
+
+          # Anything but a full sha means the label is missing or its format
+          # changed. Stop here rather than deploy an image whose orchestration
+          # cannot be identified: proceeding would silently reuse whatever
+          # compose file is on the box, which is the bug this step exists to
+          # close. Escape hatch, if ever needed during an incident: the manual
+          # rollback in deploy/README.md.
+          if ! printf '%s' "$REV" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::No usable org.opencontainers.image.revision label on ${IMAGE}:${TAG} (got '${REV}')"
+            exit 1
+          fi
+
+          echo "DEPLOY_REV=${REV}" >> "$GITHUB_ENV"
+          echo "::notice::${IMAGE}:${TAG} was built from ${REV}"
+
+      # The orchestration is delivered from the runner, checked out at the
+      # revision the image was built from — not fetched by the server from a
+      # clone kept on the box (#274).
+      #
+      # A server-side clone was the obvious alternative and is the worse one: it
+      # is host state nobody tracks. Checked on the live node, the existing one
+      # was shallow (so `checkout <sha>` fails) and half its files were root-
+      # owned from an earlier `sudo git pull` (so `fetch` fails on
+      # `.git/FETCH_HEAD`), meaning the fix would have needed a manual `sudo
+      # chown -R` before it worked once. Delivering from the runner has no such
+      # prerequisite, needs no git on the server, and drops `/srv/filer/app`
+      # from the host contract entirely.
+      - name: Check out the deployed revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.DEPLOY_REV }}
+          # Only deploy/ is needed, and only to be copied out — no history.
+          sparse-checkout: deploy
+          sparse-checkout-cone-mode: false
+          fetch-depth: 1
+
       # Ephemeral, tagged node: the ACL grants tag:ci SSH to the deploy host and
       # nothing else, so a leaked OAuth secret buys an SSH attempt against one
       # machine — not tailnet-wide access. The node is reaped when the job ends.
@@ -80,10 +129,26 @@ jobs:
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
 
+      # Upload beside the live file rather than over it: the swap happens in the
+      # next step, after the checksum matches. A connection dropped mid-transfer
+      # leaves a stray `.new`, never a truncated compose file.
+      #
       # Tailscale SSH: authentication is the tailnet identity governed by the
       # ACL, so no long-lived private key is stored in this public repo's
       # secrets. Revoking access is an ACL edit, not an SSH session to a box
       # that may be down.
+      - name: Upload the compose file
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        run: |
+          COMPOSE_SHA=$(sha256sum deploy/docker-compose.prod.yml | cut -d' ' -f1)
+          echo "COMPOSE_SHA=${COMPOSE_SHA}" >> "$GITHUB_ENV"
+
+          tailscale ssh "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "cat > /srv/filer/docker-compose.prod.yml.new" \
+            < deploy/docker-compose.prod.yml
+
       - name: Deploy
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
@@ -92,6 +157,32 @@ jobs:
           tailscale ssh "${DEPLOY_USER}@${DEPLOY_HOST}" bash -euo pipefail <<EOF
             cd /srv/filer
 
+            # Put the orchestration in place before anything else. The compose
+            # file now comes from the commit the image was built from, instead
+            # of being whatever happens to sit on the box (#274).
+            #
+            # Without this the deploy assets were versioned but not deployed:
+            # the PostgreSQL digest pin (#272) and the container healthcheck
+            # (#249) both reached the node by hand, and nothing compared the two
+            # afterwards. Deploys went green regardless — the worst shape of
+            # drift, where the repository says one thing and the server does
+            # another and no one is told.
+            echo '${COMPOSE_SHA}  docker-compose.prod.yml.new' | sha256sum -c -
+
+            if cmp -s docker-compose.prod.yml.new docker-compose.prod.yml; then
+              rm -f docker-compose.prod.yml.new
+              echo "compose file already matches ${DEPLOY_REV}"
+            else
+              # Same directory, so the rename is atomic: there is no instant at
+              # which a concurrent \`docker compose\` could read a partial file.
+              mv docker-compose.prod.yml.new docker-compose.prod.yml
+              echo "compose file updated to ${DEPLOY_REV}"
+            fi
+
+            # .env is deliberately never delivered: it holds the secrets and the
+            # image pin, it is not in the repository, and it is the one file on
+            # this box that must survive a deploy untouched.
+            #
             # Pin the tag first: .env is the record of what is deployed, and the
             # rollback path reads it. Writing it before the pull means a failed
             # pull leaves an obviously-wrong .env rather than a silent mismatch
@@ -131,9 +222,9 @@ jobs:
       # from, so `git log deployed` and `git diff deployed..main` answer "what is
       # live" and "what is pending" without shell access to the node (#264).
       #
-      # The commit comes from the **image's** OCI revision label, not from the
-      # workflow trigger: on a manual rollback the two disagree, and the artifact
-      # is the one telling the truth about what is running.
+      # Same revision that selected the compose file above — the marker now
+      # certifies the whole deployment, image and orchestration together, rather
+      # than the image alone.
       #
       # This runs only after readiness passed — the marker is derived from a
       # successful deploy, never a cause of one. That is the whole reason it is a
@@ -142,23 +233,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          REV=$(docker buildx imagetools inspect "${IMAGE}:${TAG}" \
-                  --format '{{ index .Image.Config.Labels "org.opencontainers.image.revision" }}' 2>/dev/null || true)
-
-          # Anything but a full 40-char sha means the label is missing or the
-          # format changed. Warn and leave the marker alone: a marker pointing
-          # somewhere wrong is worse than one that is merely stale.
-          case "$REV" in
-            ????????????????????????????????????????) ;;
-            *) echo "::warning::No usable revision label on ${IMAGE}:${TAG} (got '${REV}') — marker not moved"; exit 0 ;;
-          esac
-
           gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/deployed" \
-                 -f sha="$REV" -F force=true >/dev/null 2>&1 \
+                 -f sha="${DEPLOY_REV}" -F force=true >/dev/null 2>&1 \
             || gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" \
-                 -f ref="refs/tags/deployed" -f sha="$REV" >/dev/null
-          echo "::notice::deployed -> ${REV}"
-          echo "DEPLOYED_REV=${REV}" >> "$GITHUB_ENV"
+                 -f ref="refs/tags/deployed" -f sha="${DEPLOY_REV}" >/dev/null
+          echo "::notice::deployed -> ${DEPLOY_REV}"
+          echo "MARKER_MOVED=1" >> "$GITHUB_ENV"
 
       - name: Summary
         if: always()
@@ -167,8 +247,12 @@ jobs:
             echo "### Deploy \`${TAG}\` — ${{ job.status }}"
             echo ""
             echo "Image: \`${IMAGE}:${TAG}\`"
-            if [ -n "${DEPLOYED_REV:-}" ]; then
-              echo "Commit: \`${DEPLOYED_REV}\` (\`deployed\` marker moved)"
+            if [ -n "${DEPLOY_REV:-}" ]; then
+              echo "Commit: \`${DEPLOY_REV}\` — image and compose file both from this revision"
+            fi
+            if [ -n "${MARKER_MOVED:-}" ]; then
+              echo ""
+              echo "\`deployed\` marker moved."
             fi
             echo ""
             echo "To roll back: re-run this workflow with the previous tag."
