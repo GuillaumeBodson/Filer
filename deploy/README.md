@@ -167,6 +167,36 @@ seul :
 
 ## Exploitation courante
 
+### Mettre à jour PostgreSQL
+
+L'image PostgreSQL est **épinglée par digest** dans le compose (#272). Ce n'est
+pas de la coquetterie : sans digest, un `compose pull` déclenché par un
+déploiement applicatif quelconque met à jour la base **et recrée le conteneur**,
+au moment précis où l'attention est ailleurs. C'est arrivé le 2026-08-13.
+
+⚠️ Un tag de patch ne suffit pas. Les images officielles sont reconstruites quand
+la base Debian reçoit un correctif : `postgres:17` et `postgres:17.11` pointaient
+deux images différentes le même jour. Seul le digest fige.
+
+Dependabot surveille ce fichier et propose les montées de version en PR. Pour en
+appliquer une :
+
+```bash
+sudo backup-filer                      # 1. sauvegarder AVANT (dump puis blobs)
+# 2. merger la PR Dependabot, puis déployer le tag correspondant
+cd /srv/filer
+docker compose -f docker-compose.prod.yml --env-file .env pull
+docker compose -f docker-compose.prod.yml --env-file .env up -d
+docker compose -f docker-compose.prod.yml --env-file .env ps       # attendre `healthy`
+docker exec filer-postgres postgres -V                              # 3. vérifier
+```
+
+> 🔴 **Une version MAJEURE n'est pas un changement de digest.** Passer de
+> PostgreSQL 17 à 18 impose un dump/restore : le répertoire de données d'une
+> majeure n'est pas lisible par la suivante. Éditer le tag et redémarrer donne un
+> conteneur qui refuse de démarrer, dans le meilleur des cas. Restaurer depuis une
+> sauvegarde est alors la seule sortie — d'où l'étape 1, non négociable.
+
 ### Ports
 
 Rien n'est publié hors de la boucle locale, et c'est délibéré : **Docker écrit

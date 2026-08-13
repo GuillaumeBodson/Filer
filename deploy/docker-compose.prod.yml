@@ -26,7 +26,26 @@ name: filer
 
 services:
   postgres:
-    image: postgres:17
+    # Épinglé par digest (#272). Le tag n'est là que pour la lisibilité : Docker
+    # résout le digest et ignore le tag.
+    #
+    # Pourquoi pas `postgres:17`, ni même `postgres:17.11` : les deux **bougent**.
+    # Les images officielles sont reconstruites quand la base Debian reçoit un
+    # correctif, donc un tag de patch n'est pas figé non plus — vérifié le
+    # 2026-08-13, `17` et `17.11` pointaient alors deux images différentes.
+    # Sans digest, un `compose pull` fait au passage d'un déploiement applicatif
+    # met à jour PostgreSQL et **recrée le conteneur** : c'est exactement ce qui
+    # s'est produit lors du déploiement de sha-5a6b767.
+    #
+    # ⚠️ Épingler seul, c'est troquer la mise à jour silencieuse contre
+    # l'obsolescence silencieuse. Dependabot surveille ce fichier
+    # (.github/dependabot.yml, écosystème docker-compose) et propose les montées
+    # en version en PR — c'est la revue qui remplace le hasard, pas l'immobilisme.
+    #
+    # Montée de version : sauvegarder d'abord (dump puis blobs), changer le
+    # digest, déployer, vérifier. Une version **majeure** est une autre
+    # opération : dump/restore, jamais un simple changement de digest.
+    image: postgres:17@sha256:e42539a54ee3e82e21f19d7eded61b579869585f86b90b5e851ff0d3dd8b4001
     container_name: filer-postgres
     restart: unless-stopped
     environment:
