@@ -1537,12 +1537,25 @@ prompt per call — the production case, since every document is unique:
 | **Latency / document** | ~3.2 s | ~3.1 s |
 
 llama.cpp generates materially faster, but Filer's analysis output is ~100
-tokens, so the end-to-end gain is ~0.4 s per document. That does not justify the
-`OpenAiCompatibleAnalysisProvider` a switch would require, and **Ollama stays the
-runtime**. The question reopens if usage moves to long outputs — the agentic
-two-pass variant (#119), summarisation, verbose extraction — where a 36%
-generation gap compounds. Comparison, tuning traps, and the migration playbook:
-`deploy/choix-runtime-llm.md`.
+tokens, so the end-to-end gain is ~0.4 s per document. **Ollama stays the
+runtime** — that measurement does not force a switch. Comparison, tuning traps,
+and the migration playbook: `deploy/choix-runtime-llm.md`.
+
+**Amended 2026-08-13:** the `OpenAiCompatibleAnalysisProvider` is nonetheless
+**planned** (#268), sequenced after the two adapter defects below. Not on the
+strength of the benchmark, which still says the current gain is ~0.4 s/document,
+but for headroom and portability: the 36% generation gap compounds with output
+length, so RM-04 (chat), the agentic two-pass variant (#119) and any
+summarisation work would each make it material, and one adapter speaking
+`/v1/chat/completions` covers llama.cpp, vLLM, TGI, LM Studio *and* Ollama —
+ending the single-runtime dependency and making an A/B a config change.
+
+The adapter is **additive, never a replacement**: Ollama's `/v1` endpoint has no
+`think` field, so routing Ollama through OpenAI-compat would silently reintroduce
+the 10–30× regression the native adapter avoids. Reasoning suppression has no
+portable spelling — `chat_template_kwargs.enable_thinking` on llama-server and
+vLLM, `reasoning_effort` on gpt-oss — which is why the native Ollama provider
+stays the default.
 
 The measurement also surfaced a defect in the shipped adapter, independent of any
 runtime choice: **`OllamaChatRequest` sends no `think` field**, so a

@@ -12,7 +12,20 @@ bascule n'est justifiée **que si la mesure le prouve** au calibrage du stade 7.
 
 > ✅ **Mesuré le 2026-08-10 : on reste sur Ollama.** Le comparatif (section suivante) montre
 > que llama.cpp génère 36 % plus vite mais que l'avantage bout-en-bout est marginal (~0,4 s/doc)
-> pour la sortie courte de Filer. L'adaptateur OpenAI-compat n'est donc **pas** commandé.
+> pour la sortie courte de Filer. La mesure ne force donc pas la bascule.
+
+> 🔄 **Amendé le 2026-08-13 : l'adaptateur OpenAI-compat est planifié** (#268), séquencé
+> **après** les deux correctifs de l'adaptateur Ollama (#253 `think`, #254 `num_ctx`) — ceux-là
+> concernent ce qui tourne réellement en production.
+>
+> Le motif n'est pas le benchmark, qui reste valable : c'est la marge et la portabilité.
+> L'écart de 36 % en génération se cumule avec la longueur de sortie (RM-04 chat, variante
+> agentique #119, résumés), et un seul adaptateur `/v1/chat/completions` couvre llama.cpp,
+> vLLM, TGI, LM Studio **et** Ollama — le moteur devient une affaire de configuration.
+>
+> ⚠️ **Additif, jamais un remplacement.** Le `/v1` d'Ollama n'a pas de champ `think` :
+> y router Ollama réintroduirait silencieusement la régression ×10-30 que corrige #253.
+> L'adaptateur natif reste le provider par défaut.
 
 Si bascule il y a, elle passe par un **adaptateur OpenAI-compatible générique** côté Filer
 (pas un adaptateur `llama.cpp`-spécifique) — développé par l'équipe Filer. Cet adaptateur
