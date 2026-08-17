@@ -127,6 +127,51 @@ public sealed class OllamaAnalysisProviderTests
     }
 
     [Fact]
+    public async Task AnalyzeAsync_Always_SendsAnExplicitContextWindow()
+    {
+        StubHandler handler = RespondingWith(Reply("Work", 0.5, []));
+        OllamaAnalysisProvider provider = Provider(handler);
+
+        await provider.AnalyzeAsync(Request(folders: []), TestContext.Current.CancellationToken);
+
+        using JsonDocument body = JsonDocument.Parse(handler.LastRequestBody!);
+        body.RootElement.TryGetProperty("options", out JsonElement runtimeOptions)
+            .Should().BeTrue("the runtime default is 4096 tokens and overflowing it fails silently (#254)");
+        runtimeOptions.GetProperty("num_ctx").GetInt32().Should().Be(8_192);
+    }
+
+    [Fact]
+    public async Task AnalyzeAsync_WithPromptAtTheCap_StaysInsideTheConfiguredWindow()
+    {
+        // The failure this guards is silent — an over-budget prompt is truncated by
+        // the runtime with no error — so the worst case is asserted rather than
+        // assumed: text filling MaxPromptChars *and* a wide, deep folder tree.
+        var options = new OllamaOptions();
+        var root = new ExistingFolder(Guid.NewGuid(), "Root", ParentId: null, DocumentCount: 9);
+        List<ExistingFolder> folders =
+        [
+            root,
+            .. Enumerable.Range(0, 200).Select(index => new ExistingFolder(
+                Guid.NewGuid(), $"Folder with a fairly long name {index}", root.Id, DocumentCount: index)),
+        ];
+
+        StubHandler handler = RespondingWith(Reply("Root", 0.5, []));
+        OllamaAnalysisProvider provider = Provider(handler);
+
+        await provider.AnalyzeAsync(
+            Request(
+                text: new string('z', options.MaxPromptChars * 2),
+                folders: folders,
+                tags: [.. Enumerable.Range(0, 100).Select(index => $"tag-{index}")]),
+            TestContext.Current.CancellationToken);
+
+        int estimatedPromptTokens = handler.LastPrompt!.Length / OllamaOptions.EstimatedCharsPerToken;
+        estimatedPromptTokens.Should().BeLessThan(
+            options.ContextWindowTokens,
+            "a prompt at the cap must fit the window the adapter asks for, or the runtime truncates it silently");
+    }
+
+    [Fact]
     public async Task AnalyzeAsync_WithFolderTree_RendersTreeWithDocumentCountsInPrompt()
     {
         // #118: structural context — the prompt carries the owner's tree (children

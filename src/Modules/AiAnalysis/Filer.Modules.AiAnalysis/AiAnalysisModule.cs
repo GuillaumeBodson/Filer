@@ -91,6 +91,15 @@ public static class AiAnalysisModule
             .Validate(
                 options => options.Ollama.MaxPromptChars > 0,
                 "AiAnalysis:Ollama:MaxPromptChars must be positive.")
+            // The prompt budget and the window that has to hold it are one decision
+            // recorded in two settings, so raising either alone fails here rather
+            // than truncating the prompt silently at inference time (#254).
+            .Validate(
+                options => options.Ollama.ContextWindowTokens >= options.Ollama.MinimumContextWindowTokens,
+                "AiAnalysis:Ollama:ContextWindowTokens is too small for AiAnalysis:Ollama:MaxPromptChars. "
+                    + $"It must be at least MaxPromptChars / {OllamaOptions.EstimatedCharsPerToken} "
+                    + $"+ {OllamaOptions.ContextHeadroomTokens} tokens of headroom for the instructions, "
+                    + "the folder tree, the tag list and the reply — raise the window, or lower the prompt budget.")
             .ValidateOnStart();
 
         services.AddHttpClient<IAIAnalysisProvider, TProvider>((serviceProvider, client) =>

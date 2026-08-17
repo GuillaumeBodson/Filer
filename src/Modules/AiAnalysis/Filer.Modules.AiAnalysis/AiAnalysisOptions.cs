@@ -75,7 +75,50 @@ public sealed class OllamaOptions
     /// Upper bound on the document text placed in the prompt — a prompt-size guard,
     /// not a correctness limit; longer text is truncated (suggestions are advisory).
     /// </summary>
+    /// <remarks>
+    /// Bound to <see cref="ContextWindowTokens"/>: raising this without raising the
+    /// window fails validation rather than silently overflowing the context.
+    /// </remarks>
     public int MaxPromptChars { get; init; } = 8_000;
+
+    /// <summary>
+    /// Context window handed to the runtime as <c>options.num_ctx</c>.
+    /// <para>
+    /// Sent explicitly because the runtime default is small — 4096 tokens on
+    /// Ollama — and overflowing it is a <b>silent</b> failure: no error, no log,
+    /// just a truncated prompt and quietly worse suggestions (#254). A property of
+    /// the request, not of the deployment, so the adapter must carry it.
+    /// </para>
+    /// <para>
+    /// ⚠️ The window is not free: it sizes the KV cache, which occupies the same
+    /// VRAM as the model on a host where that is already the binding constraint.
+    /// Raise it because the prompt budget demands it, not for headroom's sake.
+    /// </para>
+    /// </summary>
+    public int ContextWindowTokens { get; init; } = 8_192;
+
+    /// <summary>
+    /// Conservative characters-per-token divisor for sizing the window. English
+    /// averages ~4; accented and non-Latin text tokenises worse, so 3 keeps the
+    /// estimate on the safe side of a limit whose breach is silent.
+    /// </summary>
+    public const int EstimatedCharsPerToken = 3;
+
+    /// <summary>
+    /// Tokens reserved beyond the document text: the instruction preamble, the
+    /// rendered folder tree with counts (#118), the existing tag list, and the
+    /// model's own reply — all of which share the window with the text.
+    /// </summary>
+    public const int ContextHeadroomTokens = 2_048;
+
+    /// <summary>
+    /// Smallest <see cref="ContextWindowTokens"/> consistent with
+    /// <see cref="MaxPromptChars"/>. Enforced at startup so the two cannot drift:
+    /// the prompt budget and the window that must hold it are one decision made in
+    /// two places.
+    /// </summary>
+    public int MinimumContextWindowTokens =>
+        (MaxPromptChars / EstimatedCharsPerToken) + ContextHeadroomTokens;
 
     /// <summary>
     /// Whether the model may emit a reasoning chain before its answer.

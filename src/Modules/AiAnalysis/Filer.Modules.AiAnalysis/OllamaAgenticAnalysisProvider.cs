@@ -161,7 +161,8 @@ public sealed class OllamaAgenticAnalysisProvider(
             [new OllamaChatMessage("user", prompt)],
             Stream: false,
             schema,
-            _ollama.Think);
+            _ollama.Think,
+            new OllamaRequestOptions(_ollama.ContextWindowTokens));
 
         try
         {
@@ -408,7 +409,13 @@ public sealed class OllamaAgenticAnalysisProvider(
         [property: JsonPropertyName("format")] JsonElement Format,
         [property: JsonPropertyName("think")]
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        bool? Think);
+        bool? Think,
+        [property: JsonPropertyName("options")] OllamaRequestOptions Options);
+
+    // Same `num_ctx` handling as the plain adapter. It binds harder here: the
+    // second pass carries the sampled folder contents on top of the same budget.
+    private sealed record OllamaRequestOptions(
+        [property: JsonPropertyName("num_ctx")] int NumCtx);
 
     private sealed record OllamaChatMessage(
         [property: JsonPropertyName("role")] string Role,

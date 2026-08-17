@@ -91,6 +91,35 @@ public sealed class AiAnalysisModuleTests
             "a misconfigured local provider must fail validation, not at first inference");
     }
 
+    [Fact]
+    public void AddAiAnalysisModule_WhenPromptBudgetOutgrowsContextWindow_FailsValidation()
+    {
+        // #254: the two settings are one decision. Raising the prompt budget alone
+        // would otherwise overflow the window, which the runtime resolves by
+        // truncating — no error, no log, just worse suggestions.
+        using ServiceProvider services = Build(new Dictionary<string, string?>
+        {
+            ["AiAnalysis:Provider"] = AiAnalysisOptions.OllamaProviderName,
+            ["AiAnalysis:Ollama:MaxPromptChars"] = "64000",
+        });
+
+        Action act = () => services.GetRequiredService<IAIAnalysisProvider>();
+
+        act.Should().Throw<OptionsValidationException>(
+                "raising one of the pair without the other must fail at composition")
+            .WithMessage("*ContextWindowTokens*MaxPromptChars*");
+    }
+
+    [Fact]
+    public void AddAiAnalysisModule_WithDefaultPromptBudget_HasAConsistentContextWindow()
+    {
+        var options = new OllamaOptions();
+
+        options.ContextWindowTokens.Should().BeGreaterThanOrEqualTo(
+            options.MinimumContextWindowTokens,
+            "the shipped defaults must satisfy the guard they are validated against");
+    }
+
     private static ServiceProvider Build(
         Dictionary<string, string?> settings, Action<ServiceCollection>? extraRegistrations = null)
     {

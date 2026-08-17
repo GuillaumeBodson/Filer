@@ -203,7 +203,14 @@ two of them are actively harmful:
   chain is paid twice.
 * **The context window must be set, not assumed.** A runtime default below the
   adapter's own prompt budget (`MaxPromptChars`, plus the rendered folder tree)
-  truncates silently: no error, just degraded suggestions.
+  truncates silently: no error, just degraded suggestions. The Ollama adapter
+  sends `options.num_ctx` on every request (`Ollama:ContextWindowTokens`,
+  default 8192 against Ollama's own default of 4096). The window and the prompt
+  budget are **one decision recorded in two settings**, so startup validation
+  rejects a window smaller than the budget needs — raising either alone fails
+  loudly instead of overflowing quietly. The cost of a larger window is KV-cache
+  memory, which competes with the model for the same VRAM: size it to the budget,
+  not to a comfortable round number.
 
 Both are properties of the *request*, not of the deployment, so a correct
 adapter carries them; neither can be fixed by configuring the host. Measurements
