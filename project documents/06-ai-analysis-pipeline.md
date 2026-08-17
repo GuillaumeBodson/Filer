@@ -116,6 +116,15 @@ public interface IAIAnalysisProvider
   publish failure is logged and swallowed) and no work is lost.
 * Workers are horizontally scalable independent of the API (`04`).
 * Job claiming must be safe under concurrency (no two workers run the same job).
+* **Under `Db` dispatch the poll interval, not the provider, dominates
+  end-to-end latency.** Nothing signals the worker that a job arrived, so a job
+  waits for whatever remains of the current sleep — uniform over
+  `[0, BackgroundJobs:PollInterval]`, a mean of half it. Measured on the
+  deployment node, inference takes ~2.1 s per document, which the original 5 s
+  interval more than doubled; the default is 1 s (#281). A floor of 100 ms is
+  enforced, because each poll is a claim query. This is the term RabbitMQ
+  dispatch removes outright, and the reason a faster runtime buys less than it
+  appears to at V1 volumes.
 
 ---
 

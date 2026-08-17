@@ -5,13 +5,13 @@ using Xunit;
 namespace Filer.IntegrationTests.Infrastructure;
 
 /// <summary>
-/// Boots the real API host in-process against a real PostgreSQL 17 — the
+/// Boots the real API host in-process against a real PostgreSQL 18 — the
 /// integration layer mandated by 12-testing-strategy.md (no EF in-memory/SQLite).
 ///
 /// Postgres resolution mirrors both the strategy doc and the CI wiring:
 /// <list type="bullet">
 ///   <item>locally / dev: own an ephemeral container via Testcontainers, mirroring
-///   <c>docker-compose.yml</c> (postgres:17);</item>
+///   <c>docker-compose.yml</c> (postgres:18);</item>
 ///   <item>CI: when <c>ConnectionStrings__Postgres</c> is supplied (the Postgres
 ///   service in <c>.github/workflows/ci.yml</c>), reuse it instead of nesting a
 ///   container in the runner.</item>
@@ -47,7 +47,7 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
         string? external = Environment.GetEnvironmentVariable(ConnectionEnvVar);
         if (string.IsNullOrWhiteSpace(external))
         {
-            _postgres = new PostgreSqlBuilder("postgres:17")
+            _postgres = new PostgreSqlBuilder("postgres:18")
                 .Build();
         }
 
