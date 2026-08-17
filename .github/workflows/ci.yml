@@ -90,10 +90,14 @@ jobs:
       # Coverage is collected on every run (12-testing-strategy.md); the gate
       # below turns it into a failing threshold. Architecture tests
       # (Filer.Architecture.Tests) run in this same pass.
+      # MTP mode (global.json): xunit.v3 4.0.0 ships Microsoft.Testing.Platform 2.x,
+      # which dropped the VSTest bridge. Two consequences visible here: the solution
+      # is passed with --solution rather than positionally, and coverage comes from
+      # MTP's own extension instead of the "XPlat Code Coverage" VSTest collector.
       - name: Test
         run: >-
-          dotnet test Filer.slnx --configuration Release --no-build --verbosity normal
-          --collect:"XPlat Code Coverage" --results-directory ./TestResults
+          dotnet test --solution Filer.slnx --configuration Release --no-build --verbosity normal
+          --coverage --coverage-output-format cobertura --results-directory ./TestResults
 
       # Human-readable report (12-testing-strategy.md): HTML artifact + Markdown
       # into the job summary. Exclusions per doc 12: EF migrations, Program.cs
@@ -102,7 +106,7 @@ jobs:
         if: always()
         run: >-
           dotnet tool run reportgenerator
-          -reports:./TestResults/**/coverage.cobertura.xml
+          -reports:./TestResults/**/*.cobertura.xml
           -targetdir:./CoverageReport
           "-reporttypes:Html;JsonSummary;MarkdownSummaryGithub"
           "-classfilters:-*.Migrations.*"

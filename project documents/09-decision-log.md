@@ -1262,6 +1262,33 @@ component-test layer. This entry ratifies the set.
 * **NSubstitute** — equivalent capability to Moq; no reason to switch an
   established suite.
 
+### Update 2026-08-17 — the runner moved to Microsoft.Testing.Platform
+
+`xunit.v3` **4.0.0** ships Microsoft.Testing.Platform 2.x, which **removed the
+VSTest bridge** on the .NET 10 SDK. This is not a version bump that can be taken
+on its own: without the opt-in, every test project fails before a test runs with
+*"Testing with VSTest target is no longer supported by Microsoft.Testing.Platform
+on .NET 10 SDK and later"*.
+
+The library choices above are unchanged. What changed is the platform underneath:
+
+* **MTP mode is opted into in `global.json`** (`"test": { "runner":
+  "Microsoft.Testing.Platform" }`), the .NET 10 SDK mechanism. The older
+  `TestingPlatformDotnetTestSupport` property is *not* an alternative — it drives
+  the VSTest bridge, which is precisely what MTP 2.x removed.
+* **Coverage changed collector.** `coverlet.collector` was a VSTest data
+  collector driven by the "XPlat Code Coverage" collect option, which MTP does
+  not have; it is replaced by `Microsoft.Testing.Extensions.CodeCoverage`,
+  driven by the coverage switch of `dotnet test`. The output is still Cobertura,
+  so ReportGenerator and `build/coverage-gate.ps1` keep working on the same
+  input — only the glob changed.
+* **A solution is passed as `--solution`**, not positionally, in MTP mode.
+
+The alternative was to pin `xunit.v3` to 3.x and ignore the major, as is done for
+PostgreSQL majors (`.github/dependabot.yml`). Rejected: 3.x is a dead end, the
+migration is mechanical and fully covered by the existing suite, and staying
+current on the test platform costs nothing once done.
+
 ---
 
 ## ADR-016 — Frontend design system: hand-rolled CSS on design tokens, no component library

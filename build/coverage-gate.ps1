@@ -3,9 +3,11 @@
 # reproducible locally, unlike changed-module diff detection. Runs on Windows
 # PowerShell 5.1 and pwsh (CI uses pwsh on ubuntu).
 #
-# Local usage (after a coverage run):
-#   dotnet test Filer.slnx -c Release --collect:"XPlat Code Coverage" --results-directory ./TestResults
-#   dotnet tool run reportgenerator -reports:./TestResults/**/coverage.cobertura.xml `
+# Local usage (after a coverage run). MTP mode (global.json) since xunit.v3 4.0.0:
+# the solution is passed with --solution, and coverage comes from MTP's extension
+# instead of the "XPlat Code Coverage" VSTest collector (ADR-015 update):
+#   dotnet test --solution Filer.slnx -c Release --coverage --coverage-output-format cobertura --results-directory ./TestResults
+#   dotnet tool run reportgenerator -reports:./TestResults/**/*.cobertura.xml `
 #     -targetdir:./CoverageReport "-reporttypes:JsonSummary" "-classfilters:-*.Migrations.*" `
 #     "-filefilters:-**/Program.cs;-**/*.g.cs"
 #   ./build/coverage-gate.ps1
