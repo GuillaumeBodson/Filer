@@ -2,7 +2,7 @@
 # The walking skeleton proves host + auth + persistence wire together (10-solution-structure.md).
 services:
   postgres:
-    image: postgres:17
+    image: postgres:18
     container_name: filer-postgres
     environment:
       POSTGRES_DB: filer
@@ -11,7 +11,13 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - filer-pgdata:/var/lib/postgresql/data
+      # Mount one level above /data: from 18 on, the image stores the cluster in
+      # a version-specific subdirectory (/var/lib/postgresql/18/docker) and
+      # declares its VOLUME at /var/lib/postgresql. A mount left on
+      # .../data makes 18 refuse to start ("unused mount/volume").
+      # Existing local volume from 17: `docker compose down -v` once - dev data
+      # is disposable, the schema is recreated by the startup migrations.
+      - filer-pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U filer -d filer"]
       interval: 5s

@@ -177,7 +177,7 @@ The `build-test` job (`.github/workflows/ci.yml`) runs, in order:
 `tool restore` → **Kiota drift gate** → `restore` → `build` (Release,
 warnings-as-errors) → `test` with coverage collection → coverage report
 (ReportGenerator) → **coverage gate** (`build/coverage-gate.ps1`, thresholds
-above). The PostgreSQL 17 service already present in CI backs the integration
+above). The PostgreSQL 18 service already present in CI backs the integration
 tests; `Filer.Architecture.Tests` run in the same pass. The frontend is covered
 in this same pass: building `Filer.slnx` compiles the Blazor WASM host
 (`Filer.Web`) and the shared RCL (`Filer.Ui`) under warnings-as-errors, and
