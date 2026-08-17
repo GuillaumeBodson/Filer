@@ -206,8 +206,10 @@ au moment précis où l'attention est ailleurs. C'est arrivé le 2026-08-13.
 la base Debian reçoit un correctif : `postgres:17` et `postgres:17.11` pointaient
 deux images différentes le même jour. Seul le digest fige.
 
-Dependabot surveille ce fichier et propose les montées de version en PR. Pour en
-appliquer une :
+Dependabot surveille ce fichier et propose les montées de version en PR — les
+**mineures et correctifs** seulement : les majeures y sont ignorées
+(`.github/dependabot.yml`), pour la raison expliquée plus bas. Pour appliquer une
+montée mineure :
 
 ```bash
 sudo backup-filer                                  # 1. sauvegarder AVANT (dump puis blobs)
@@ -219,11 +221,68 @@ docker exec filer-postgres postgres -V             # 4. vérifier
 Le nouveau digest arrive **par le déploiement**, comme n'importe quel autre
 changement : il n'y a pas de copie manuelle du compose (#274).
 
-> 🔴 **Une version MAJEURE n'est pas un changement de digest.** Passer de
-> PostgreSQL 17 à 18 impose un dump/restore : le répertoire de données d'une
-> majeure n'est pas lisible par la suivante. Éditer le tag et redémarrer donne un
-> conteneur qui refuse de démarrer, dans le meilleur des cas. Restaurer depuis une
-> sauvegarde est alors la seule sortie — d'où l'étape 1, non négociable.
+### Changer de version MAJEURE de PostgreSQL
+
+> 🔴 **Une majeure n'est pas un changement de digest.** Le répertoire de données
+> d'une majeure n'est pas lisible par la suivante. Mesuré sur la 17→18 avant de
+> la faire : le conteneur refuse de démarrer — `FATAL: database files are
+> incompatible with server` — et boucle en `restarting` sous `restart:
+> unless-stopped`. Le healthcheck ne passe jamais `healthy`, donc `filer.api`,
+> qui en dépend (`condition: service_healthy`), ne démarre pas non plus : le
+> service entier est à terre. Les données, elles, ne sont **pas** détruites.
+
+Deux choses changent en même temps, et il faut les faire dans cet ordre — le
+cluster sur le serveur d'abord, le dépôt ensuite. Une compose qui décrit une
+18 alors que `/srv/pgdata` est encore en 17 est un piège armé : il se déclenchera
+au prochain déploiement applicatif, puisque la compose part avec chaque déploiement
+(#274).
+
+**1. Le serveur** (fenêtre de coupure). Avec des données à conserver, c'est un
+dump/restore ; le dump se fait avec le client de la version **cible**, pas de la
+version en place :
+
+```bash
+sudo backup-filer                                                   # dump + blobs
+cd /srv/filer
+docker compose -f docker-compose.prod.yml --env-file .env stop filer.api
+docker run --rm --network filer_default -e PGPASSWORD="$POSTGRES_PASSWORD" \
+  postgres:<majeure cible> pg_dump -h postgres -U "$POSTGRES_USER" \
+  -d "$POSTGRES_DB" -Fc > /srv/backup/filer/pre-<majeure>.dump
+docker compose -f docker-compose.prod.yml --env-file .env down
+sudo mv /srv/pgdata /srv/pgdata.<majeure sortante>   # `mv`, pas `rm` : c'est le retour arrière
+sudo mkdir /srv/pgdata
+```
+
+Si les données sont jetables, tout ce bloc se réduit au `down`, au `mv` et au
+`mkdir` — et il faut alors vider aussi `/srv/data/filer/blobs`, dont les fichiers
+ne seraient plus référencés par aucune ligne :
+
+```bash
+sudo rm -rf /srv/data/filer/blobs && sudo mkdir -p /srv/data/filer/blobs
+sudo chown 1654:1654 /srv/data/filer/blobs           # UID du conteneur (cf. compose)
+```
+
+**2. Le dépôt puis le déploiement.** Merger la PR qui porte le digest *et* la
+disposition des volumes (elle change d'une majeure à l'autre — voir les
+commentaires du compose), puis :
+
+```bash
+gh workflow run cd.yml -f tag=<le tag déjà dans .env>
+docker exec filer-postgres postgres -V               # vérifier la version servie
+```
+
+`initdb` crée le cluster neuf, l'API applique ses migrations au démarrage. Avec
+un dump à restaurer, l'insérer entre le `up -d postgres` et le reste :
+
+```bash
+docker run --rm --network filer_default -i -e PGPASSWORD="$POSTGRES_PASSWORD" \
+  postgres:<majeure cible> pg_restore -h postgres -U "$POSTGRES_USER" \
+  -d "$POSTGRES_DB" --no-owner < /srv/backup/filer/pre-<majeure>.dump
+```
+
+**Retour arrière** : revert de la PR, `mv /srv/pgdata.<majeure sortante>
+/srv/pgdata`, redéployer. Supprimer l'ancien répertoire seulement après quelques
+jours de fonctionnement sur la nouvelle majeure.
 
 ### Ports
 

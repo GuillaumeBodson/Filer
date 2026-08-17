@@ -148,10 +148,14 @@ test obligations:
 
 Coverage is a signal, not a target to game. The rules:
 
-* **Line + branch coverage is collected on every CI run** (`coverlet` via
-  `dotnet test --collect:"XPlat Code Coverage"`), and a human-readable report is
+* **Line + branch coverage is collected on every CI run**
+  (`Microsoft.Testing.Extensions.CodeCoverage` via `dotnet test --coverage
+  --coverage-output-format cobertura`), and a human-readable report is
   produced as a build artifact (`coverage-report`, ReportGenerator HTML) plus a
-  Markdown summary on the job page.
+  Markdown summary on the job page. The collector changed with xunit.v3 4.0.0
+  (ADR-015 update): coverlet's was a VSTest data collector, and MTP has no
+  VSTest bridge. The format is still Cobertura, so the report and the gate below
+  are unaffected.
 * **Gate (live, #61):** the `build-test` check fails if **any** gated assembly is
   below **80% line / 70% branch**. Gated per assembly on *every* run — not by
   diff-detecting "changed" modules, which is fragile and not reproducible
@@ -177,7 +181,7 @@ The `build-test` job (`.github/workflows/ci.yml`) runs, in order:
 `tool restore` → **Kiota drift gate** → `restore` → `build` (Release,
 warnings-as-errors) → `test` with coverage collection → coverage report
 (ReportGenerator) → **coverage gate** (`build/coverage-gate.ps1`, thresholds
-above). The PostgreSQL 17 service already present in CI backs the integration
+above). The PostgreSQL 18 service already present in CI backs the integration
 tests; `Filer.Architecture.Tests` run in the same pass. The frontend is covered
 in this same pass: building `Filer.slnx` compiles the Blazor WASM host
 (`Filer.Web`) and the shared RCL (`Filer.Ui`) under warnings-as-errors, and

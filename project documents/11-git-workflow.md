@@ -86,7 +86,7 @@ Every change lands through a PR, even though there is one developer.
 `dotnet tool restore` → **Kiota client drift gate** → `dotnet restore` →
 `dotnet build` (Release, warnings-as-errors) → `dotnet test` with coverage →
 coverage report + **coverage gate** (80% line / 70% branch per module,
-`build/coverage-gate.ps1` — thresholds and scope in `12`). A PostgreSQL 17
+`build/coverage-gate.ps1` — thresholds and scope in `12`). A PostgreSQL 18
 service mirrors `docker-compose.yml` so integration tests can run against a real
 database; `Filer.Architecture.Tests` enforce module boundaries in the same run.
 The build/test pass also covers the frontend — the Blazor WASM host and shared
