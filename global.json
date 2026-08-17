@@ -1,0 +1,6 @@
+{
+  "//": "MTP mode for `dotnet test` (.NET 10 SDK). xunit.v3 4.0.0 ships Microsoft.Testing.Platform 2.x, which removed the VSTest bridge: without this opt-in every test project fails with 'Testing with VSTest target is no longer supported'. See 12-testing-strategy.md.",
+  "test": {
+    "runner": "Microsoft.Testing.Platform"
+  }
+}
