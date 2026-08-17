@@ -45,7 +45,7 @@ services:
     # Montée de version : sauvegarder d'abord (dump puis blobs), changer le
     # digest, déployer, vérifier. Une version **majeure** est une autre
     # opération : dump/restore, jamais un simple changement de digest.
-    image: postgres:17@sha256:e42539a54ee3e82e21f19d7eded61b579869585f86b90b5e851ff0d3dd8b4001
+    image: postgres:18@sha256:06cad38a5d9f5d24b4d83d86def30795d5e4b757fedbf5281172b576dedcd941
     container_name: filer-postgres
     restart: unless-stopped
     environment:
