@@ -56,7 +56,8 @@ public sealed class OllamaAnalysisProvider(
             [new OllamaChatMessage("user", BuildPrompt(request))],
             Stream: false,
             ResponseSchema,
-            _ollama.Think);
+            _ollama.Think,
+            new OllamaRequestOptions(_ollama.ContextWindowTokens));
 
         DocumentAnalysisResult result;
         try
@@ -295,7 +296,14 @@ public sealed class OllamaAnalysisProvider(
         [property: JsonPropertyName("format")] JsonElement Format,
         [property: JsonPropertyName("think")]
         [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        bool? Think);
+        bool? Think,
+        [property: JsonPropertyName("options")] OllamaRequestOptions Options);
+
+    // Runtime options. `num_ctx` is always sent: the runtime default is 4096 and
+    // overflowing it truncates the prompt with no error at all (OllamaOptions
+    // .ContextWindowTokens).
+    private sealed record OllamaRequestOptions(
+        [property: JsonPropertyName("num_ctx")] int NumCtx);
 
     private sealed record OllamaChatMessage(
         [property: JsonPropertyName("role")] string Role,
