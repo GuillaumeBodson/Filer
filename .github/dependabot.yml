@@ -30,7 +30,7 @@ updates:
   # merge deliberately, with a backup taken first (deploy/README.md).
   #
   # Only /deploy is watched. The root docker-compose.yml is a development file
-  # and deliberately keeps a floating tag: there, a new postgres:17 breaking
+  # and deliberately keeps a floating tag: there, a new postgres:18 breaking
   # something should surface in a local run or CI, not on the server.
   - package-ecosystem: docker-compose
     directory: "/deploy"
@@ -39,3 +39,17 @@ updates:
       day: monday
     commit-message:
       prefix: "chore(deploy)"
+    ignore:
+      # A major is not a mergeable PR. The data directory of one major cannot be
+      # read by the next: PR #277 (17 -> 18) was verified to crash-loop the
+      # container on the existing cluster, taking filer.api down with it through
+      # `depends_on: service_healthy`. Landing it as a digest change would arm a
+      # trap that fires on whatever unrelated release deploys next, since the
+      # compose file now ships with every deploy (#276).
+      #
+      # A major upgrade is a planned operation with the data migrated by hand
+      # first (runbook: deploy/README.md); the digest bump is then written in
+      # that same PR. Patch and minor bumps - the reason this ecosystem is
+      # watched at all - keep flowing.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]

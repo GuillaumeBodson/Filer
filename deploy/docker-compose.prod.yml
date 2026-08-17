@@ -29,7 +29,7 @@ services:
     # Épinglé par digest (#272). Le tag n'est là que pour la lisibilité : Docker
     # résout le digest et ignore le tag.
     #
-    # Pourquoi pas `postgres:17`, ni même `postgres:17.11` : les deux **bougent**.
+    # Pourquoi pas `postgres:18`, ni même `postgres:18.6` : les deux **bougent**.
     # Les images officielles sont reconstruites quand la base Debian reçoit un
     # correctif, donc un tag de patch n'est pas figé non plus — vérifié le
     # 2026-08-13, `17` et `17.11` pointaient alors deux images différentes.
@@ -41,23 +41,38 @@ services:
     # l'obsolescence silencieuse. Dependabot surveille ce fichier
     # (.github/dependabot.yml, écosystème docker-compose) et propose les montées
     # en version en PR — c'est la revue qui remplace le hasard, pas l'immobilisme.
+    # Les **majeures** y sont ignorées : elles ne se mergent pas seules (voir
+    # juste en dessous), elles se planifient.
     #
     # Montée de version : sauvegarder d'abord (dump puis blobs), changer le
     # digest, déployer, vérifier. Une version **majeure** est une autre
-    # opération : dump/restore, jamais un simple changement de digest.
-    image: postgres:17@sha256:e42539a54ee3e82e21f19d7eded61b579869585f86b90b5e851ff0d3dd8b4001
+    # opération : le répertoire de données d'une majeure n'est pas lisible par la
+    # suivante. Vérifié sur la 17→18 (PR #277) : le conteneur refuse de démarrer
+    # (« database files are incompatible with server »), boucle en `restarting`,
+    # et entraîne filer.api avec lui via `depends_on: service_healthy`. Les
+    # données ne sont pas détruites, mais le service est à terre jusqu'au retour
+    # arrière. Runbook : deploy/README.md.
+    image: postgres:18@sha256:06cad38a5d9f5d24b4d83d86def30795d5e4b757fedbf5281172b576dedcd941
     container_name: filer-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB manquant}
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER manquant}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant}
-      # Sous-répertoire délibéré : si /srv/pgdata devient un jour un point de
-      # montage dédié, initdb refuse de démarrer sur un répertoire contenant
-      # lost+found. Pointer PGDATA un cran plus bas rend le montage indifférent.
-      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - /srv/pgdata:/var/lib/postgresql/data
+      # Depuis la 18, l'image range les données dans un sous-répertoire versionné
+      # (PGDATA par défaut : /var/lib/postgresql/18/docker) et déclare son VOLUME
+      # sur /var/lib/postgresql. Le montage se fait donc un cran plus haut qu'en
+      # 17, et il n'y a plus de PGDATA explicite à écrire :
+      #   - le sous-répertoire versionné joue le rôle que jouait l'ancien
+      #     `PGDATA: …/data/pgdata` — si /srv/pgdata devient un point de montage
+      #     dédié, initdb ne voit toujours pas son lost+found ;
+      #   - un montage resté sur /var/lib/postgresql/data ferait refuser le
+      #     démarrage (« unused mount/volume »), et sans PGDATA explicite les
+      #     données atterriraient hors du volume monté ;
+      #   - c'est la disposition qui rendra la 18→19 faisable en
+      #     `pg_upgrade --link` plutôt qu'en dump/restore.
+      - /srv/pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s

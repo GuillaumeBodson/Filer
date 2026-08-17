@@ -31,8 +31,9 @@ public static class BackgroundJobsModule
         services.AddOptions<BackgroundJobsOptions>()
             .Bind(configuration.GetSection(BackgroundJobsOptions.SectionName))
             .Validate(
-                options => options.PollInterval > TimeSpan.Zero,
-                "BackgroundJobs:PollInterval must be positive.")
+                options => options.PollInterval >= BackgroundJobsOptions.MinPollInterval,
+                $"BackgroundJobs:PollInterval must be at least {BackgroundJobsOptions.MinPollInterval.TotalMilliseconds} ms: "
+                    + "each poll is a claim query, and a shorter interval spins the database for latency no user perceives.")
             .Validate(
                 options => options.SweepInterval > TimeSpan.Zero,
                 "BackgroundJobs:SweepInterval must be positive.")

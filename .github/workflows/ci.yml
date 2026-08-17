@@ -27,7 +27,7 @@ jobs:
     # Architecture/unit tests ignore it; it costs nothing when unused.
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18
         env:
           POSTGRES_DB: filer
           POSTGRES_USER: filer

@@ -24,8 +24,28 @@ public sealed class BackgroundJobsOptions
     /// </summary>
     public QueueDispatch Queue { get; init; } = QueueDispatch.Db;
 
-    /// <summary>How long the worker sleeps when the queue is empty (Db dispatch).</summary>
-    public TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(5);
+    /// <summary>
+    /// How long the worker sleeps when the queue is empty (Db dispatch).
+    /// <para>
+    /// Nothing signals the worker that a job arrived, so this is the dominant
+    /// term in end-to-end analysis latency: a job waits for whatever remains of
+    /// the current sleep — uniform over <c>[0, PollInterval]</c>, so a mean of
+    /// half this value. Measured on the deployment node, inference itself takes
+    /// ~2.1 s, which the previous 5 s default more than doubled (#281).
+    /// </para>
+    /// <para>
+    /// The floor below which it is rejected is <see cref="MinPollInterval"/>;
+    /// removing the wait altogether is what RabbitMQ dispatch is for (ADR-008).
+    /// </para>
+    /// </summary>
+    public TimeSpan PollInterval { get; init; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Lower bound accepted for <see cref="PollInterval"/>. Each poll is a claim
+    /// query against PostgreSQL; a mistyped value like <c>00:00:00.001</c> would
+    /// spin the database for no latency gain the user could perceive.
+    /// </summary>
+    public static readonly TimeSpan MinPollInterval = TimeSpan.FromMilliseconds(100);
 
     /// <summary>
     /// Sweep cadence when RabbitMQ dispatch is active (ADR-008): the polling loop
