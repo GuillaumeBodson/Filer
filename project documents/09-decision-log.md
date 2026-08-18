@@ -1572,6 +1572,29 @@ route would have needed a manual repair on the host before working once. The
 runner already has the repository; keeping the clone out of the path also keeps
 git off the server and out of the host contract.
 
+### Update 2026-08-18 — closing a milestone is the release trigger
+
+The `v*` tag is no longer typed by hand: `milestone-release.yml` creates and
+pushes it — next minor on `main`, message = the milestone title — when the
+milestone is **closed on GitHub**. The deliberate human act the tagging policy
+demanded (`11`) is preserved; it moved from "push a tag" to "close the
+milestone", and the mechanical step between decision and node — the one that
+could be forgotten, mistyped, or postponed — is gone.
+
+Two constraints shaped the implementation:
+
+* **The push needs a real credential.** Refs pushed with the built-in workflow
+  token trigger no workflows (GitHub's recursion guard), so an automated tag
+  pushed that way would exist and deploy *nothing* — a release that looks made
+  and never shipped. A dedicated fine-grained PAT (`MILESTONE_TAG_TOKEN`, this
+  repository only, Contents read/write) carries the push; the workflow refuses
+  to run without it rather than half-succeed.
+* **Guard rails over trust in ceremony.** A milestone closed over open issues
+  is refused; a re-close (or a second milestone closing before anything new
+  merged) finds `main`'s head already tagged and releases nothing. The manual
+  `git tag -a … && git push` remains documented in `11` as the fallback when
+  the workflow is unavailable — same effect, same policy.
+
 ---
 
 ## Note - LLM runtime: Ollama stays, and reasoning must be switched off (#253, #254)

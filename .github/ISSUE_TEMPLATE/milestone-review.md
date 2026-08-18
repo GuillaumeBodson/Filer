@@ -51,6 +51,7 @@ Fix trivia inline in one cleanup PR; open separate issues for anything bigger.
 <!-- Link the cleanup PR and any follow-up issues opened. -->
 - Cleanup PR:
 - Follow-up issues:
-- [ ] Milestone tagged on the cleanup-PR merge commit — minor bump, message
-      names the milestone (`git tag -a v0.<next>.0 -m "<milestone title>"`,
-      then push the tag; policy in `11`)
+- [ ] Milestone closed on GitHub — **after** the cleanup PR merged, since
+      closing it tags the next minor on `main` and deploys it
+      (`milestone-release.yml`; policy in `11`)
+- [ ] CI + CD runs for the new tag verified green, `deployed` marker moved

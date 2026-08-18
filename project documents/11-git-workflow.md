@@ -131,11 +131,13 @@ This makes it impossible to push broken code straight to `main`.
 Policy adopted 2026-07-31; baseline **`v0.10.0`** = V1 scope complete
 (M1–M7 + FE-M1–FE-M3).
 
-* **One annotated tag per closed milestone**, on the merge commit of that
-  milestone's review/cleanup PR — the moment the milestone's code is fully on
-  `main`. Bump **minor** per milestone (`v0.11.0`, `v0.12.0`, …), whichever
-  track (M-x, FE-M-x or OPS-M-x) closes; tagging is a checkbox on the
-  milestone-review issue so it can't be forgotten.
+* **One annotated tag per closed milestone**, on the head of `main` once the
+  milestone's code — review/cleanup PR included — is fully merged. Bump
+  **minor** per milestone (`v0.11.0`, `v0.12.0`, …), whichever track (M-x,
+  FE-M-x or OPS-M-x) closes. The tag is **created by `milestone-release.yml`
+  when the milestone is closed on GitHub**: next minor, message = the milestone
+  title. It cannot be forgotten because it is no longer a separate act —
+  closing the milestone is the act.
 * Tag numbers do **not** mirror milestone numbers (the tracks close in
   arbitrary order). The mapping lives in the tag message:
   `git tag -a v0.11.0 -m "M8 — Bulk operations"`.
@@ -166,10 +168,16 @@ Two consequences of combining that with the per-milestone policy above:
   milestone closes, not when a PR merges — a deliberate consequence of tagging
   per milestone, not an accident of the pipeline. A fix that must reach the node
   sooner is exactly the **patch bump** the policy already allows.
-* **The tagging checkbox on the milestone-review issue is now also a deploy
-  trigger.** Ticking it ships. That is the intended coupling — a milestone is
-  not closed until its code is running — but it means the tag is no longer a
-  bookkeeping act that can be done absent-mindedly.
+* **Closing the milestone is the deploy trigger.** `milestone-release.yml`
+  derives the tag and pushes it; the push publishes the image and deploys, like
+  any hand-pushed tag. That is the intended coupling — a milestone is not
+  closed until its code is running — so a milestone is closed **only once
+  everything, review/cleanup PR included, is on `main`**. Guard rails: the
+  workflow refuses a milestone closed over open issues, and re-closing (or
+  closing a second milestone before anything new merged) does not re-release an
+  already-tagged head. The push uses a dedicated fine-grained PAT
+  (`MILESTONE_TAG_TOKEN`), because a tag pushed with the built-in workflow
+  token triggers no workflows — it would release nothing, silently.
 
 Rolling back is re-running `cd.yml` with an earlier tag; the deployed version is
 pinned in the node's `.env`, which is why no floating `latest` is published.
@@ -223,7 +231,10 @@ git diff deployed..main      # what is merged but not yet deployed
 * **Deployment credentials are scoped, not shared.** The CD workflow holds a
   private-network credential that can reach exactly one host on exactly one port,
   and no long-lived SSH key (ADR-018). Repository *variables* carry the deploy
-  host and user so the workflow file names neither.
+  host and user so the workflow file names neither. The milestone-release
+  workflow holds a fine-grained PAT (`MILESTONE_TAG_TOKEN` — this repository
+  only, Contents read/write, nothing else) whose sole job is pushing the release
+  tag; same philosophy, one capability per credential.
 * `.gitignore` excludes `appsettings.*.local.json`, `secrets.json`, `.env*`, and
   IDE/user files.
 * **Enable on GitHub:** Settings → Code security → secret scanning + push
@@ -248,6 +259,8 @@ gh pr create --title "feat(storage): add async upload endpoint" \
   --body "... Closes #77"
 # let CI run, squash-merge, delete branch, VERIFY #77 closed
 
-# Tag a milestone close (minor bump; message names the milestone)
+# Milestone close: closing the milestone on GitHub tags and deploys it
+# (milestone-release.yml). Manual fallback, same effect, if the workflow is
+# unavailable — minor bump, message names the milestone:
 git tag -a v0.11.0 -m "M8 — Bulk operations" && git push origin v0.11.0
 ```
