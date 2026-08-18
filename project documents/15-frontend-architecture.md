@@ -67,8 +67,13 @@ src/Clients/
 Dependency direction: `Filer.Web ──▶ Filer.Ui ──▶ Filer.ApiClient`. The RCL
 holds everything a future MAUI Blazor Hybrid shell (RM-02) would reuse;
 `Filer.Web` contains only what is browser-specific (localStorage token store,
-the WASM host, `index.html`). This boundary is compiler-enforced only —
-`Filer.Architecture.Tests` does not load client assemblies (`10`, open item).
+the WASM host, `index.html`). Since ADR-019 this boundary is asserted by
+`Filer.Architecture.Tests` — the host references `Filer.Web` to serve the
+published client from the api image (hosting only, no client type consumed),
+which puts the client assemblies in the tests' scanned closure (`10`). In
+production the client is therefore same-origin with the API: the `Production`
+configuration overlay blanks `FilerApi:BaseAddress` and `Program.cs` falls back
+to the origin the app was loaded from — no CORS surface exists.
 
 Platform notes that cost a debugging session each:
 

@@ -1639,3 +1639,88 @@ approach. Both were fixed under OPS-M1 — #253 (`think: false` by default) and
 #254 (`num_ctx` sent on every request, validated against the prompt budget);
 the resulting adapter contract is documented in `06`, "Model expectations".
 
+
+## ADR-019 — Web client hosting: served by the api image, exposed tailnet-only through a host reverse proxy
+
+* **Date:** 2026-08-18
+* **Status:** Accepted
+
+### Context
+
+FE-M1–FE-M3 shipped a working Blazor WASM client, and nothing deployed it: the
+production topology was `postgres` + `filer.api` on a loopback publication, and
+the client's hosting had been an open question in `07` rather than tracked work
+(#267). Deciding it forced a second decision that is easy to miss: the API is
+published on `127.0.0.1:8080` only — a browser cannot call an API it cannot
+reach — so choosing where the static assets are served from also fixes the
+node's **exposure boundary**, which today is deliberately "nothing".
+
+Three placements were on the table for the assets (api container, host reverse
+proxy serving files, separate origin), and two boundaries (LAN vs tailnet-only).
+Meanwhile the host was already going to run a reverse proxy for services beyond
+Filer, and the deploy pipeline's core invariant — image and orchestration are
+delivered from one revision, and a rollback restores both (ADR-018, #274) — was
+about to gain a third artifact.
+
+### Decision
+
+**The published WASM client rides in the api image and is served by the api
+container, same-origin. Exposure is tailnet-only, through a reverse proxy on the
+host (Caddy) that terminates HTTPS with the tailnet's certificates.**
+
+* `Filer.Api` references `Filer.Web` (hosting only — the host consumes no client
+  type): `dotnet publish` integrates the client's static assets, the container
+  serves them (`UseBlazorFrameworkFiles` + static files), and an SPA fallback
+  returns `index.html` for unmatched non-API routes. A catch-all keeps unknown
+  `/api/*` routes as problem-details 404s (`03`); neither endpoint enters the
+  OpenAPI document (ADR-011).
+* Deployed same-origin, the client's `Production` configuration blanks
+  `FilerApi:BaseAddress` and the client calls the origin it was loaded from. The
+  CORS machinery (#148) stays in place for genuinely-separate origins and stays
+  **off** in production.
+* The reverse proxy is **host configuration, not repository content**: the vhost
+  proxies everything to `127.0.0.1:8080` and is bound to the tailnet interface.
+  Its concrete Caddyfile lives with the host's other configuration (private
+  `homeserver` repository), because the proxy serves more than Filer. The repo's
+  deploy contract records only the requirement and the boundary.
+* The API's own publication does not widen: `127.0.0.1:8080`, unchanged.
+
+### Rationale
+
+* **One revision, one artifact, no third delivery path.** Assets in the image
+  extend ADR-018's invariant to the client for free: a deploy or rollback moves
+  client and API together, `cd.yml` is untouched, and no `/srv/www` directory,
+  rsync step, or asset-drift failure mode is added. In a single-repository
+  project whose releases are repo-wide tags, the textbook con — coupling the
+  client's release cycle to the API image — costs nothing.
+* **Tailnet-only matches the existing posture and erases the certificate
+  problem.** Access rides the identity/ACL system that already governs SSH and
+  CD; `*.ts.net` certificates are browser-trusted and renew automatically
+  (an explicit #267 criterion); the login page is unreachable from the LAN,
+  where guests and IoT live. Remote use is included rather than a second path.
+* **Same-origin removes the CORS surface** and keeps the `localStorage` token
+  threat model exactly as analyzed in ADR-014 — no cross-origin variant.
+* **A host proxy is firewall-governed.** Docker-published ports bypass UFW;
+  a host process does not. Caddy over `tailscale serve` because the proxy is
+  host-global: several services, one TLS point, LAN exposure possible later as
+  a Caddyfile edit rather than an architecture change.
+* **The hosting reference makes the client boundary testable.** With the client
+  assemblies in the host's closure, `Filer.Architecture.Tests` now asserts
+  "clients reference nothing outside `src/Clients/*`" — previously
+  compiler-enforced only (`10`, resolved open item).
+
+### Trade-offs accepted
+
+* **A UI-only fix ships as a full release.** There is no separate client release
+  channel; there also wasn't one before, and releases are already repo-wide
+  tags. Accepted until a real cadence mismatch appears.
+* **Every client device must be on the tailnet.** A device that cannot run
+  Tailscale cannot reach Filer. Widening to the LAN later is a deliberate,
+  recorded change (proxy bind + firewall rule + a certificate story), not a
+  default.
+* **The api container serves static files.** Kestrel behind a proxy is entirely
+  adequate at household scale; a CDN/static-host split remains available at the
+  SaaS phase where `07`'s scale-out topology already separates concerns.
+* **The UI path depends on Tailscale's control plane.** As with CD (ADR-018),
+  the manual LAN/console path remains for administration; self-hosting the
+  control plane stays possible and unjustified.

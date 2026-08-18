@@ -91,6 +91,34 @@ public sealed class DependencyBoundaryTests
     }
 
     /// <summary>
+    /// Acceptance criterion: clients consume the REST API only, through
+    /// <c>Filer.ApiClient</c> — no client assembly references a module, a
+    /// <c>*.Contracts</c> project, or a kernel (10-solution-structure.md, client
+    /// boundary; ADR-001). Enforceable since ADR-019 put the client assemblies in
+    /// this project's closure; if the host ever stops serving the client, the
+    /// guard below turns vacuous rather than failing.
+    /// </summary>
+    [Fact]
+    public void Clients_should_reference_no_server_assembly()
+    {
+        var violations = new List<string>();
+
+        foreach (var client in ProductionAssemblies.Clients)
+        {
+            var self = ProductionAssemblies.Name(client);
+
+            var offending = SolutionReferences(client)
+                .Where(reference => !ProductionAssemblies.ClientNames.Contains(reference));
+
+            violations.AddRange(offending.Select(reference => $"{self} -> {reference}"));
+        }
+
+        violations.Should().BeEmpty(
+            "clients consume the REST API only through Filer.ApiClient — never a module, " +
+            "a *.Contracts project, or a kernel (10-solution-structure.md, ADR-001)");
+    }
+
+    /// <summary>
     /// <c>SharedKernel</c> is the bottom of the graph: it depends on nothing else in the solution (rule 4).
     /// </summary>
     [Fact]

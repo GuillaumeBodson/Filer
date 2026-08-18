@@ -63,9 +63,11 @@ Class Library) and `Filer.ApiClient` (Kiota-generated typed client, ADR-011).
 `Filer.App` (MAUI Blazor Hybrid) is planned for later (RM-02) and does not exist
 yet. Clients consume the REST API **only through `Filer.ApiClient`** — they never
 reference a module, a `*.Contracts` project, `Filer.WebKernel` or the kernels
-(ADR-001). Today this client-side boundary is compiler-enforced only:
-`Filer.Architecture.Tests` loads `Filer.Api`'s transitive closure, which does not
-include the client assemblies (see Boundary Enforcement below).
+(ADR-001). Since ADR-019 the host references `Filer.Web` to serve the published
+client from the api image — a hosting-only reference (the host consumes no
+client type), which also puts the client assemblies in `Filer.Api`'s transitive
+closure and lets `Filer.Architecture.Tests` enforce this client-side boundary
+(see Boundary Enforcement below).
 
 ---
 
@@ -304,16 +306,18 @@ fork of NetArchTest) asserts the dependency rules as executable tests, run in CI
 * no `Filer.Modules.X` references `Filer.Modules.Y` (only `*.Contracts`);
 * no `*.Contracts` project references EF Core or another module;
 * nothing references `Filer.Api`;
-* feature code references storage/AI only through their abstractions.
+* feature code references storage/AI only through their abstractions;
+* no client assembly references anything outside `src/Clients/*` — the "REST API
+  only through `Filer.ApiClient`" rule.
 
 A boundary that is only documented erodes; encoding it as a failing test keeps
 project-per-module honest as the codebase grows.
 
-The `src/Clients/*` projects are **outside** the architecture-test scope: the
-tests load assemblies from `Filer.Api`'s dependency closure, which the clients
-are not part of. Their "REST API only" rule is currently enforced by the
-compiler alone (no client project references a server project). Extending
-`Filer.Architecture.Tests` to cover client assemblies is an open item below.
+The `src/Clients/*` projects joined the architecture-test scope with ADR-019:
+the host references `Filer.Web` to serve the client, so the client assemblies
+are now part of the closure the tests scan, and the client boundary is asserted
+rather than compiler-enforced only. If the host ever stops serving the client,
+that assertion turns vacuous again rather than failing.
 
 ---
 
@@ -337,6 +341,9 @@ any document feature is added.
 * ~~Exact architecture-test tooling and the CI gate that runs it.~~ Resolved:
   `NetArchTest.eNhancedEdition`, asserted by `Filer.Architecture.Tests` and run
   in the existing `build-test` job via `dotnet test Filer.slnx` (`11-git-workflow.md`).
-* Whether `Filer.Architecture.Tests` should also load the `src/Clients/*`
+* ~~Whether `Filer.Architecture.Tests` should also load the `src/Clients/*`
   assemblies and assert the client boundary (no references to modules,
-  Contracts, kernels), or whether compiler enforcement stays sufficient.
+  Contracts, kernels), or whether compiler enforcement stays sufficient.~~
+  Resolved by ADR-019 as a side effect: the host now references `Filer.Web`, the
+  client assemblies are in the scanned closure, and the boundary is asserted in
+  `Filer.Architecture.Tests`.

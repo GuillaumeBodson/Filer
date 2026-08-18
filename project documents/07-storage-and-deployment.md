@@ -106,10 +106,11 @@ The api container exposes `/health/live` (process up) and `/health/ready`
 
 The web client (`Filer.Web`, Blazor WebAssembly) is static assets; in dev it is
 served by `dotnet run --project src/Clients/Filer.Web` (cross-origin calls to
-the API need the CORS policy tracked in #148). It is **not** part of the Compose
-topology yet — production hosting (served by the api container vs. a static
-host/CDN) is decided when the first deployable frontend milestone ships (open
-item).
+the API need the CORS policy tracked in #148). In production it is **served by
+the api container itself** (ADR-019): the published WASM assets ride in the api
+image and ship with every deployment, same-origin with the API — so the deployed
+client needs no CORS at all, and client and API roll back together as one
+revision.
 
 For V1 the background worker runs as a hosted service inside the api container.
 The boundary is kept clean so it can be split into a separate **worker** service
@@ -178,6 +179,14 @@ states the procedure.
   existing private-network membership; the node exposes nothing to the internet
   (`11`). Migrations apply at container startup, so a release is the unit of both
   deployment and rollback.
+* **The web client ships in the api image and is exposed tailnet-only**
+  (ADR-019). The api container serves the published WASM assets same-origin on
+  its loopback publication; a reverse proxy on the host — subject to the host
+  firewall, unlike Docker-published ports — terminates HTTPS and is bound to the
+  tailnet interface alone. Nothing is reachable from the LAN or the internet;
+  certificates are the tailnet's own (`*.ts.net`), renewed automatically. The
+  proxy is host configuration, not part of this repository's deploy contract
+  beyond the requirement itself.
 * **Backups follow a fixed order — database dump first, blobs second.** A
   document created between the two leaves an orphaned blob, which is harmless;
   the reverse order produces a dump referencing a `StorageKey` whose bytes were

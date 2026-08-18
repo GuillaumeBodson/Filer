@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Testcontainers.PostgreSql;
 using Xunit;
@@ -85,6 +86,15 @@ public sealed class FilerApiFactory : WebApplicationFactory<Program>, IAsyncLife
             // exports this variable, so this branch is skipped.
             Environment.SetEnvironmentVariable(ConnectionEnvVar, _postgres.GetConnectionString());
         }
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        // The host serves the web client's static assets (ADR-019). Outside
+        // Development the framework does not load the build-time static web assets
+        // manifest on its own, and the test host runs as "Testing" — enable it here
+        // so the hosting tests exercise the same files a publish would ship.
+        builder.UseStaticWebAssets();
     }
 
     public override async ValueTask DisposeAsync()

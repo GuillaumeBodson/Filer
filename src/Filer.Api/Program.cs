@@ -154,6 +154,13 @@ if (corsOrigins.Length > 0)
     app.UseCors();
 }
 
+// The web client ships in this image and is served same-origin (ADR-019): the
+// framework files of the published WASM app (with their precompressed variants),
+// then its static assets. Before auth on purpose — the assets are public
+// bootstrap code, and every /api endpoint keeps its own authorization.
+app.UseBlazorFrameworkFiles();
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -169,6 +176,15 @@ app.MapDocumentsEndpoints();
 app.MapFoldersEndpoints();
 app.MapSearchEndpoints();
 app.MapTagsEndpoints();
+
+// SPA fallback (ADR-019): unmatched routes serve the client's index.html so a
+// deep link into the app boots the WASM router. The /api catch-all above it
+// keeps the API's contract intact — an unknown API route must stay a
+// problem-details 404 (03), never a 200 with an HTML page. More specific real
+// endpoints always outrank a catch-all, and both stay out of the OpenAPI
+// document: they are hosting plumbing, not API surface (ADR-011).
+app.Map("/api/{**path}", () => Results.NotFound()).ExcludeFromDescription();
+app.MapFallbackToFile("index.html").ExcludeFromDescription();
 
 app.Run();
 

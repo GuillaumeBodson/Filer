@@ -20,6 +20,14 @@ internal static class ProductionAssemblies
     internal const string WebKernel = "Filer.WebKernel";
     internal const string Host = "Filer.Api";
 
+    /// <summary>
+    /// The client-side assemblies (10-solution-structure.md, `src/Clients/`). In the
+    /// scanned closure since the host serves the web client (ADR-019) — which is what
+    /// lets the client boundary be test-enforced instead of compiler-enforced only.
+    /// </summary>
+    internal static readonly ImmutableHashSet<string> ClientNames =
+        ["Filer.Web", "Filer.Ui", "Filer.ApiClient"];
+
     private const string Prefix = "Filer.";
     private const string ModulePrefix = "Filer.Modules.";
     private const string ContractsSuffix = ".Contracts";
@@ -34,6 +42,10 @@ internal static class ProductionAssemblies
     /// <summary>Module contract assemblies (e.g. <c>Filer.Modules.Auth.Contracts</c>).</summary>
     internal static ImmutableArray<Assembly> Contracts { get; } =
         All.Where(IsContracts).ToImmutableArray();
+
+    /// <summary>Client assemblies present in the closure (see <see cref="ClientNames"/>).</summary>
+    internal static ImmutableArray<Assembly> Clients { get; } =
+        All.Where(assembly => ClientNames.Contains(Name(assembly))).ToImmutableArray();
 
     internal static bool IsModuleImplementation(Assembly assembly) =>
         Name(assembly).StartsWith(ModulePrefix, StringComparison.Ordinal) && !IsContracts(assembly);
