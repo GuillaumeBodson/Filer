@@ -1,0 +1,21 @@
+# Sauvegarde Filer — unité déclenchée par filer-backup.timer.
+# Installation : voir l'en-tête de backup-filer.sh ou deploy/README.md.
+#
+# Pas de OnFailure= locale : la visibilité des échecs passe par le ping
+# « dead-man's switch » du script (BACKUP_PING_URL), le seul mécanisme qui
+# détecte aussi un timer qui ne se déclenche plus.
+
+[Unit]
+Description=Sauvegarde Filer (dump PostgreSQL puis blobs)
+# Le dump passe par `docker compose exec` : sans démon Docker, échec immédiat
+# (et ping /fail) plutôt qu'une attente.
+Wants=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup-filer
+# Le nœud partage GPU et RAM avec le runtime LLM : la sauvegarde cède la
+# priorité CPU et I/O plutôt que de concurrencer une analyse en cours.
+Nice=10
+IOSchedulingClass=idle

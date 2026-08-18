@@ -10,3 +10,11 @@ src/Clients/Filer.ApiClient/Generated/** text eol=lf
 # with a bare "not found" that points nowhere near the real cause. Pin LF so a
 # contributor's core.autocrlf setting cannot produce that.
 *.sh text eol=lf
+
+# systemd units and the .env template are copied verbatim onto the Linux node.
+# A CRLF checkout would smuggle `\r` into unit values and sourced variables —
+# `ExecStart=/usr/local/bin/backup-filer\r` or a password ending in `\r` — both
+# failing far from the real cause. Pin LF like the shell scripts above.
+deploy/*.service text eol=lf
+deploy/*.timer text eol=lf
+deploy/.env.example text eol=lf

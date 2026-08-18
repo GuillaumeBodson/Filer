@@ -1,0 +1,16 @@
+# Planification de la sauvegarde Filer — déclenche filer-backup.service.
+# Installation : voir l'en-tête de backup-filer.sh ou deploy/README.md.
+
+[Unit]
+Description=Sauvegarde quotidienne Filer
+
+[Timer]
+# 03h30 locale : hors des heures d'usage, et avant tout déploiement matinal.
+OnCalendar=*-*-* 03:30
+# Persistent : un run manqué (machine éteinte, reboot) est rattrapé au
+# démarrage suivant au lieu d'attendre la prochaine occurrence — c'est ce qui
+# fait survivre la planification à un reboot, pas seulement l'enable.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
