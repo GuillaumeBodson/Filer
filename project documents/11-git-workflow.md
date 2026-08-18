@@ -183,10 +183,16 @@ commit the running image was built from, so the repo can answer two questions
 without shell access to the node:
 
 ```bash
-git fetch --tags
+git fetch --tags --force     # --force: see below
 git log -1 deployed          # what is live
 git diff deployed..main      # what is merged but not yet deployed
 ```
+
+> ⚠️ `--force` is not optional. `deployed` moves on every deploy, and a plain
+> `git fetch --tags` refuses to move a tag the clone already has — it prints an
+> easily-missed `! [rejected] … (would clobber existing tag)` and leaves the
+> local tag where it was, so `git log -1 deployed` answers with a **stale**
+> commit while looking authoritative.
 
 * **It is not a release tag.** It carries no version, is **force-moved** on every
   deploy, and is excluded from the SemVer policy above. Only the annotated `v*`
