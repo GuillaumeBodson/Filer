@@ -14,6 +14,7 @@ Topologie et cycle de vie : `07-storage-and-deployment.md`.
 | `.env.example` | Modèle de `/srv/filer/.env`. Secrets et tag d'image. |
 | `backup-filer.sh` | Dump PostgreSQL + copie des blobs, dans cet ordre. |
 | `filer-backup.service` / `filer-backup.timer` | Planification systemd de la sauvegarde — quotidienne, rattrapée après un arrêt (`Persistent=true`). |
+| `restore-drill.sh` | Exercice de restauration : la dernière sauvegarde planifiée, restaurée dans un environnement jetable et vérifiée blob par blob. |
 | `choix-runtime-llm.md` | Comparatif Ollama / llama.cpp mesuré, et critère de bascule. |
 
 ---
@@ -223,11 +224,45 @@ fichiers.
 
 Deux points que le script ne peut pas régler seul :
 
-- **Une sauvegarde jamais restaurée n'est pas une sauvegarde.** Faire une
-  restauration réelle au moins une fois, sur une base jetable (#259).
+- **Une sauvegarde jamais restaurée n'est pas une sauvegarde.** L'exercice
+  ci-dessous existe pour ça (#259) — le refaire après tout changement qui touche
+  la sauvegarde ou le schéma de stockage.
 - **Une copie hors machine reste nécessaire.** Trois disques dans le même boîtier
   ne protègent ni du vol, ni de l'incendie, ni d'une alimentation qui les emporte
   ensemble (#260).
+
+### Exercice de restauration
+
+```bash
+sudo install -m 0755 restore-drill.sh /usr/local/bin/restore-drill
+sudo restore-drill          # monte l'environnement jetable et vérifie
+sudo restore-drill down     # démonte tout
+```
+
+Le script restaure le **dernier dump planifié** — pas une sauvegarde faite pour
+l'occasion — dans un environnement intégralement disjoint de la production :
+conteneurs `filer-drill-*`, réseau et répertoire propres, API sur
+`127.0.0.1:8081`, sauvegarde source lue en copie et jamais modifiée. Il
+chronomètre la restauration et le passage `healthy`, puis vérifie **chaque
+document vivant** : blob présent dans la disposition attendue, sha256 égal au
+`ContentHash` en base. C'est le couplage que l'ordre de sauvegarde protège — un
+dump qui se restaure proprement avec des blobs manquants ressemble à un succès,
+et c'est exactement le faux positif que la vérification élimine.
+
+La sortie se termine par la vérification **humaine** : un login et un vrai
+téléchargement à travers l'API restaurée (les commandes `curl` exactes sont
+affichées). Les identifiants sont ceux de la base restaurée — les comptes de
+production au moment du dump.
+
+L'API jetable partage l'Ollama de l'hôte : des `AnalysisJobs` restaurés en
+attente peuvent relancer des analyses — sans effet hors de l'environnement
+jetable.
+
+#### Journal des exercices
+
+| Date | Dump | Restauration | API healthy | Vérifiés | Incidents |
+|---|---|---|---|---|---|
+| _à compléter au premier exercice_ | | | | | |
 
 ---
 
