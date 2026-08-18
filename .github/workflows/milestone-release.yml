@@ -1,0 +1,100 @@
+name: Milestone release
+
+# Closing a milestone on GitHub IS the release act: this workflow derives the
+# tag from it — next minor on `main`, message = the milestone title — and pushes
+# it, which runs the full CI pipeline, publishes the image, and hands off to
+# cd.yml exactly as a hand-pushed tag would (`11-git-workflow.md`).
+#
+# The deliberateness the tagging policy demands is preserved, just relocated:
+# the human act is closing the milestone, which GitHub only offers once its
+# issues are dealt with and which nobody does absent-mindedly. What is removed
+# is only the mechanical step between that decision and the node — the one that
+# could be forgotten, mistyped (v0.11 vs v0.11.0), or put off.
+on:
+  milestone:
+    types: [closed]
+
+# Two milestones closed in quick succession must tag sequentially — each run
+# reads the latest v* tag to compute the next one.
+concurrency:
+  group: milestone-release
+  cancel-in-progress: false
+
+# Deliberately none: the push MUST NOT use `github.token`. Events caused by the
+# workflow token do not trigger other workflows (GitHub's recursion guard), so a
+# tag pushed with it would exist in the repository and deploy nothing — the
+# worst failure shape, a release that looks made and never shipped.
+permissions: {}
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # MILESTONE_TAG_TOKEN: fine-grained PAT, this repository only, permission
+      # Contents: Read and write, nothing else. It exists solely so the tag push
+      # is attributed to a real principal and therefore triggers ci.yml + cd.yml
+      # (see the permissions comment above). Same scoping philosophy as the
+      # tailnet credential in cd.yml: one capability, one target.
+      - name: Refuse to run half-configured
+        env:
+          TOKEN_SET: ${{ secrets.MILESTONE_TAG_TOKEN != '' }}
+          OPEN: ${{ github.event.milestone.open_issues }}
+          TITLE: ${{ github.event.milestone.title }}
+        run: |
+          if [ "$TOKEN_SET" != "true" ]; then
+            echo "::error::MILESTONE_TAG_TOKEN is not set — the milestone was closed but nothing will deploy. Create a fine-grained PAT (this repo, Contents: read/write), store it as that secret, reopen the milestone and close it again."
+            exit 1
+          fi
+          # GitHub allows closing a milestone over open issues. Releasing then
+          # would tag code the milestone says is unfinished — refuse loudly.
+          if [ "$OPEN" != "0" ]; then
+            echo "::error::'${TITLE}' was closed with ${OPEN} open issue(s). Close or re-home them, reopen the milestone, and close it again."
+            exit 1
+          fi
+
+      - name: Check out main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          # Full history: the next version is computed from the existing v* tags.
+          fetch-depth: 0
+          token: ${{ secrets.MILESTONE_TAG_TOKEN }}
+
+      - name: Tag the next minor and push
+        env:
+          TITLE: ${{ github.event.milestone.title }}
+        run: |
+          # `--force`: `deployed` moves on every deploy and a plain fetch
+          # refuses to move a tag it already has (`11-git-workflow.md`).
+          git fetch --tags --force
+
+          # Reclosing a milestone (or closing a second one before anything new
+          # merged) must not re-release the same commit under a second number.
+          if EXISTING=$(git describe --exact-match --match 'v*' HEAD 2>/dev/null); then
+            echo "::notice::main is already tagged ${EXISTING} — nothing new to release."
+            exit 0
+          fi
+
+          LATEST=$(git tag --list 'v*' --sort=-v:refname | head -1)
+          if ! printf '%s' "$LATEST" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Could not find a previous vX.Y.Z tag to bump (got '${LATEST}')."
+            exit 1
+          fi
+          MAJOR=${LATEST%%.*}; MAJOR=${MAJOR#v}
+          MINOR=${LATEST#v*.}; MINOR=${MINOR%%.*}
+          NEXT="v${MAJOR}.$((MINOR + 1)).0"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$NEXT" -m "$TITLE"
+          git push origin "$NEXT"
+
+          {
+            echo "### Released \`${NEXT}\` — ${TITLE}"
+            echo ""
+            echo "Tag pushed on \`$(git rev-parse --short HEAD)\`. CI publishes the image;"
+            echo "cd.yml deploys it and moves the \`deployed\` marker. Watch those runs —"
+            echo "this workflow ends at the push, it does not wait for the deploy."
+          } >> "$GITHUB_STEP_SUMMARY"
