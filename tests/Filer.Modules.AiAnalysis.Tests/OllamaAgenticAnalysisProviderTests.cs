@@ -204,6 +204,10 @@ public sealed class OllamaAgenticAnalysisProviderTests
                 .Should().BeTrue();
             think.GetBoolean().Should().BeFalse(
                 "reasoning left on would be paid on both passes, not just one (#253)");
+            parsed.RootElement.GetProperty("options").GetProperty("num_ctx").GetInt32()
+                .Should().Be(8_192,
+                    "the window must be explicit on both passes — the second carries the "
+                    + "sampled folder contents on top of the same budget (#254)");
         }
     }
 

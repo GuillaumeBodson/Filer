@@ -1,7 +1,9 @@
 # Choix du runtime LLM — Ollama, et bascule éventuelle vers llama.cpp
 
 > Document de décision + brief d'implémentation pour l'**équipe Filer**.
-> Complète le stade 7 de [`README.md`](README.md).
+> Complète le « stade 7 » — la mise en service du runtime LLM sur l'hôte, un
+> stade du journal de build de la machine, qui vit hors dépôt (cf.
+> [`README.md`](README.md), « Provisionnement de l'hôte »).
 > Créé 2026-08-09.
 
 ## Décision

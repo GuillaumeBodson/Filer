@@ -8,7 +8,10 @@
 #
 # Installation :
 #   sudo install -m 0755 backup-filer.sh /usr/local/bin/backup-filer
-#   sudo systemctl enable --now filer-backup.timer
+#
+# La planification (unité filer-backup.timer) n'existe pas encore : c'est #258
+# (OPS-M2). D'ici là, ce script se lance à la main — avant chaque déploiement
+# qui porte une migration, au minimum (deploy/README.md).
 
 set -euo pipefail
 
@@ -56,4 +59,4 @@ echo "Sauvegarde terminée : $DEST/db-$DATE.sql.gz + $(du -sh "$DEST/blobs" | cu
 
 # ⚠️ /srv/backup est un disque du MÊME boîtier. Cette sauvegarde ne protège ni
 # du vol, ni de l'incendie, ni d'une alimentation qui emporte les trois disques.
-# Une copie hors machine reste à configurer (stade 9).
+# Une copie hors machine reste à configurer (#260, OPS-M2).

@@ -150,7 +150,14 @@ jobs:
   # The job id stays `docker-build` on purpose: it is a required status check in
   # branch protection (`11-git-workflow.md`), and renaming it would silently
   # leave main unprotected until the rule is re-pointed.
+  #
+  # `needs`: publishing waits for the tests. Branch protection only guards PR
+  # merges; a tag push is the deploy path (cd.yml waits for the image, nothing
+  # else), so without this gate a tagged commit whose tests fail would still
+  # publish — and deploy. Costs PR feedback some parallelism; that is the price
+  # of "the deployed image comes from a green build" being true rather than said.
   docker-build:
+    needs: build-test
     runs-on: ubuntu-latest
 
     permissions:
@@ -174,10 +181,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # `latest=false`: no floating tag is ever published. Deployments pin an
+      # `latest=false` and no other floating tag either: deployments pin an
       # exact tag in /srv/filer/.env, which is what makes a rollback a one-line
-      # edit — a `latest` in circulation invites an unpinned deploy that cannot
-      # be reasoned about after the fact.
+      # edit — a floating tag in circulation invites an unpinned deploy that
+      # cannot be reasoned about after the fact. (`edge` and a `{{major}}.{{minor}}`
+      # tag used to be published here; nothing consumed them, and both float.)
+      #
+      # `{{raw}}`, not `{{version}}`: the semver type strips the leading `v`
+      # (git tag v0.11.0 -> image tag 0.11.0), while cd.yml deploys the image
+      # under the git tag's own name (`TAG: github.ref_name`). The image tag must
+      # equal the git tag verbatim, or every release-tag deploy times out waiting
+      # for a tag that was never published (OPS-M1 review, #257).
       - name: Image tags
         id: meta
         uses: docker/metadata-action@v6
@@ -185,10 +199,8 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/filer-api
           flavor: latest=false
           tags: |
-            type=raw,value=edge,enable={{is_default_branch}}
             type=sha,format=short
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{raw}}
 
       - name: Build and push API image
         uses: docker/build-push-action@v7
