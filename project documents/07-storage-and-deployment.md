@@ -181,7 +181,10 @@ states the procedure.
 * **Backups follow a fixed order — database dump first, blobs second.** A
   document created between the two leaves an orphaned blob, which is harmless;
   the reverse order produces a dump referencing a `StorageKey` whose bytes were
-  never copied, which is a silently broken restore (`04`).
+  never copied, which is a silently broken restore (`04`). The backup runs
+  unattended on a systemd timer that survives reboots, and reports through a
+  dead-man's-switch ping: the monitoring service alerts when no ping arrives,
+  which is the only signal that also covers a timer that stopped firing.
 
 ## Health & Readiness
 

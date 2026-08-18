@@ -13,6 +13,7 @@ Topologie et cycle de vie : `07-storage-and-deployment.md`.
 | `docker-compose.prod.yml` | La composition de production. Autonome — il *remplace* le compose de dev, il ne le surcharge pas. |
 | `.env.example` | Modèle de `/srv/filer/.env`. Secrets et tag d'image. |
 | `backup-filer.sh` | Dump PostgreSQL + copie des blobs, dans cet ordre. |
+| `filer-backup.service` / `filer-backup.timer` | Planification systemd de la sauvegarde — quotidienne, rattrapée après un arrêt (`Persistent=true`). |
 | `choix-runtime-llm.md` | Comparatif Ollama / llama.cpp mesuré, et critère de bascule. |
 
 ---
@@ -178,22 +179,55 @@ déploiement qui porte une migration lourde.
 
 ```bash
 sudo install -m 0755 backup-filer.sh /usr/local/bin/backup-filer
-sudo backup-filer
+sudo install -m 0644 filer-backup.service filer-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now filer-backup.timer
 ```
 
 **L'ordre est impératif : dump PostgreSQL d'abord, blobs ensuite.** Un document
 créé entre les deux laisse un blob orphelin — inoffensif. Dans l'ordre inverse,
 le dump référence une `StorageKey` dont le blob n'a pas encore été copié : la
-restauration est cassée, et elle est cassée *silencieusement*.
+restauration est cassée, et elle est cassée *silencieusement*. L'ordre est dans
+le script, pas dans une procédure : l'opérateur n'a rien à se rappeler.
 
-Automatiser avec un timer systemd. Deux points que le script ne peut pas régler
-seul :
+Le timer lance la sauvegarde chaque nuit à 03h30. `Persistent=true` fait
+rattraper un déclenchement manqué (machine éteinte, reboot) au démarrage
+suivant — c'est ce qui fait survivre la planification à un arrêt, pas seulement
+le `enable`. Un lancement manuel reste de mise **avant tout déploiement qui
+porte une migration** : `sudo backup-filer` (un verrou empêche l'entrelacement
+avec le run planifié).
+
+### Savoir que la sauvegarde va bien — sans lire les journaux
+
+**Renseigner `BACKUP_PING_URL` dans `/srv/filer/.env`** (healthchecks.io ou
+équivalent auto-hébergé ; période attendue : 1 jour, délai de grâce ~1 h). Le
+script pingue `/start` au début du run, l'URL nue en cas de succès, `/fail` sur
+toute erreur ; le service d'en face alerte quand **aucun** ping n'arrive dans la
+fenêtre. C'est le seul mécanisme qui détecte aussi un timer qui ne se déclenche
+plus — le cas qu'aucune alerte locale ne peut voir. Sans cette URL, un échec ne
+s'écrit que dans le journal local, que personne ne lit.
+
+Vérification ponctuelle sur l'hôte :
+
+```bash
+systemctl list-timers filer-backup.timer   # dernier et prochain déclenchement
+ls -lh /srv/backup/filer/db-*.sql.gz       # un dump daté par jour, taille plausible
+journalctl -u filer-backup.service -n 20   # bilan du dernier run
+```
+
+Rétention : 30 jours de dumps ; les blobs sont un miroir de la source
+(`rsync --delete`), donc bornés par sa taille. Le bilan de fin de run journalise
+le nombre de dumps conservés, la taille des blobs et l'espace libre restant sur
+la destination — la croissance du disque se lit là, pas en comptant les
+fichiers.
+
+Deux points que le script ne peut pas régler seul :
 
 - **Une sauvegarde jamais restaurée n'est pas une sauvegarde.** Faire une
-  restauration réelle au moins une fois, sur une base jetable.
+  restauration réelle au moins une fois, sur une base jetable (#259).
 - **Une copie hors machine reste nécessaire.** Trois disques dans le même boîtier
   ne protègent ni du vol, ni de l'incendie, ni d'une alimentation qui les emporte
-  ensemble.
+  ensemble (#260).
 
 ---
 
