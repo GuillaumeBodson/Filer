@@ -138,7 +138,11 @@ Après un déploiement réussi, le workflow CD déplace un tag léger **`deploye
 sur le commit dont l'image déployée a été construite :
 
 ```bash
-git fetch --tags
+git fetch --tags --force     # --force obligatoire : ce tag bouge, et un fetch
+                             # ordinaire refuse de déplacer un tag déjà présent
+                             # (« would clobber existing tag ») — le tag local
+                             # reste alors figé sur un ancien déploiement, en
+                             # silence.
 git log -1 deployed          # ce qui tourne
 git diff deployed..main      # ce qui est mergé mais pas encore déployé
 ```
@@ -324,3 +328,9 @@ L'installation du système (BIOS, partitionnement, pilote GPU, réseau, durcisse
 SSH) **n'est pas dans ce dépôt** : elle est propre à une machine et relève du
 journal de build de cette machine, pas du contrat de déploiement. Ce fichier
 définit ce que l'hôte doit fournir — pas comment l'y amener.
+
+Ce journal hors dépôt est découpé en **« stades » numérotés**, et quelques
+fichiers de `deploy/` y font référence. Pour un lecteur du dépôt public, la seule
+qui compte : le **stade 7** est la mise en service et la calibration du runtime
+LLM natif sur l'hôte — son versant décisionnel est documenté ici, dans
+`choix-runtime-llm.md`.

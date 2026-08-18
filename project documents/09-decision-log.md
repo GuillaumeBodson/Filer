@@ -1574,7 +1574,7 @@ git off the server and out of the host contract.
 
 ---
 
-## Note - LLM runtime: Ollama stays, and reasoning must be switched off (#TBD)
+## Note - LLM runtime: Ollama stays, and reasoning must be switched off (#253, #254)
 
 Measured on the deployment node (2026-08-10), same `qwen3:30b-a3b` GGUF, fresh
 prompt per call — the production case, since every document is unique:
@@ -1612,5 +1612,7 @@ hybrid-reasoning model emits a long reasoning chain before the JSON — **30–1
 per document instead of ~3 s**. A second gap sits beside it: `num_ctx` is never
 sent either, so Ollama's 4096-token default silently truncates prompts that
 `MaxPromptChars` (8000 chars, plus the rendered folder tree) is allowed to
-approach. Both are tracked under OPS-M1.
+approach. Both were fixed under OPS-M1 — #253 (`think: false` by default) and
+#254 (`num_ctx` sent on every request, validated against the prompt budget);
+the resulting adapter contract is documented in `06`, "Model expectations".
 

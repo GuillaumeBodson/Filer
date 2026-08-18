@@ -109,8 +109,8 @@ services:
       Storage__Provider: "Local"
       Storage__RootPath: "/data/storage"
 
-      # Ollama tourne en natif sur l'hôte (stade 7), pas dans un conteneur :
-      # un seul runtime pour les 8 Go de VRAM.
+      # Ollama tourne en natif sur l'hôte, pas dans un conteneur :
+      # un seul runtime pour les 8 Go de VRAM (choix-runtime-llm.md).
       #
       # ⚠️ `extra_hosts: host-gateway` ne fait que RÉSOUDRE un nom vers l'IP de
       # la passerelle Docker (172.17.0.1) — il ne rend pas joignable un service
