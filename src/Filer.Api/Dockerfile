@@ -31,6 +31,11 @@ WORKDIR /src
 COPY ["Directory.Build.props", "Directory.Packages.props", "./"]
 COPY ["src/Filer.Api/Filer.Api.csproj", "src/Filer.Api/"]
 COPY ["src/Filer.SharedKernel/Filer.SharedKernel.csproj", "src/Filer.SharedKernel/"]
+# The web client rides in this image and is served same-origin (ADR-019); its
+# project graph joins the restore layer like any other Filer.Api dependency.
+COPY ["src/Clients/Filer.Web/Filer.Web.csproj", "src/Clients/Filer.Web/"]
+COPY ["src/Clients/Filer.Ui/Filer.Ui.csproj", "src/Clients/Filer.Ui/"]
+COPY ["src/Clients/Filer.ApiClient/Filer.ApiClient.csproj", "src/Clients/Filer.ApiClient/"]
 COPY ["src/Modules/AiAnalysis/Filer.Modules.AiAnalysis/Filer.Modules.AiAnalysis.csproj", "src/Modules/AiAnalysis/Filer.Modules.AiAnalysis/"]
 COPY ["src/Modules/AiAnalysis/Filer.Modules.AiAnalysis.Contracts/Filer.Modules.AiAnalysis.Contracts.csproj", "src/Modules/AiAnalysis/Filer.Modules.AiAnalysis.Contracts/"]
 COPY ["src/Modules/Auth/Filer.Modules.Auth/Filer.Modules.Auth.csproj", "src/Modules/Auth/Filer.Modules.Auth/"]

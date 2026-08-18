@@ -30,6 +30,7 @@ Topologie et cycle de vie : `07-storage-and-deployment.md`.
 | `/srv/backup` | destination des sauvegardes |
 | Ollama joignable depuis les conteneurs | voir ci-dessous — deux réglages, pas un |
 | Un chemin d'administration hors LAN | Tailscale ou équivalent ; c'est aussi le chemin du CD |
+| Un reverse proxy sur l'hôte, lié au tailnet | expose client web + API en HTTPS (ADR-019) — voir « Le client web » |
 
 > ⚠️ **`chown 1654` n'est pas cosmétique.** Le conteneur tourne sous cet UID
 > (`USER $APP_UID`) et le module Storage teste que la racine des blobs est
@@ -173,6 +174,33 @@ Une migration déjà appliquée n'est pas annulée par ce retour arrière. Si la
 version fautive a modifié le schéma de façon non rétro-compatible, restaurer un
 dump (voir plus bas) est la seule sortie — d'où la sauvegarde *avant* un
 déploiement qui porte une migration lourde.
+
+---
+
+## Le client web
+
+Le client Blazor WASM **voyage dans l'image API** (ADR-019) : `dotnet publish`
+intègre ses assets statiques, le conteneur les sert sur la même origine que
+l'API, et chaque déploiement — ou retour arrière — livre client et API depuis la
+même révision. Il n'y a **rien à déployer de plus** : pas de répertoire d'assets
+sur l'hôte, pas d'étape de copie, pas de CORS (`Cors__AllowedOrigins` reste
+éteint).
+
+L'exposition est **tailnet uniquement** : un reverse proxy sur l'hôte (Caddy),
+lié à l'interface Tailscale, termine le HTTPS avec les certificats du tailnet
+(`*.ts.net`, renouvellement automatique) et proxifie tout vers
+`127.0.0.1:8080`. Rien n'est joignable depuis le LAN ni l'internet ; l'accès est
+gouverné par les ACL du tailnet, comme SSH et le CD. La publication de l'API,
+elle, ne s'élargit pas — toujours la boucle locale seule.
+
+La configuration du proxy est de la **configuration d'hôte, pas un livrable de
+ce dépôt** : le proxy sert plus que Filer, son Caddyfile réel vit avec le reste
+de la configuration de la machine (dépôt privé). Élargir l'exposition au LAN
+plus tard est une modification délibérée du vhost + une règle de pare-feu + une
+histoire de certificat — pas un défaut.
+
+Vérification après déploiement, depuis un appareil du tailnet : ouvrir l'URL du
+vhost, se connecter, téléverser un document, voir les suggestions d'analyse.
 
 ---
 

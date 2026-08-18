@@ -17,10 +17,14 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Typed Filer API client (Kiota, ADR-011). The base address is configuration-driven
-// (wwwroot/appsettings*.json) so each environment points at its own API.
-var apiBaseAddress = builder.Configuration["FilerApi:BaseAddress"]
-    ?? throw new InvalidOperationException(
-        "Configuration 'FilerApi:BaseAddress' is required (wwwroot/appsettings.json).");
+// (wwwroot/appsettings*.json) so each environment points at its own API. Deployed,
+// the client is served by the API itself (ADR-019): the Production overlay blanks
+// the entry and the client calls the origin it was loaded from — same origin, so
+// no CORS surface exists.
+var configuredBaseAddress = builder.Configuration["FilerApi:BaseAddress"];
+var apiBaseAddress = string.IsNullOrWhiteSpace(configuredBaseAddress)
+    ? builder.HostEnvironment.BaseAddress
+    : configuredBaseAddress;
 builder.Services.AddFilerApiClient(new Uri(apiBaseAddress, UriKind.Absolute));
 
 // Auth plumbing (#128, 05-security.md): tokens persist in browser localStorage; the

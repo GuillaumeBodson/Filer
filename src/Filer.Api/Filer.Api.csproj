@@ -22,9 +22,17 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
     <!-- Readiness check against the real DbContext/connection (#159). -->
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <!-- Serves the published WASM client from this host (ADR-019):
+         UseBlazorFrameworkFiles + client assets integrated into publish output. -->
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The deployed client rides in the api image and is served same-origin
+         (ADR-019). Hosting-only: the host consumes no client type, and the client
+         boundary (clients → Filer.ApiClient only) is enforced by
+         Filer.Architecture.Tests now that these assemblies join its closure. -->
+    <ProjectReference Include="..\Clients\Filer.Web\Filer.Web.csproj" />
     <ProjectReference Include="..\Modules\AiAnalysis\Filer.Modules.AiAnalysis\Filer.Modules.AiAnalysis.csproj" />
     <ProjectReference Include="..\Modules\Auth\Filer.Modules.Auth\Filer.Modules.Auth.csproj" />
     <ProjectReference Include="..\Modules\BackgroundJobs\Filer.Modules.BackgroundJobs\Filer.Modules.BackgroundJobs.csproj" />
