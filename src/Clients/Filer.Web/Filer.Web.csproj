@@ -8,7 +8,13 @@
   -->
 
   <PropertyGroup>
-    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <!-- No asset fingerprinting: the html-placeholder substitution that resolves
+         fingerprinted names (#[.{fingerprint}], preload, importmap) runs only in
+         this project's OWN publish — not when Filer.Api publishes it into the api
+         image (ADR-019). Shipped that way, index.html keeps the raw placeholder
+         and the WASM bootstrap 404s. Plain names make build and publish output
+         identical; the cache-busting loss is acceptable at this scale. -->
+    <WasmFingerprintAssets>false</WasmFingerprintAssets>
   </PropertyGroup>
 
   <ItemGroup>

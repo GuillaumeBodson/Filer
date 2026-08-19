@@ -18,7 +18,7 @@ public sealed class WebClientHostingTests(FilerApiFactory factory)
     private readonly FilerApiFactory _factory = factory;
 
     [Fact]
-    public async Task Root_ServesTheClientBootstrapPage()
+    public async Task Root_ServesTheClientBootstrapPage_AndItsScriptResolves()
     {
         using HttpClient client = _factory.CreateClient();
 
@@ -29,8 +29,21 @@ public sealed class WebClientHostingTests(FilerApiFactory factory)
         response.Content.Headers.ContentType?.MediaType.Should().Be("text/html");
 
         string html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        html.Should().Contain("blazor.webassembly.js",
+        html.Should().Contain("_framework/blazor.webassembly.js",
             "the page served at the root must be the WASM bootstrap, not an error page");
+
+        // The page once shipped with an unprocessed `#[.{fingerprint}]` placeholder
+        // — html that *looks* right while the referenced script 404s and the app
+        // hangs on "Loading". Guard both halves: no placeholder survives, and the
+        // reference the browser will actually request resolves.
+        html.Should().NotContain("#[",
+            "an unprocessed asset placeholder means the html transformation this " +
+            "hosting mode cannot run was reintroduced (see Filer.Web.csproj)");
+
+        HttpResponseMessage script =
+            await client.GetAsync("/_framework/blazor.webassembly.js", TestContext.Current.CancellationToken);
+        script.StatusCode.Should().Be(HttpStatusCode.OK,
+            "the bootstrap script referenced by index.html must be servable, or the app never starts");
     }
 
     [Fact]

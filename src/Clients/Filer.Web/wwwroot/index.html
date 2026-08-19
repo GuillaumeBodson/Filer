@@ -6,13 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Filer</title>
     <base href="/" />
-    <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="_content/Filer.Ui/css/tokens.css" />
     <link rel="stylesheet" href="_content/Filer.Ui/css/app.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="Filer.Web.styles.css" rel="stylesheet" />
-    <script type="importmap"></script>
 </head>
 
 <body>
@@ -30,7 +28,13 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_content/Filer.Ui/js/filer-ui.js"></script>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <!-- Plain, un-fingerprinted reference on purpose: the fingerprint-placeholder
+         machinery (the hash token, the webassembly preload link, the importmap)
+         only runs when this project publishes ITSELF — served from the api image
+         (ADR-019), the placeholders would ship verbatim and the bootstrap would
+         404. Fingerprinting is off (Filer.Web.csproj) so this file is identical
+         in dev, tests and publish. -->
+    <script src="_framework/blazor.webassembly.js"></script>
 </body>
 
 </html>
