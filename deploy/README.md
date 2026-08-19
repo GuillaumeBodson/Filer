@@ -290,7 +290,7 @@ jetable.
 
 | Date | Dump | Restauration | API healthy | Vérifiés | Incidents |
 |---|---|---|---|---|---|
-| _à compléter au premier exercice_ | | | | | |
+| 2026-08-19 | `db-2026-08-19.sql.gz` (planifié, 03:30 UTC) | 0 s | 3 s | 1 document, sha256 = `ContentHash` | Aucun. Le téléchargement humain via l'API n'a pas été fait ce premier coup — à faire au prochain exercice. |
 
 ---
 
