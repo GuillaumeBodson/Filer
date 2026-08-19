@@ -60,7 +60,14 @@ public static class ObservabilityExtensions
                 .AddMeter("System.Net.Http"))
             // Route ILogger records through OTel alongside the JSON console: same
             // message templates, now exportable with trace correlation (ADR-005).
-            .WithLogging();
+            // The body carries the RENDERED message (#294): the sink's log stream
+            // is read as text, and a template with unsubstituted placeholders
+            // taxes exactly the incident the sink exists for. Attributes keep
+            // flowing regardless (IncludeAttributes defaults to true), so nothing
+            // structured is traded away.
+            .WithLogging(
+                configureBuilder: null,
+                configureOptions: options => options.IncludeFormattedMessage = true);
 
         if (!string.IsNullOrWhiteSpace(options.Otlp.Endpoint))
         {
