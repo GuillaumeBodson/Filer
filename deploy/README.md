@@ -31,6 +31,7 @@ Topologie et cycle de vie : `07-storage-and-deployment.md`.
 | Ollama joignable depuis les conteneurs | voir ci-dessous — deux réglages, pas un |
 | Un chemin d'administration hors LAN | Tailscale ou équivalent ; c'est aussi le chemin du CD |
 | Un reverse proxy sur l'hôte, lié au tailnet | expose client web + API en HTTPS (ADR-019) — voir « Le client web » |
+| Un puits d'observabilité sur l'hôte *(optionnel)* | OpenObserve partagé par toutes les applications (ADR-020) — voir « Télémétrie » |
 
 > ⚠️ **`chown 1654` n'est pas cosmétique.** Le conteneur tourne sous cet UID
 > (`USER $APP_UID`) et le module Storage teste que la racine des blobs est
@@ -201,6 +202,40 @@ histoire de certificat — pas un défaut.
 
 Vérification après déploiement, depuis un appareil du tailnet : ouvrir l'URL du
 vhost, se connecter, téléverser un document, voir les suggestions d'analyse.
+
+---
+
+## Télémétrie
+
+La télémétrie de production part vers le **puits d'observabilité de l'hôte**
+(OpenObserve — ADR-020) : un composant partagé par toutes les applications de
+la machine, installé et configuré côté hôte (dépôt privé), **pas par ce
+compose**. Filer ne fait qu'exporter : trois valeurs dans `/srv/filer/.env`,
+toutes optionnelles — absentes, aucun export, et l'API ne dépend jamais du
+puits (une panne du puits coûte de la télémétrie, jamais un upload).
+
+```bash
+OTLP_ENDPOINT=http://host.docker.internal:5080/api/default
+OTLP_PROTOCOL=HttpProtobuf
+OTLP_HEADERS=Authorization=Basic $(echo -n 'email:motdepasse' | base64)   # générer la valeur, .env ne substitue rien
+```
+
+> ⚠️ **Même piège de joignabilité qu'Ollama** (section plus haut) :
+> `host.docker.internal` ne fait que résoudre un nom vers la passerelle Docker.
+> Le puits doit **écouter cette passerelle** (pas seulement `127.0.0.1`) et UFW
+> doit laisser passer son port depuis les conteneurs :
+>
+> ```bash
+> sudo ufw allow from 172.16.0.0/12 to any port 5080 proto tcp
+> sudo ufw reload
+> ```
+>
+> Symptôme sinon : aucun signal dans le puits, aucune erreur côté Filer —
+> l'export OTLP échoue en silence, par conception.
+
+Vérification : téléverser un document, puis retrouver dans le puits la trace de
+l'upload et le span du job d'analyse lié (même `traceparent` — ADR-013). Un job
+en échec doit être diagnosticable depuis le puits seul, sans session SSH.
 
 ---
 
