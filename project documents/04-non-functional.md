@@ -136,7 +136,11 @@ BackgroundJobs module adds a broker check that reports **Degraded**, not
 Unhealthy: broker-down still processes via the sweeper (ADR-008), so readiness
 stays green while the state remains visible to monitoring. The local viewer is
 the standalone Aspire dashboard behind the `observability` Compose profile
-(`07`).
+(`07`). In production the export lands in the node's **host-level sink**
+(OpenObserve, shared by every application on the machine — ADR-020): bounded
+retention, restart-surviving, reachable only from the Docker bridge (ingest)
+and the tailnet (UI); the api never depends on it, so a sink outage costs
+telemetry, never requests.
 
 Exported meters (#60): `Filer.BackgroundJobs` (queue depth, job duration,
 success/failure/retry/cancel counters — the module has emitted these since

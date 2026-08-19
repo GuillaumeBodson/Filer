@@ -128,6 +128,21 @@ services:
       AiAnalysis__Ollama__Model: ${OLLAMA_MODEL:-llama3.2:3b}
       AiAnalysis__Ollama__TimeoutSeconds: "300"
 
+      # Télémétrie (ADR-020) : export OTLP vers le puits d'observabilité de
+      # l'HÔTE — il centralise logs/traces/métriques de toutes les applications
+      # de la machine, pas seulement Filer, donc il n'est pas un service de ce
+      # compose (même logique que le reverse proxy, ADR-019). OTLP_ENDPOINT
+      # vide ou absent : aucun export, l'API ne dépend jamais du puits.
+      #
+      # ⚠️ Même piège de joignabilité qu'Ollama ci-dessus : le puits doit
+      # écouter la passerelle Docker ET UFW doit laisser passer son port
+      # (deploy/README.md, « Télémétrie »).
+      Observability__Otlp__Endpoint: ${OTLP_ENDPOINT:-}
+      Observability__Otlp__Protocol: ${OTLP_PROTOCOL:-HttpProtobuf}
+      # Authentification d'ingestion — "Authorization=Basic <base64>", jamais en
+      # clair ici : la valeur vit dans .env (chmod 600), comme les autres secrets.
+      OTEL_EXPORTER_OTLP_HEADERS: ${OTLP_HEADERS:-}
+
       # CORS : à n'activer QUE si le client Blazor WASM est servi sur une autre
       # origine. Derrière un reverse proxy same-origin, laisser désactivé.
       # Une entrée vide ferait échouer WithOrigins("") au démarrage — décommenter

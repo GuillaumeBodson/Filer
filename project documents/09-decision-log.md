@@ -1724,3 +1724,89 @@ host (Caddy) that terminates HTTPS with the tailnet's certificates.**
 * **The UI path depends on Tailscale's control plane.** As with CD (ADR-018),
   the manual LAN/console path remains for administration; self-hosting the
   control plane stays possible and unjustified.
+
+## ADR-020 — Production telemetry: a host-level sink shared by every application on the node
+
+* **Date:** 2026-08-19
+* **Status:** Accepted
+
+### Context
+
+The API exports OTLP opt-in (ADR-013), and in production the endpoint was unset:
+telemetry went nowhere, silently, and `07` carried the open question. Meanwhile
+the node had just gained its first piece of deliberately *host-level*
+infrastructure — the reverse proxy (ADR-019) — and will host applications beyond
+Filer, each producing structured logs worth keeping in one place. A sink that
+lived inside Filer's compose file would centralize exactly one application.
+
+The node's constraint is memory: it shares 62 GB of RAM with an LLM runtime
+whose MoE experts alone occupy ~18 GB (`choix-runtime-llm.md`). Whatever
+receives telemetry must be bounded, and its loss must never degrade the
+applications that feed it.
+
+### Decision
+
+**The sink is host infrastructure, not a Filer service: one OpenObserve
+container on the node, shared by every application, fed by Filer over OTLP.
+Filer's repository carries only its own export wiring.**
+
+* `docker-compose.prod.yml` passes three `.env` values through to the API —
+  `OTLP_ENDPOINT`, `OTLP_PROTOCOL` (default `HttpProtobuf`), `OTLP_HEADERS`
+  (ingest credentials, `Basic` — a secret, so `.env` only). Unset, export is
+  off and nothing changes: **the API never depends on the sink** — no
+  `depends_on`, no healthcheck coupling, and a sink outage costs telemetry,
+  never uploads.
+* The sink itself — container, pinned image, `/srv` data directory, bounded
+  retention, root credentials, RAM cap — is host configuration in the private
+  `homeserver` repository, like the Caddyfile (ADR-019). Reachability from
+  Filer's containers follows the Ollama pattern documented in the runbook:
+  bind to the Docker gateway, open the port in UFW for `172.16.0.0/12` only.
+* The UI is exposed like everything else on this node: through the host proxy,
+  tailnet-only, on a dedicated port of the node's MagicDNS name. Nothing on the
+  LAN or the internet; ingest and UI stay unreachable beyond the Docker bridge
+  and the tailnet respectively.
+* OpenObserve over the alternatives: a single container that ingests all three
+  OTLP signals *and* plain structured logs from non-OTel applications
+  (HTTP/JSON, syslog), stores on disk with retention by days, and holds at
+  household scale in a few hundred MB of RAM. The Grafana stack is several
+  services; Jaeger is traces-only; the Aspire dashboard — kept as the **dev**
+  viewer (`07`) — is in-memory and anonymous by design, which is exactly what a
+  restart-surviving production sink must not be.
+
+### Rationale
+
+* **"Centralized" is the requirement, and only host-level placement delivers
+  it.** Every future application gets the same destination without touching
+  Filer's deploy contract — the same reasoning that put Caddy outside the
+  repository, applied to telemetry.
+* **The failure direction is safe by construction.** Fire-and-forget export
+  from an SDK that tolerates an absent collector means the sink can crash,
+  restart, or be reinstalled with zero effect on Filer; the reverse coupling
+  (API waiting on a telemetry store) is the failure mode this design refuses.
+* **A failed analysis job is diagnosable from the sink alone** (#261): the
+  worker's job spans link to the originating upload trace (ADR-013), Ollama
+  calls surface as timed child spans (#159), and `ILogger` records arrive with
+  trace correlation (ADR-005) — one trace id walks from upload to the failing
+  provider call without shell access.
+* **Secrets and content stay out** (`05`): logging is structured and reviewed —
+  storage keys are opaque references, tokens and passwords never logged — and
+  document bytes never enter spans or log records; only metadata-level
+  attributes travel.
+
+### Trade-offs accepted
+
+* **The sink is another host component to keep patched**, outside the
+  repository's CI. Accepted as host configuration debt, tracked in the
+  homeserver repository like Caddy; its image is pinned and upgraded
+  deliberately.
+* **Ingest credentials ride in `.env`** as an encoded `Basic` header — same
+  posture as every other secret on the node (chmod 600, never delivered by
+  deploys, never committed).
+* **Filer's dev and prod viewers differ** (Aspire dashboard vs OpenObserve).
+  Deliberate: dev wants a zero-setup ephemeral viewer, production wants
+  retention and auth; both consume the same OTLP export, so the emit layer —
+  the part Filer owns — is identical.
+* **A telemetry gap is invisible from Filer's side** by design (export never
+  fails the app). The sink's own alerting/uptime is a host concern; at minimum
+  the drill of looking at it after each deploy (runbook) bounds how long a gap
+  goes unnoticed.

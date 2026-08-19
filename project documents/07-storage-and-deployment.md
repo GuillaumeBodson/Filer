@@ -215,8 +215,10 @@ states the procedure.
 * Off-node backup destination for the V1 deployment: the current backup target is
   a second disk in the same chassis, which protects against neither theft, fire,
   nor a power event that takes the disks together (OPS-M2).
-* Production observability sink: the api exports OTLP unconditionally (ADR-013),
-  but the Aspire dashboard is a local-only viewer that no real environment ships.
-  Where production telemetry lands is undecided (OPS-M2).
+* ~~Production observability sink: where production telemetry lands is
+  undecided.~~ Resolved by **ADR-020** (OPS-M2): a host-level OpenObserve
+  container shared by every application on the node; Filer feeds it over OTLP
+  via `.env` wiring and never depends on it. The Aspire dashboard remains the
+  dev-only viewer.
 
 ---
