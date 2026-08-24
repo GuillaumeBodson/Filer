@@ -23,10 +23,10 @@
     <!-- Observability (ADR-013): OpenTelemetry as the emit layer, referenced by
          the host only — modules keep emitting via the BCL primitives
          (ActivitySource/Meter/ILogger) and never see the OTel SDK. -->
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.17.0" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.17.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.18.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.18.0" />
     <!-- Health endpoints (#159): first-party checks only. The EF Core check
          reuses the exact DbContext/connection the app runs on; the HealthChecks
          base stack itself ships in the ASP.NET Core shared framework. -->
