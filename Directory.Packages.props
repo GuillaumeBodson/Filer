@@ -50,7 +50,7 @@
     <!-- Typed API client (ADR-011): Kiota Bundle pulls abstractions + HTTP adapter +
          all default serializers (json/text/form/multipart, needed for the upload
          endpoint). DI.Abstractions lets Filer.ApiClient expose AddFilerApiClient. -->
-    <PackageVersion Include="Microsoft.Kiota.Bundle" Version="2.0.0" />
+    <PackageVersion Include="Microsoft.Kiota.Bundle" Version="2.1.1" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
     <!-- Auth plumbing (#128): IHttpClientFactory for the bearer/refresh handler chain
          (Filer.ApiClient); AuthenticationStateProvider/AuthorizeRouteView (Filer.Ui). -->
@@ -78,7 +78,7 @@
          MTP does not have. xunit.v3 4.0.0 removed the VSTest bridge, so the
          collector lost the host it ran in; collection moves to MTP's own
          extension, driven by the coverage switch of dotnet test (ADR-015, `12`). -->
-    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.10.0" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.11.0" />
     <!-- Architecture/boundary tests (10-solution-structure.md): assert the
          dependency rules as executable tests. eNhancedEdition is the maintained
          fork of NetArchTest, same fluent API plus fixes. -->
@@ -86,9 +86,9 @@
     <!-- Integration tests only: in-process host via WebApplicationFactory and a
          real Postgres via Testcontainers (12-testing-strategy.md). -->
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.11" />
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.14.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.15.0" />
     <!-- Broker-dispatch integration tests (ADR-008): real RabbitMQ per test class. -->
-    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.14.0" />
+    <PackageVersion Include="Testcontainers.RabbitMq" Version="4.15.0" />
     <!-- Pin Testcontainers' transitive SSH.NET to a patched version: 2025.1.0
          carries GHSA-q939-rpr3-3284 (high, published 2026-08-12), which fails
          restore under NuGet audit-as-errors - same pattern as the AngleSharp and
