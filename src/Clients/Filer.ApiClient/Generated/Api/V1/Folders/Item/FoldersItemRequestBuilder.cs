@@ -171,8 +171,10 @@ namespace Filer.ApiClient.Generated.Api.V1.Folders.Item
         public partial class FoldersItemRequestBuilderDeleteQueryParameters 
         #pragma warning restore CS1591
         {
+            #pragma warning disable CS1591
             [QueryParameter("recursive")]
             public bool? Recursive { get; set; }
+            #pragma warning restore CS1591
         }
         /// <summary>
         /// Configuration for the request such as headers, query parameters, and middleware options.
