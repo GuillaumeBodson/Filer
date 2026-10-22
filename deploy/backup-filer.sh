@@ -30,10 +30,22 @@ RETENTION_DAYS=30
 DATE=$(date +%Y-%m-%d)
 TMP="$DEST/.db-$DATE.sql.gz.partial"
 
-# shellcheck source=/dev/null
-set -a; source "$ENV_FILE"; set +a
+# Lecture clé par clé — jamais `source` : .env est au format Docker Compose, pas
+# bash. Une valeur avec espace non citée (`OTLP_HEADERS=Authorization=Basic
+# <jeton>`, câblage OpenObserve du 2026-08-19) faisait exécuter le jeton comme
+# commande, et `set -e` tuait le script AVANT le ping /start : deux mois sans
+# sauvegarde ni ping /fail (#305). Guillemets simples ou doubles retirés, comme
+# le fait Compose ; clé absente = valeur vide, à vérifier par l'appelant.
+env_get() {
+  local v
+  v=$({ grep -E "^${1}=" "$ENV_FILE" || true; } | tail -n 1 | cut -d= -f2-)
+  v=${v%\"}; v=${v#\"}; v=${v%\'}; v=${v#\'}
+  printf '%s' "$v"
+}
 
-PING_URL="${BACKUP_PING_URL:-}"
+[ -r "$ENV_FILE" ] || { echo "$ENV_FILE illisible — abandon" >&2; exit 1; }
+
+PING_URL="$(env_get BACKUP_PING_URL)"
 
 # $1 : suffixe optionnel (/start, /fail). Le ping lui-même ne fait jamais
 # échouer la sauvegarde : un réseau sortant en panne ne doit pas empêcher le
@@ -59,6 +71,14 @@ on_exit() {
 trap on_exit EXIT
 
 ping_backup /start
+
+# Lues après le /start : une clé manquante doit produire un /fail, pas un
+# silence. POSTGRES_PASSWORD n'est pas nécessaire — pg_dump passe par `compose
+# exec`, dans le conteneur, qui l'a déjà.
+POSTGRES_USER="$(env_get POSTGRES_USER)"
+POSTGRES_DB="$(env_get POSTGRES_DB)"
+[ -n "$POSTGRES_USER" ] && [ -n "$POSTGRES_DB" ] \
+  || { echo "POSTGRES_USER ou POSTGRES_DB absent de $ENV_FILE — abandon" >&2; exit 1; }
 
 compose() {
   docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"

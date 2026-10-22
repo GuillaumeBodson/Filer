@@ -41,8 +41,22 @@ down() {
 
 if [ "${1:-}" = "down" ]; then down; exit 0; fi
 
-# shellcheck source=/dev/null
-set -a; source "$ENV_FILE"; set +a
+# Lecture clé par clé — jamais `source` : .env est au format Docker Compose, pas
+# bash ; une valeur avec espace non citée y devient une commande (#305, même
+# correction que backup-filer.sh). Guillemets retirés comme le fait Compose.
+env_get() {
+  local v
+  v=$({ grep -E "^${1}=" "$ENV_FILE" || true; } | tail -n 1 | cut -d= -f2-)
+  v=${v%\"}; v=${v#\"}; v=${v%\'}; v=${v#\'}
+  printf '%s' "$v"
+}
+[ -r "$ENV_FILE" ] || { echo "$ENV_FILE illisible" >&2; exit 1; }
+for k in POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD JWT_SIGNING_KEY FILER_IMAGE_TAG; do
+  declare "$k=$(env_get "$k")"
+  [ -n "${!k}" ] || { echo "$k absent de $ENV_FILE" >&2; exit 1; }
+done
+OLLAMA_MODEL="$(env_get OLLAMA_MODEL)"
+FILER_IMAGE="$(env_get FILER_IMAGE)"
 
 # --- 0. La sauvegarde sous test ----------------------------------------------
 # Le dump le plus récent. L'exercice n'a de valeur que sur une sauvegarde

@@ -217,8 +217,14 @@ puits (une panne du puits coûte de la télémétrie, jamais un upload).
 ```bash
 OTLP_ENDPOINT=http://host.docker.internal:5080/api/default
 OTLP_PROTOCOL=HttpProtobuf
-OTLP_HEADERS=Authorization=Basic $(echo -n 'email:motdepasse' | base64)   # générer la valeur, .env ne substitue rien
+OTLP_HEADERS="Authorization=Basic $(echo -n 'email:motdepasse' | base64)"   # générer la valeur, .env ne substitue rien
 ```
+
+> ⚠️ **Guillemets obligatoires** autour de `OTLP_HEADERS` : la valeur contient
+> un espace. Compose les retire ; sans eux, la ligne reste valide pour Compose
+> mais casse tout lecteur shell du fichier — `backup-filer` a échoué en silence
+> pendant deux mois pour cette raison (#305). Même règle pour toute valeur avec
+> espace dans `.env`.
 
 > ⚠️ **Même piège de joignabilité qu'Ollama** (section plus haut) :
 > `host.docker.internal` ne fait que résoudre un nom vers la passerelle Docker.
@@ -274,6 +280,7 @@ s'écrit que dans le journal local, que personne ne lit.
 Vérification ponctuelle sur l'hôte :
 
 ```bash
+systemctl --failed                         # filer-backup.service ne doit PAS y figurer
 systemctl list-timers filer-backup.timer   # dernier et prochain déclenchement
 ls -lh /srv/backup/filer/db-*.sql.gz       # un dump daté par jour, taille plausible
 journalctl -u filer-backup.service -n 20   # bilan du dernier run
