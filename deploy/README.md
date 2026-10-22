@@ -333,6 +333,7 @@ jetable.
 | Date | Dump | Restauration | API healthy | Vérifiés | Incidents |
 |---|---|---|---|---|---|
 | 2026-08-19 | `db-2026-08-19.sql.gz` (planifié, 03:30 UTC) | 0 s | 3 s | 1 document, sha256 = `ContentHash` | Aucun. Le téléchargement humain via l'API n'a pas été fait ce premier coup — à faire au prochain exercice. |
+| 2026-10-22 | `db-2026-10-22.sql.gz` (**manuel**, 13:56 UTC — premier run après #305) | 0 s | 3 s | 3 documents, sha256 = `ContentHash` | Premier dump depuis le 2026-08-19 : deux mois d'échecs silencieux (#305). Exercice fait sur un run manuel, pas planifié — le timer reste à prouver au prochain exercice. Téléchargement humain encore sauté. |
 
 ---
 
