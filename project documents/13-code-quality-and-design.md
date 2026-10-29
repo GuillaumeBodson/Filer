@@ -5,7 +5,7 @@
 ## Purpose
 
 Defines *how the code itself is written* — the standards that turn the
-architecture in `00`/`10` into consistently high-quality source. Where `08` tells
+architecture in `00`/`10` into consistently high-quality source. Where `CLAUDE.md` tells
 AI assistants which decisions to respect, this document gives both humans and
 assistants the concrete code-level rules: error handling, cancellation,
 validation, logging, the OOP/SOLID posture, which design patterns are endorsed
@@ -13,7 +13,7 @@ validation, logging, the OOP/SOLID posture, which design patterns are endorsed
 
 Related documents: `03-api-specification.md` (error shape, DTOs),
 `04-non-functional.md` (maintainability), `05-security.md`,
-`08-ai-development-guidelines.md` (assistant behaviour),
+`CLAUDE.md` (assistant behaviour),
 `10-solution-structure.md` (layout, slices), `12-testing-strategy.md`. Related
 decisions: ADR-003 (modular monolith + vertical slices), ADR-004 (plain feature
 services, pragmatic API style).
@@ -22,7 +22,7 @@ services, pragmatic API style).
 
 ## The Governing Tension: principled, not gold-plated
 
-This project deliberately avoids speculative complexity (ADR-003/004; `08`:
+This project deliberately avoids speculative complexity (ADR-003/004; `CLAUDE.md`:
 "avoid unnecessary abstraction", "avoid speculative complexity", "do not
 overengineer V1"). The principles below — OOP, SOLID, design patterns — serve
 that goal; they are not in tension with it. They exist to make code **readable
@@ -281,25 +281,20 @@ the ad-hoc checklist and is mirrored in the PR template (`11`):
    every failure `Error`; the slice's security-critical integration tests
    (ownership → 404, auth, upload validation where applicable); architecture tests
    green.
-3. **Coverage** meets the module threshold once the gate is active (`12`).
-4. **Respects ADRs and boundaries** (`08`, `10`) — no new cross-module
+3. **Respects ADRs and boundaries** (`CLAUDE.md`, `10`) — no new cross-module
    implementation dependency, infrastructure only behind its abstraction.
-5. **Security obligations met** (`05`): ownership checks present, no secret logged,
+4. **Security obligations met** (`05`): ownership checks present, no secret logged,
    problem-details errors leak nothing internal, uploads validated.
-6. **`CancellationToken` threaded** through new async paths; no blocking on async.
-7. **Observability**: meaningful structured logs at the right levels; new
+5. **`CancellationToken` threaded** through new async paths; no blocking on async.
+6. **Observability**: meaningful structured logs at the right levels; new
    background work emits the metrics/correlation `04` requires.
-8. **Docs updated** if a canonical fact changed (`project documents/`), and an ADR
+7. **Docs updated** if a canonical fact changed (`project documents/`), and an ADR
    added to `09` for any non-trivial design or pattern decision.
-9. **Conventional Commit** title; PR explains the *why* (`11`).
+8. **Conventional Commit** title; PR explains the *why* (`11`).
 
 ---
 
 ## Open Items
 
-* Adopt the analyzer ramp in `Directory.Build.props` and confirm the `Recommended`
-  set is green, then schedule the move toward `All`.
-* Decide whether a shared web kernel (centralising `ErrorResults`-style mapping and
-  problem-details) is warranted once a second module needs it (`10`); record via
-  ADR.
-* Confirm assertion/mocking library choices (`12`) and pin them centrally.
+Tracked as issues: #315 (analyzer ramp toward `latest-all`). The shared web
+kernel question was settled by ADR-006; the test libraries by ADR-015.

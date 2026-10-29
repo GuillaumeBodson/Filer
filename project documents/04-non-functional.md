@@ -106,7 +106,7 @@ These are guideline SLOs to design against, not contractual SLAs.
 
 ## Observability
 
-Per `08` (background jobs must be observable):
+Background jobs must be observable (`06`; each point is a test obligation, `12`):
 
 * **Structured logging** (JSON) across API and workers, with correlation IDs
   that tie an upload request to its analysis job.

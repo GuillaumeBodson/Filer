@@ -14,7 +14,7 @@ Closes #
 
 ## Checklist (Definition of Done — see `project documents/13-code-quality-and-design.md`)
 - [ ] Builds clean in Release (warnings-as-errors + analyzers, code style enforced)
-- [ ] Tests per `12-testing-strategy.md`: feature-service unit tests (success + every `Error`) and security-critical integration tests pass; coverage meets the module threshold
+- [ ] Tests per `12-testing-strategy.md`: feature-service unit tests (success + every `Error`) and security-critical integration tests pass
 - [ ] Respects ADRs and module boundaries (architecture tests green); no premature mediator/repository/CQRS
 - [ ] Expected outcomes use `Result`/`Error` (no exceptions for business flow); `CancellationToken` threaded through new async paths
 - [ ] No secrets committed (`Jwt__SigningKey`, connection strings, keys); nothing sensitive logged

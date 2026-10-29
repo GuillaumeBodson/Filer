@@ -162,7 +162,7 @@ the compiler and by `Filer.Architecture.Tests`.
 4. **SharedKernel depends on nothing.** It is the bottom of the graph.
 5. **Infrastructure stays behind its abstraction.** Domain and feature code
    depends on `IFileStorageProvider` / `IAIAnalysisProvider` (from Contracts),
-   never on a concrete provider (`05`, `07`, `08`).
+   never on a concrete provider (`05`, `07`, `13`).
 6. **WebKernel is web-only and module-agnostic.** Module implementations may
    reference `Filer.WebKernel`; it references `SharedKernel` (plus the ASP.NET Core
    framework) only, and never a module or a `*.Contracts` project (ADR-006). A
@@ -182,7 +182,7 @@ Modules.*.Contracts ──▶ SharedKernel
 * **Synchronous:** call the other module's interface from its Contracts project
   (e.g. Documents calls `IFileStorage` from `Storage.Contracts`).
 * **Asynchronous (in-process):** the upload→analysis hand-off must not run
-  inline (`06`, `08`). The uploading slice persists metadata and enqueues a job
+  inline (`06`). The uploading slice persists metadata and enqueues a job
   through `IBackgroundJobQueue` (`BackgroundJobs.Contracts`); the worker resolves
   and runs it. Modules react to outcomes via integration events defined in the
   emitting module's Contracts, not by calling back into each other's internals.
@@ -202,7 +202,7 @@ Modules.*.Contracts ──▶ SharedKernel
   by id and validated through the owning module's Contracts, so a module can be
   extracted later without untangling database-level constraints.
 * Persistence concerns stay inside the module and do not leak into feature
-  logic (`08`).
+  logic (ADR-004).
 
 > Trade-off: a `DbContext` per module is slightly more setup than one shared
 > context. It is accepted because shared-context coupling is exactly what the
@@ -323,9 +323,9 @@ that assertion turns vacuous again rather than failing.
 
 ## Build Order Mapping
 
-The module layout lines up with the recommended build order in `08`
-(Authentication → Upload pipeline → File storage abstraction → Folder/Tag →
-AI analysis → Search → Observability). The walking skeleton is built first:
+The module layout lined up with the V1 build order (Authentication → Upload
+pipeline → File storage abstraction → Folder/Tag → AI analysis → Search →
+Observability), shipped as M1–M7 (`v0.10.0`). The walking skeleton was built first:
 `Filer.Api` + `Filer.SharedKernel` + `Filer.Modules.Auth` + Postgres via
 `docker-compose`, proving the host, auth, and persistence wire together before
 any document feature is added.
@@ -334,16 +334,7 @@ any document feature is added.
 
 ## Open Items
 
-* Whether Folders and Tags remain separate modules or merge into one
-  organization module (revisit after the first slices are built).
-* Whether in-process integration events need a lightweight dispatcher or can stay
-  as direct interface calls in V1 (`06`).
-* ~~Exact architecture-test tooling and the CI gate that runs it.~~ Resolved:
-  `NetArchTest.eNhancedEdition`, asserted by `Filer.Architecture.Tests` and run
-  in the existing `build-test` job via `dotnet test Filer.slnx` (`11-git-workflow.md`).
-* ~~Whether `Filer.Architecture.Tests` should also load the `src/Clients/*`
-  assemblies and assert the client boundary (no references to modules,
-  Contracts, kernels), or whether compiler enforcement stays sufficient.~~
-  Resolved by ADR-019 as a side effect: the host now references `Filer.Web`, the
-  client assemblies are in the scanned closure, and the boundary is asserted in
-  `Filer.Architecture.Tests`.
+Tracked as issues: #311 (Folders and Tags: separate modules or one organization
+module), #312 (in-process integration events: direct calls or a dispatcher).
+Architecture-test tooling and the client boundary are settled (`NetArchTest`,
+`Filer.Architecture.Tests`, ADR-019).

@@ -206,9 +206,8 @@ mount outside Development (07-storage-and-deployment.md).
 - `Directory.Packages.props` — central NuGet versions (projects carry no version attributes).
 - `.editorconfig` — file-scoped namespaces, formatting, style rules.
 
-## Next steps (build order — 08-ai-development-guidelines.md)
+## Next steps
 
-1. Observability & CI (M7) — metrics, correlation ids (ADR-013), coverage +
-   architecture gate.
-2. Bulk operations (M8) — bulk tag add/remove, sync + capped (ADR-010).
-3. RabbitMQ job dispatch with Postgres outbox (ADR-008, deferred from M5).
+Work is tracked in GitHub milestones (`gh issue list --milestone "<name>"`); the
+post-V1 roadmap is `project documents/14-roadmap.md`.
+

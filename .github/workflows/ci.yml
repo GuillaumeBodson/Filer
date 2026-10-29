@@ -87,8 +87,8 @@ jobs:
       - name: Build
         run: dotnet build Filer.slnx --configuration Release --no-restore
 
-      # Coverage is collected on every run (12-testing-strategy.md); the gate
-      # below turns it into a failing threshold. Architecture tests
+      # Coverage is collected on every run and reported, never gated
+      # (12-testing-strategy.md, ADR-021). Architecture tests
       # (Filer.Architecture.Tests) run in this same pass.
       # MTP mode (global.json): xunit.v3 4.0.0 ships Microsoft.Testing.Platform 2.x,
       # which dropped the VSTest bridge. Two consequences visible here: the solution
@@ -115,11 +115,6 @@ jobs:
       - name: Coverage summary
         if: always()
         run: cat ./CoverageReport/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
-
-      # Per-module gate (12-testing-strategy.md): every module/kernel assembly
-      # must hold 80% line / 70% branch, on every run — same script runs locally.
-      - name: Coverage gate
-        run: pwsh ./build/coverage-gate.ps1 -SummaryPath ./CoverageReport/Summary.json
 
       - name: Upload coverage report
         if: always()

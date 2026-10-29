@@ -6,7 +6,7 @@
 
 Defines how binary files are stored and how the system is packaged and deployed.
 Both are infrastructure concerns kept behind abstractions and driven by
-configuration (`08`, `04`).
+configuration (`00`, `04`).
 
 Related documents: `02-data-model.md`, `04-non-functional.md`, `05-security.md`.
 Related decisions: ADR-002 (PostgreSQL), ADR-003 (modular monolith).
@@ -47,7 +47,7 @@ public interface IFileStorageProvider
 
 ## Future Implementation — Object Storage
 
-* S3-compatible / Azure Blob implementations of `IFileStorageProvider` (`08`).
+* S3-compatible / Azure Blob implementations of `IFileStorageProvider` (`00`).
 * Selected by configuration; no domain changes required.
 * Pre-signed download URLs may be introduced but must preserve ownership
   guarantees and use short expiries (`05`).
@@ -208,7 +208,6 @@ states the procedure.
 
 ## Open Questions
 
-* Choice of message broker for the scale-out queue (deferred to `06` future work).
 * Container orchestration target for production (Compose vs Kubernetes) at the
   SaaS phase.
 * Backup automation and retention specifics for managed services.
