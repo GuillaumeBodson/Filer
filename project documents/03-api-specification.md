@@ -98,7 +98,7 @@ an existing folder can. No completed analysis → `404 analysis_not_found`.
 
 ### Upload behavior
 
-Follows the async flow in `01`/`08`:
+Follows the async flow in `01`/`06`:
 
 1. Validate file (type, size).
 2. Persist bytes via `IFileStorageProvider`; compute `ContentHash`.

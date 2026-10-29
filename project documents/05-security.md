@@ -6,7 +6,7 @@
 
 Defines the security requirements and mechanisms for the platform: how users are
 authenticated, how access is authorized, how files are handled safely, and how
-secrets are managed. Security is a core, first-class concern (`08`).
+secrets are managed. Security is a core, first-class concern (`00`).
 
 Related documents: `02-data-model.md`, `03-api-specification.md`,
 `04-non-functional.md`. Related decisions: ADR-002, ADR-003, ADR-014.

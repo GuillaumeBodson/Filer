@@ -9,11 +9,11 @@ along the way.
 ## How to Read These Docs
 
 Start at `00` for context and `01` for the product vision. `02`–`07` are the
-design specifications. `08` is the rule set for AI coding assistants. `09` is the
+design specifications. `08` is retired — assistant rules live in the root `CLAUDE.md`. `09` is the
 running decision log — read it to understand *why* things are the way they are.
 `10` defines how the codebase is physically structured before implementation
 begins. `11` is the Git workflow. `12` is the testing strategy (required tests and
-coverage), and `13` is the code-quality and design standard (coding rules,
+coverage reporting), and `13` is the code-quality and design standard (coding rules,
 OOP/SOLID, design patterns, and the Definition of Done) — read `12`/`13` before
 writing code. `14` is the roadmap of post-V1 features (intent and sequencing, not
 spec) — everything there is deferred until the V1 milestones ship. `15` is the
@@ -34,11 +34,11 @@ FE milestones established — read it before touching `src/Clients/`.
 | 05  | Security Model              | Auth, ownership, upload/file security, secrets       | Active |
 | 06  | AI Analysis Pipeline        | Async job lifecycle, provider abstraction, retries   | Active |
 | 07  | Storage & Deployment        | Storage abstraction, Docker topology, evolution      | Active |
-| 08  | AI Development Guidelines    | Rules for AI coding assistants                       | Active |
+| 08  | AI Development Guidelines    | Retired — folded into the root `CLAUDE.md` (#310)    | Retired |
 | 09  | Decision Log (ADRs)         | Significant decisions and their rationale            | Active |
 | 10  | Solution & Architecture Layout | Projects, module structure, dependency rules, slices | Active |
 | 11  | Git Workflow                | Branching, commits, PR, CI, branch protection        | Active |
-| 12  | Testing Strategy            | Test pyramid, required tests per slice, coverage gate | Active |
+| 12  | Testing Strategy            | Test pyramid, required tests per slice, coverage reporting | Active |
 | 13  | Code Quality & Design       | Coding standards, OOP/SOLID, patterns, Definition of Done | Active |
 | 14  | Roadmap                     | Post-V1 features: intent, rationale, sequencing      | Active |
 | 15  | Frontend Architecture       | Client projects, service seams, page patterns, tokens, bUnit idioms | Active |
@@ -47,7 +47,7 @@ FE milestones established — read it before touching `src/Clients/`.
 
 ## Resolved Key Decisions
 
-See `09-decision-log.md` for full rationale.
+See `09-decision-log.md` for full rationale; the index at its top lists every ADR.
 
 * **ADR-001 — Frontend:** Blazor (Blazor WebAssembly for web; MAUI Blazor Hybrid
   for Windows/Android; shared Razor Class Library).
@@ -78,17 +78,15 @@ See `09-decision-log.md` for full rationale.
 * Each design doc lists its related documents and related ADRs at the top.
 * Decisions are recorded as ADRs in `09` (append-only; supersede rather than
   delete).
-* Open questions are tracked inline at the end of the relevant doc and resolved
-  over time.
+* Open *design questions* stay inline at the end of the relevant doc. Actionable
+  work is a GitHub issue, never a doc section; a resolved item is removed, not
+  struck through — the history is in git.
 
 ---
 
 ## Open Items (Cross-Document)
 
-Tracked in the relevant docs; highlights:
-
-* Folder nesting depth and single-vs-multi folder membership (`02`).
-* Email verification, password reset, login rate limiting (`05`).
-* Message broker and orchestration target for the scale-out phase (`06`, `07`).
+Open design questions live at the end of `02`, `03`, `05` and `07`. Everything
+actionable is a GitHub issue.
 
 ---

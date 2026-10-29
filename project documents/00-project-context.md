@@ -211,8 +211,8 @@ See `09-decision-log.md` (ADR-003) for rationale.
 
 ## AI Assistant Instructions
 
-Rules for AI coding assistants are maintained in `08-ai-development-guidelines.md`
-(the single source of truth for assistant behavior). They build on the principles
-above — preserve extensibility, prefer infrastructure abstractions, keep the
+Rules for AI coding assistants live in the repository root `CLAUDE.md` — the
+single behavioural rule layer, routing to these documents for every fact. They
+build on the principles above — preserve extensibility, prefer infrastructure abstractions, keep the
 system evolvable toward SaaS, maintain API-first design, and respect the resolved
 architecture (ADR-003).

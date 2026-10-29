@@ -279,18 +279,10 @@ action (`12`).
 
 ## Open Items
 
-* `Filer.Architecture.Tests` does not yet load client assemblies; the
-  REST-only client boundary is compiler-enforced only (`10`).
-* The in-app theme toggle that stamps `data-theme` is not built; dark mode is
-  OS-driven only.
-* The MAUI Blazor Hybrid shell (RM-02) will consume `Filer.Ui` as-is; anything
-  browser-specific added to the RCL by mistake will surface then.
-* `DocumentAnalysisPanel` refreshes a pending analysis manually; bounded
-  auto-polling is tracked in #204.
-
-Resolved along the way: the #195 test-helper consolidation shipped (PR #199),
-and FE-M3 shipped both additive panels as planned (ADR-012) — the
-analysis-suggestions review on the document detail (#141) and the ranked
-search mode on the documents list (#142). A submitted search is global
-(`/search`, opaque relevance score); a deep link combining `?q=` with a
-folder/tag keeps the browse list's substring-filter semantics.
+Tracked as issues: #316 (in-app theme toggle stamping `data-theme`; dark mode is
+OS-driven only today), #204 (bounded auto-polling of a pending analysis in
+`DocumentAnalysisPanel`). The MAUI Blazor Hybrid shell (RM-02) will consume
+`Filer.Ui` as-is; anything browser-specific added to the RCL by mistake will
+surface then. A submitted search is global (`/search`, opaque relevance score);
+a deep link combining `?q=` with a folder/tag keeps the browse list's
+substring-filter semantics.

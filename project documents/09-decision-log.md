@@ -8,6 +8,39 @@ when a decision is superseded, mark it and add a new entry rather than deleting 
 
 ---
 
+## Index
+
+| ADR | Title | Date | Status |
+|-----|-------|------|--------|
+| 001 | Frontend technology: Blazor | 2026-05-30 | Accepted |
+| 002 | Database engine: PostgreSQL | 2026-05-30 | Accepted |
+| 003 | Architecture: modular monolith with vertical slices | 2026-05-30 | Accepted |
+| 004 | Solution layout: project-per-module, plain feature services, pragmatic API style | 2026-05-30 | Accepted |
+| 005 | Logging: trace-context correlation and PII-safe auth events | 2026-05-31 | Accepted |
+| 006 | Shared web kernel for cross-cutting route and error-mapping conventions | 2026-06-01 | Accepted |
+| 007 | Non-empty folder deletion: reject by default, explicit opt-in cascade | 2026-06-05 | Accepted |
+| 008 | Job dispatch: adopt RabbitMQ, keep PostgreSQL as the durable outbox | 2026-06-06 | Implemented (M7) |
+| 009 | DocumentTag join: owned by the Documents module, app-layer tag ownership | 2026-06-08 | Accepted |
+| 010 | Bulk tag operations: synchronous and capped, async deferred | 2026-06-09 | Accepted |
+| 011 | API client: typed Blazor client generated from OpenAPI with Kiota | 2026-06-14 | Accepted |
+| 012 | Frontend development: start in parallel after the core API, web-first | 2026-06-14 | Accepted |
+| 013 | Observability: OpenTelemetry, trace context persisted on the job row | 2026-07-11 | Accepted |
+| — | Note: agentic provider pulls owner-scoped data mid-analysis (#119) | 2026-07-16 | Noted |
+| 014 | Client-side token storage: browser localStorage behind `ITokenStore` | 2026-07-17 | Accepted |
+| 015 | Test libraries: xUnit v3, FluentAssertions, Moq at the seams, bUnit | 2026-07-17 | Accepted |
+| 016 | Frontend design system: hand-rolled CSS on design tokens, no component library | 2026-07-17 | Accepted |
+| 017 | Search: thin API module over a Documents-owned query contract | 2026-07-18 | Accepted |
+| 018 | Deployment: publish an image, pin it, deliver it over the tailnet | 2026-08-10 | Accepted |
+| — | Note: LLM runtime — Ollama stays, reasoning switched off (#253, #254) | — | Noted |
+| 019 | Web client hosting: served by the api image, tailnet-only via a host reverse proxy | 2026-08-18 | Accepted |
+| 020 | Production telemetry: a host-level sink shared by every application on the node | 2026-08-19 | Accepted |
+| 021 | Coverage: reported, never gated | 2026-10-29 | Accepted |
+
+Keep this table in step with the entries below: a new ADR is not recorded until
+its row exists.
+
+---
+
 ## ADR-001 — Frontend technology: Blazor
 
 * **Date:** 2026-05-30
@@ -1810,3 +1843,50 @@ Filer's repository carries only its own export wiring.**
   fails the app). The sink's own alerting/uptime is a host concern; at minimum
   the drill of looking at it after each deploy (runbook) bounds how long a gap
   goes unnoticed.
+
+---
+
+## ADR-021 — Coverage: reported, never gated
+
+* **Date:** 2026-10-29
+* **Status:** Accepted (#310)
+
+### Context
+
+Since #61 the `build-test` job failed when any gated assembly fell under 80 %
+line / 70 % branch coverage (`build/coverage-gate.ps1`). The per-slice test
+obligations in `12` — success path, every failure `Error`, the security-critical
+integration tests — have always been the real bar; the threshold sat on top of
+them as a second, cruder measure.
+
+### Decision
+
+Remove the gate: the script and the CI step are deleted, and "coverage meets the
+module threshold" leaves the Definition of Done (`13`) and the PR template.
+Coverage is still **collected on every run and reported** (HTML artifact, job
+summary); it is a signal for finding untested slices, not a number to satisfy.
+
+### Rationale
+
+* A percentage is a weak indicator of test quality: it is high over code whose
+  behaviour is never asserted, and it says nothing about the failure branches
+  `12` actually requires.
+* A threshold steers effort toward covering lines rather than proving outcomes,
+  which is the opposite of `12`'s "test behaviour, not implementation".
+* The obligations that matter are already explicit and reviewed per PR; the gate
+  added a failure mode (a trivially small assembly, a refactor shifting lines
+  across modules) without adding a guarantee.
+
+### Consequences
+
+* The `12` per-slice requirements, checked through the PR template, are the only
+  test bar. Review carries the weight the threshold used to pretend to carry.
+* The coverage report remains in CI as an aid; nothing reads `Summary.json` any
+  more. Reinstating a gate means restoring `build/coverage-gate.ps1` from history
+  (last present at `c101d4b`) and recording a new ADR that supersedes this one.
+
+### Alternatives considered
+
+* **Warning-only threshold** — rejected: a warning nobody acts on is noise.
+* **Diff coverage on the PR** — rejected for the same reason as the absolute
+  threshold: it measures lines touched, not behaviour proven.

@@ -2,7 +2,7 @@
 
 Auto-generated from the canonical docs in `project documents/`. Tickets are
 **vertical slices** (endpoint + service + DTOs + validation + tests, per `10`),
-grouped into **epics** and sequenced by the build order in `08`
+grouped into **epics** and sequenced by the V1 build order
 (Auth → Upload → Folders/Tags → AI → Search → Observability).
 
 Each ticket carries acceptance criteria drawn from the docs — ownership→404
@@ -133,7 +133,7 @@ slices close.
   implementing it.
 - Build order puts the **storage abstraction** and the **job queue/worker** at the
   top of M3 because the upload slice depends on both — that's a slight reordering
-  of the `08` list (which names "Upload pipeline" before "File storage
+  of the V1 build order (which names "Upload pipeline" before "File storage
   abstraction"), kept dependency-correct here.
 - Folders and Tags are separate modules per `10`; revisit a possible merge after
   the first slices land.

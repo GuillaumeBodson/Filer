@@ -6,7 +6,7 @@
 
 Defines how AI-assisted document analysis works: the asynchronous job lifecycle,
 the provider abstraction, reliability requirements, and how suggestions reach the
-user. AI is an assistive feature, never a blocking dependency (`01`, `08`).
+user. AI is an assistive feature, never a blocking dependency (`00`, `01`).
 
 Related documents: `02-data-model.md` (AnalysisJob), `03-api-specification.md`
 (analysis endpoints), `04-non-functional.md`, `05-security.md`. Related decisions:
@@ -16,7 +16,7 @@ ADR-002, ADR-003, ADR-008.
 
 ## Principles
 
-* **Asynchronous always.** Analysis never runs inside an upload request (`08`).
+* **Asynchronous always.** Analysis never runs inside an upload request (`00`, `03`).
 * **Isolated from the API.** Processing happens in a background worker, decoupled
   from request handling.
 * **Provider-agnostic.** Concrete AI services sit behind `IAIAnalysisProvider`;
@@ -91,7 +91,7 @@ public interface IAIAnalysisProvider
 * Implementations are selected by configuration. The shipped real adapter is
   **Ollama** (no-egress, self-hosted — see Privacy & Provider Selection below);
   cloud adapters (OpenAI, Azure OpenAI) remain possible future implementations
-  behind the same interface (`00`/`08`). A zero-footprint `Fake` provider
+  behind the same interface (`00`). A zero-footprint `Fake` provider
   (deterministic canned suggestions, no model, no network) ships alongside it
   for development and tests on machines that cannot host a local LLM.
 * Provider credentials live with the worker only and never reach clients (`05`).
@@ -130,7 +130,7 @@ public interface IAIAnalysisProvider
 
 ## Reliability Requirements
 
-Per `08` (background jobs must support these):
+Each of these is also a test obligation (`12`):
 
 * **Retries** with exponential backoff for transient failures (provider timeout,
   rate limit), capped by a configurable attempt limit.

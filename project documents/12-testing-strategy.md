@@ -6,12 +6,12 @@
 
 Defines how the platform is tested: the kinds of tests, what each kind is
 responsible for, what *must* be tested before a change merges, and how coverage
-is measured and gated. Where `08` says tests are expected and `11` says CI runs
+is measured and reported. Where `CLAUDE.md` says tests are expected and `11` says CI runs
 them, this document defines the bar that makes "tested" mean something concrete.
 
 Related documents: `04-non-functional.md` (maintainability, reliability),
 `05-security.md` (ownership, upload rules), `10-solution-structure.md` (project
-layout, boundary tests), `11-git-workflow.md` (CI gate). Related decisions:
+layout, boundary tests), `11-git-workflow.md` (CI). Related decisions:
 ADR-003 (modular monolith + vertical slices), ADR-004 (plain feature services).
 
 ---
@@ -70,19 +70,6 @@ Every feature slice merges with, at minimum:
   ownership applies — it is the single most important behavioural guarantee in the
   system and must never regress.
 
-  Until the first owned-resource module (Documents, `08` build order) exists,
-  this guarantee is proven against a **temporary, `Testing`-environment-only
-  probe**: `Filer.Api/Infrastructure/OwnershipProbeEndpoints.cs` maps a throwaway
-  owned resource, and `OwnershipProbeTests` drives the real JWT → `ICurrentUser`
-  → `OwnershipGuard` → problem-details chain through it to assert cross-owner →
-  404 ahead of any real resource. The probe is scaffolding, not a fixture: it is
-  gated to the Testing environment (never shipped). Its **removal trigger is
-  defined**: the `Documents: get metadata` slice (`GET /api/v1/documents/{id}`,
-  milestone M3, issue **#35**) — the same endpoint the skipped `OwnershipTests`
-  waits on. When #35 lands, the probe and `OwnershipProbeTests` are deleted and
-  `OwnershipTests` takes the guarantee over against a real resource; deleting the
-  probe is an acceptance criterion on #35, so it cannot be closed with the
-  scaffold still present.
 
 ### Security-critical behaviours that always require a test
 
@@ -146,66 +133,39 @@ test obligations:
 
 ## Coverage
 
-Coverage is a signal, not a target to game. The rules:
+Coverage is collected and **reported** on every CI run — it is a signal, never a
+gate (ADR-021). The rules:
 
-* **Line + branch coverage is collected on every CI run**
+* **Line + branch coverage is collected on every run**
   (`Microsoft.Testing.Extensions.CodeCoverage` via `dotnet test --coverage
-  --coverage-output-format cobertura`), and a human-readable report is
-  produced as a build artifact (`coverage-report`, ReportGenerator HTML) plus a
-  Markdown summary on the job page. The collector changed with xunit.v3 4.0.0
+  --coverage-output-format cobertura`), and a human-readable report is produced
+  as a build artifact (`coverage-report`, ReportGenerator HTML) plus a Markdown
+  summary on the job page. The collector changed with xunit.v3 4.0.0
   (ADR-015 update): coverlet's was a VSTest data collector, and MTP has no
-  VSTest bridge. The format is still Cobertura, so the report and the gate below
-  are unaffected.
-* **Gate (live, #61):** the `build-test` check fails if **any** gated assembly is
-  below **80% line / 70% branch**. Gated per assembly on *every* run — not by
-  diff-detecting "changed" modules, which is fragile and not reproducible
-  locally. Gated: `Filer.Modules.*` (implementations and Contracts),
-  `Filer.SharedKernel`, `Filer.WebKernel`, `Filer.Ui`. Not gated: the thin host
-  (`Filer.Api`), the generated client (`Filer.ApiClient`), the WASM bootstrap
-  (`Filer.Web`). The same script runs locally: `build/coverage-gate.ps1` (see its
-  header for the two commands before it).
-* **Generated and trivial code is excluded**: EF Core migrations
-  (`-*.Migrations.*` class filter), `Program.cs` wiring and source-generated
-  files (file filters), and — implementing "DTOs/records with no logic"
-  mechanically — a **de-minimis rule**: an assembly with fewer than 10 coverable
-  lines is reported but not gated (a percentage over a handful of lines is
-  noise; an implementation module that small is essentially empty).
-* A high percentage on untested-behaviour does not count: coverage is necessary,
-  not sufficient. The per-slice requirements above are the real bar.
+  VSTest bridge. The format is still Cobertura, so the report is unaffected.
+* **No threshold.** A percentage over untested behaviour proves nothing, and a
+  threshold drives tests toward lines rather than outcomes. The per-slice
+  requirements above are the bar, checked in review (PR template).
+* **Use the report to find gaps**: a slice whose failure `Error`s show as
+  uncovered branches is missing the tests this document requires.
+* **Generated and trivial code is excluded** from the report: EF Core migrations
+  (`-*.Migrations.*` class filter), `Program.cs` wiring and source-generated files
+  (file filters).
 
 ---
 
-## CI Wiring (extends `11`)
+## CI
 
-The `build-test` job (`.github/workflows/ci.yml`) runs, in order:
-`tool restore` → **Kiota drift gate** → `restore` → `build` (Release,
-warnings-as-errors) → `test` with coverage collection → coverage report
-(ReportGenerator) → **coverage gate** (`build/coverage-gate.ps1`, thresholds
-above). The PostgreSQL 18 service already present in CI backs the integration
-tests; `Filer.Architecture.Tests` run in the same pass. The frontend is covered
-in this same pass: building `Filer.slnx` compiles the Blazor WASM host
-(`Filer.Web`) and the shared RCL (`Filer.Ui`) under warnings-as-errors, and
-`dotnet test Filer.slnx` runs the bUnit component tests (`Filer.Ui.Tests`) with
-the rest. A separate `docker-build` job proves the API image still builds.
-Branch protection requires both checks: **`build-test`** and **`docker-build`**
-(`11`).
-
-The **Kiota drift gate** runs early (it needs only the committed OpenAPI snapshot —
-no API, no Postgres) so it fails fast: it regenerates the typed client from
-`src/Clients/Filer.ApiClient/openapi/v1.json` and fails the job if the result
-differs from the checked-in `Generated/`. This enforces ADR-011 (#126): a contract
-change that lands without regenerating the client breaks the build. The regenerate
-command and recovery steps live in `src/Clients/Filer.ApiClient/README.md`.
+The pipeline — steps, order, services, required checks — is described once, in
+`11-git-workflow.md` ("Continuous Integration"). From this document's point of
+view: `dotnet test Filer.slnx` runs every layer of the pyramid in one pass
+(unit, integration against the PostgreSQL service, architecture, bUnit), the
+Kiota drift gate runs before the build so a contract change that lands without
+regenerating the client fails fast (ADR-011), and coverage is reported as above.
 
 ---
 
 ## Open Items
 
-* Whether to add a nightly job that runs the full integration suite against a
-  matrix of provider configs once more `IAIAnalysisProvider` adapters exist.
-* Mutation testing (e.g. Stryker.NET) as a later quality ratchet — deferred, noted
-  so it is not forgotten.
-* Remove the temporary ownership probe (`OwnershipProbeEndpoints` +
-  `OwnershipProbeTests`) when `Documents: get metadata` (issue **#35**, milestone
-  M3) lands and the live `OwnershipTests` cover cross-owner → 404 against a real
-  owned resource. Tracked as an acceptance criterion on #35.
+Tracked as issues: #313 (mutation testing with Stryker.NET), #314 (nightly run
+against a matrix of provider configurations).

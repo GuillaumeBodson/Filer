@@ -82,11 +82,14 @@ Every change lands through a PR, even though there is one developer.
 
 ## Continuous Integration
 
+This section is the single description of the pipeline; `12` and `13` link here
+rather than repeating it.
+
 `.github/workflows/ci.yml` runs on every push to `main` and every PR:
 `dotnet tool restore` → **Kiota client drift gate** → `dotnet restore` →
 `dotnet build` (Release, warnings-as-errors) → `dotnet test` with coverage →
-coverage report + **coverage gate** (80% line / 70% branch per module,
-`build/coverage-gate.ps1` — thresholds and scope in `12`). A PostgreSQL 18
+coverage report (HTML artifact + job summary; a signal, never a gate —
+ADR-021, `12`). A PostgreSQL 18
 service mirrors `docker-compose.yml` so integration tests can run against a real
 database; `Filer.Architecture.Tests` enforce module boundaries in the same run.
 The build/test pass also covers the frontend — the Blazor WASM host and shared

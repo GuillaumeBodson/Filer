@@ -1,60 +1,65 @@
 # CLAUDE.md
 
-Filer — plateforme de gestion documentaire. Monolithe modulaire API-first
-(.NET 10, PostgreSQL). Ce fichier est le point d'entrée ; il route vers la doc
-canonique et donne les commandes. **Il ne reformule pas les faits du projet.**
+Filer — document management platform. API-first modular monolith (.NET 10,
+PostgreSQL, Blazor WebAssembly). This file is the entry point **and the single
+behavioural rule layer for AI assistants**: it routes to the canonical docs,
+gives the commands, and lists the non-negotiables with a pointer each. It does
+not restate project facts.
 
-## Doc canonique (la source de vérité)
+## Canonical docs (the source of truth)
 
-Tout le *quoi* vit dans `project documents/`. En cas de conflit avec ce fichier,
-**le document canonique gagne** — corrige la doc, ne forke pas le fait.
+Every *what* lives in `project documents/`. On a conflict with this file, **the
+canonical document wins** — fix the doc, do not fork the fact.
 
-| Pour…                                               | Voir |
-|-----------------------------------------------------|------|
-| Stack, scope, modules, principes, architecture      | `00-project-context.md` |
-| Vision produit et workflows                         | `01-product-vision.md` |
-| Entités, relations, persistance                     | `02-data-model.md` |
-| Conventions API, endpoints, forme des erreurs       | `03-api-specification.md` |
-| Limites fichiers, performance, observabilité        | `04-non-functional.md` |
-| Authentification, ownership, sécurité upload        | `05-security.md` |
-| Cycle de vie des jobs IA, provider abstrait         | `06-ai-analysis-pipeline.md` |
-| Abstraction stockage et déploiement                 | `07-storage-and-deployment.md` |
-| Règles comportementales pour assistants IA          | `08-ai-development-guidelines.md` |
-| Décisions et leur rationale (ADR)                   | `09-decision-log.md` |
-| Layout solution, projets, règles de dépendance      | `10-solution-structure.md` |
-| Workflow Git, branches, commits, PR, CI, releases   | `11-git-workflow.md` |
-| Stratégie de tests, tests requis, seuil de couverture | `12-testing-strategy.md` |
-| Standards de code, OOP/SOLID, patterns, Definition of Done | `13-code-quality-and-design.md` |
-| Roadmap post-V1 (features différées)                | `14-roadmap.md` |
-| Architecture frontend, seams UI, tokens, tests bUnit | `15-frontend-architecture.md` |
+| For…                                                      | See |
+|-----------------------------------------------------------|-----|
+| Stack, scope, modules, principles, architecture           | `00-project-context.md` |
+| Product vision and workflows                              | `01-product-vision.md` |
+| Entities, relationships, persistence                      | `02-data-model.md` |
+| API conventions, endpoints, error shape                   | `03-api-specification.md` |
+| File limits, performance, observability                   | `04-non-functional.md` |
+| Authentication, ownership, upload security, secrets       | `05-security.md` |
+| AI job lifecycle, provider abstraction                    | `06-ai-analysis-pipeline.md` |
+| Storage abstraction and deployment                        | `07-storage-and-deployment.md` |
+| Decisions and their rationale (ADRs, index at the top)    | `09-decision-log.md` |
+| Solution layout, projects, dependency rules               | `10-solution-structure.md` |
+| Git workflow, branches, commits, PR, **CI**, releases     | `11-git-workflow.md` |
+| Testing strategy, required tests per slice                | `12-testing-strategy.md` |
+| Coding standards, OOP/SOLID, patterns, Definition of Done | `13-code-quality-and-design.md` |
+| Post-V1 roadmap (deferred features)                       | `14-roadmap.md` |
+| Frontend architecture, UI seams, tokens, bUnit tests      | `15-frontend-architecture.md` |
 
-## Commandes
+`08-ai-development-guidelines.md` is retired; its rules are the section below.
+Work is tracked in GitHub milestones and issues (`gh issue list --milestone …`).
+Open items are issues, never doc sections.
+
+## Commands
 
 ```bash
-# Postgres en Docker, API depuis l'IDE/CLI
+# Postgres in Docker, API from the IDE/CLI
 docker compose up -d postgres
-dotnet run --project src/Filer.Api          # http://localhost:5232 (profil http), migrations au démarrage
+dotnet run --project src/Filer.Api          # http://localhost:5232 (http profile), migrations at startup
 
-# Tout en Docker (API sur http://localhost:8080)
+# Everything in Docker (API on http://localhost:8080)
 docker compose up --build
 
-# Profils compose optionnels : dashboard Aspire (télémétrie, UI :18888) et RabbitMQ
+# Optional compose profiles: Aspire dashboard (telemetry UI :18888) and RabbitMQ
 docker compose --profile observability up -d aspire-dashboard
 docker compose --profile mq up -d rabbitmq   # + BackgroundJobs__Queue=RabbitMq
 
-# Client web (Blazor WASM) — base API : src/Clients/Filer.Web/wwwroot/appsettings.json
+# Web client (Blazor WASM) — API base: src/Clients/Filer.Web/wwwroot/appsettings.json
 dotnet run --project src/Clients/Filer.Web
 
-# Régénérer le client API typé (Kiota) : voir src/Clients/Filer.ApiClient/README.md
-# (snapshot OpenAPI commité + drift gate CI)
+# Regenerate the typed API client (Kiota): see src/Clients/Filer.ApiClient/README.md
+# (committed OpenAPI snapshot + CI drift gate)
 
-# Tests (les projets de test vivent sous tests/ — cf. 10-solution-structure.md)
+# Tests (test projects live under tests/ — see 10-solution-structure.md)
 dotnet test
 
-# Déploiement mono-nœud auto-hébergé : contrat + runbook dans deploy/README.md
-# (image publiée sur GHCR par la CI, tag figé côté serveur — ADR-018)
+# Self-hosted single-node deployment: contract + runbook in deploy/README.md
+# (image published to GHCR by CI, pinned tag on the node — ADR-018)
 
-# Nouvelle migration EF (le module Auth possède ses migrations)
+# New EF migration (the Auth module owns its migrations)
 dotnet ef migrations add <Name> \
   --project src/Modules/Auth/Filer.Modules.Auth \
   --startup-project src/Filer.Api \
@@ -62,42 +67,46 @@ dotnet ef migrations add <Name> \
   --context AuthDbContext
 ```
 
-Smoke test : `src/Filer.Api/Filer.Api.http` (register → login → me).
+Smoke test: `src/Filer.Api/Filer.Api.http` (register → login → me).
 
-## Règles non négociables
+## Non-negotiables
 
-Décisions résolues (ADR) — ne pas rouvrir : Blazor (ADR-001), PostgreSQL
-(ADR-002), monolithe modulaire + vertical slices (ADR-003), projet-par-module +
-services simples (ADR-004). Ne propose **pas** de microservices, CQRS ou DDD
-sans besoin concret justifié.
+- **Resolved decisions stay resolved.** Blazor (ADR-001), PostgreSQL (ADR-002),
+  modular monolith + vertical slices (ADR-003), project-per-module + plain feature
+  services (ADR-004). Do not reopen them, and do not propose microservices, CQRS,
+  DDD aggregates, a mediator/command bus or a generic repository over EF Core
+  without a concrete, documented need (`13`, "deferred patterns").
+- **Abstractions.** Storage only via `IFileStorageProvider` (`07`), AI only via
+  `IAIAnalysisProvider` (`06`); auth, background jobs and persistence behind their
+  seams. Never a concrete infrastructure implementation inside domain logic.
+- **Upload is always asynchronous.** Persist metadata, enqueue a background job,
+  return. Never synchronous AI analysis (`06`/`03`).
+- **Security is not optional.** JWT + ownership check on every protected operation.
+  Cross-owner access → **404, not 403** (`05`). Validate uploads: type allow-list,
+  size, content sniffing (`04`/`05`).
+- **Secrets** never in source control, never logged. `Jwt__SigningKey` (≥ 32 chars)
+  from env or a secret store; the key in `appsettings.Development.json` is dev-only.
+- **Code** (`13`): expected outcomes via `Result`/`Error`, never exceptions for
+  business flow; `CancellationToken` propagated everywhere; structured logging via
+  `[LoggerMessage]`; `sealed` by default, `record` DTOs, entities never cross the
+  API boundary. Avoid unnecessary abstraction and speculative complexity — a
+  pattern is applied only where it removes a present complexity; do not
+  overengineer V1.
+- **Tests** (`12`): a slice is not done without its tests — feature service
+  (success + every `Error`) and the security-critical integration tests
+  (ownership → 404, auth, upload validation). Full Definition of Done: `13`.
+- **Docs and decisions.** A changed canonical fact is updated in its doc in the
+  same PR; a non-trivial design or pattern decision gets an ADR in `09`
+  (append-only; supersede, never delete).
+- **Git** (`11`): branch per issue off `main`, Conventional Commits, `Closes #N`
+  in the PR body, CI green, squash-merge, verify the issue closed.
 
-- **Abstractions** : accès stockage uniquement via `IFileStorageProvider` (`07`),
-  IA uniquement via `IAIAnalysisProvider` (`06`). Jamais d'implémentation
-  d'infra en dur dans le domaine.
-- **Upload toujours asynchrone** : persister les métadonnées, mettre en file un
-  job de fond, retourner immédiatement. Jamais d'analyse IA synchrone (`06`/`03`).
-- **Sécurité non optionnelle** : JWT + check d'ownership sur chaque opération
-  protégée. Accès cross-owner → **404, pas 403** (`05`). Valider les uploads
-  (allow-list de type, taille, content sniffing — `04`/`05`).
-- **Secrets** : jamais en source control. `Jwt__SigningKey` (≥32 car.) via env/
-  secret store. La clé de `appsettings.Development.json` est dev-only.
-- **Qualité de code** : résultats attendus via `Result`/`Error` (pas d'exceptions
-  pour le flux métier) ; `CancellationToken` propagé partout ; logging structuré,
-  jamais de secret loggé ; OOP/SOLID/patterns appliqués seulement quand ils
-  suppriment une complexité réelle, jamais par anticipation (`13`).
-- **Tests obligatoires** : une slice n'est pas terminée sans ses tests (`12`) —
-  service de feature (succès + chaque `Error`) et tests d'intégration critiques
-  (ownership → 404, auth, validation upload). Definition of Done complète : `13`.
+## Structure conventions
 
-## Conventions de structure
-
-- Projet-par-module sous `src/Modules/<Module>/` ; un module n'expose que son
-  projet `*.Contracts`. Dépendances appliquées par le compilateur **et** par
+- Project-per-module under `src/Modules/<Module>/`; a module exposes only its
+  `*.Contracts` project. Dependencies enforced by the compiler **and** by
   `Filer.Architecture.Tests` (`10`).
-- Vertical slices : endpoint + service + DTOs + validation par feature.
+- Vertical slices: endpoint + service + DTOs + validation per feature.
 - `Directory.Build.props` (net10.0, nullable, **warnings-as-errors**),
-  `Directory.Packages.props` (versions NuGet centralisées), `.editorconfig`
-  (namespaces file-scoped, style imposé au build).
-
-Ordre de construction et priorités : voir `08`. Standards de code et design
-(OOP/SOLID, patterns, error handling, Definition of Done) : `13`. Tests : `12`.
+  `Directory.Packages.props` (central NuGet versions), `.editorconfig`
+  (file-scoped namespaces, style enforced at build).
