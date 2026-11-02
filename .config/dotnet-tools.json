@@ -3,14 +3,14 @@
   "isRoot": true,
   "tools": {
     "microsoft.openapi.kiota": {
-      "version": "1.36.1",
+      "version": "1.37.0",
       "commands": [
         "kiota"
       ],
       "rollForward": false
     },
     "dotnet-reportgenerator-globaltool": {
-      "version": "5.5.11",
+      "version": "5.5.12",
       "commands": [
         "reportgenerator"
       ],
