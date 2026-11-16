@@ -51,10 +51,10 @@
          all default serializers (json/text/form/multipart, needed for the upload
          endpoint). DI.Abstractions lets Filer.ApiClient expose AddFilerApiClient. -->
     <PackageVersion Include="Microsoft.Kiota.Bundle" Version="2.1.2" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="11.0.0" />
     <!-- Auth plumbing (#128): IHttpClientFactory for the bearer/refresh handler chain
          (Filer.ApiClient); AuthenticationStateProvider/AuthorizeRouteView (Filer.Ui). -->
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="11.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="10.0.13" />
   </ItemGroup>
 
