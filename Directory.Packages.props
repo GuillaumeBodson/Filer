@@ -42,7 +42,7 @@
   <ItemGroup>
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.13" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.13" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="11.0.0" />
     <!-- Host-side half of serving the WASM client from the api image (ADR-019):
          UseBlazorFrameworkFiles + the publish integration. Referenced by Filer.Api
          only — the client projects stay MAUI-reusable (ADR-012). -->
