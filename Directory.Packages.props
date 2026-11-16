@@ -72,7 +72,7 @@
     <PackageVersion Include="FluentAssertions" Version="8.11.0" />
     <!-- FakeLogger for log-assertion tests (12-testing-strategy.md): asserts
          message templates and structured state without a real sink. -->
-    <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="11.0.0" />
     <!-- Coverage under Microsoft.Testing.Platform. coverlet.collector was a VSTest
          *data collector*, driven by the "XPlat Code Coverage" collect option that
          MTP does not have. xunit.v3 4.0.0 removed the VSTest bridge, so the
